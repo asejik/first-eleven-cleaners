@@ -1,0 +1,21 @@
+{
+  "name": "First Eleven Cleaners",
+  "short_name": "First Eleven",
+  "description": "Premium AI-Augmented Dry Cleaning & Laundry Delivery across Dallas-Fort Worth",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B1F3A",
+  "theme_color": "#0B1F3A",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

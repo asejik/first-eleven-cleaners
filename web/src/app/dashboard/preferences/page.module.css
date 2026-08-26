@@ -1,0 +1,179 @@
+.page {
+  background-color: var(--color-gray-50);
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-8) var(--space-4) var(--space-16);
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.topNav {
+  margin-bottom: var(--space-4);
+}
+
+.backLink {
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+  font-weight: var(--font-semibold);
+}
+
+.backLink:hover {
+  color: var(--color-gold-dark);
+}
+
+.card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+}
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.badgeRow {
+  margin-bottom: var(--space-2);
+}
+
+.elevenBadge {
+  font-size: var(--text-xs);
+  padding: 4px var(--space-3);
+  background-color: var(--color-cream);
+  color: var(--color-navy);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-bold);
+  border: 1px solid var(--color-cream-dark);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+  margin-bottom: 2px;
+}
+
+.subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  line-height: var(--leading-relaxed);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.groupLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+}
+
+.optionsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+@media (max-width: 639px) {
+  .optionsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.optionsGridTwo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 639px) {
+  .optionsGridTwo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.optionCard {
+  padding: var(--space-3);
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-white);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: all var(--transition-fast);
+}
+
+.optionCard:hover {
+  border-color: var(--color-gold);
+}
+
+.selectedOption {
+  border-color: var(--color-gold);
+  background-color: var(--color-cream);
+}
+
+.optionCapital {
+  font-size: var(--text-xs);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+.optionIcon {
+  font-size: var(--text-2xl);
+  margin-bottom: 2px;
+}
+
+.optionTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.optionDesc {
+  font-size: 10px;
+  color: var(--color-gray-500);
+  line-height: var(--leading-snug);
+}
+
+.textareaGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.textareaGroup label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-navy);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  color: var(--color-navy);
+  background-color: var(--color-white);
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  outline: none;
+  resize: vertical;
+  transition: all var(--transition-fast);
+}
+
+.textarea:focus {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px rgba(201, 161, 74, 0.15);
+}

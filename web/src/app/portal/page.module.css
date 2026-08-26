@@ -1,0 +1,328 @@
+.page {
+  background-color: var(--color-cream);
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-4) var(--space-16);
+  font-family: var(--font-body);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* --- Hero Top Bar --- */
+.heroCard {
+  background: linear-gradient(135deg, var(--color-navy) 0%, #131d35 100%);
+  color: #ffffff;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid rgba(201, 161, 74, 0.3);
+  box-shadow: var(--shadow-lg);
+}
+
+.heroHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.heroBrand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accountBadge {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--color-gold);
+  font-weight: var(--font-black);
+  letter-spacing: var(--tracking-wider);
+}
+
+.companyTitle {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: #ffffff;
+  margin: 0;
+}
+
+.accountMeta {
+  font-size: var(--text-xs);
+  color: #cbd5e1;
+  margin: 2px 0 0;
+}
+
+.accountSelectorBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.selectLabel {
+  font-size: var(--text-xs);
+  color: var(--color-gold);
+  font-weight: var(--font-bold);
+}
+
+.selectInput {
+  background: #0b1329;
+  color: #ffffff;
+  border: 1px solid #334155;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  outline: none;
+  cursor: pointer;
+}
+
+/* --- Executive KPI Grid --- */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.kpiCard {
+  background: #ffffff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kpiLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--color-gray-500);
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-wide);
+}
+
+.kpiValue {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+  margin: 0;
+}
+
+.kpiSub {
+  font-size: var(--text-xs);
+  color: #16a34a;
+  font-weight: var(--font-semibold);
+}
+
+/* --- Content Two-Column Grid --- */
+.twoColGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+
+@media (min-width: 900px) {
+  .twoColGrid {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+.sectionCard {
+  background: #ffffff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-gray-100);
+  padding-bottom: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Rate Card Menu */
+.rateCardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.rateItem {
+  background: var(--color-cream);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid rgba(201, 161, 74, 0.2);
+}
+
+.rateLabel {
+  font-size: var(--text-xs);
+  color: var(--color-navy);
+  font-weight: var(--font-bold);
+}
+
+.ratePrice {
+  font-size: var(--text-sm);
+  color: var(--color-gold-dark);
+  font-weight: var(--font-black);
+}
+
+/* Schedule Card */
+.scheduleDaysList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dayBadge {
+  background: var(--color-navy);
+  color: var(--color-gold);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+}
+
+.deliveryNoteAlert {
+  background: #f8fafc;
+  border-left: 4px solid var(--color-navy);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+}
+
+/* --- Invoices Table --- */
+.invoicesTableCard {
+  background: #ffffff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.invoicesTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-xs);
+}
+
+.invoicesTable th {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-cream);
+  color: var(--color-navy);
+  font-weight: var(--font-bold);
+  border-bottom: 2px solid var(--color-gray-200);
+  white-space: nowrap;
+}
+
+.invoicesTable td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-gray-100);
+  color: var(--color-gray-700);
+  white-space: nowrap;
+}
+
+.invoicesTable tr:hover td {
+  background-color: #fafaf9;
+}
+
+.invNumber {
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.invAmount {
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+/* Statement Modal Printable Form */
+.statementModal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+}
+
+.statementHead {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--color-navy);
+  padding-bottom: var(--space-3);
+}
+
+.statementBrand h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+  margin: 0;
+}
+
+.statementItemsTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-2) 0;
+}
+
+.statementItemsTable th {
+  background: var(--color-gray-100);
+  padding: 8px;
+  font-weight: var(--font-bold);
+  text-align: left;
+}
+
+.statementItemsTable td {
+  padding: 8px;
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.statementTotals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: var(--text-sm);
+}
+
+.totalRow {
+  font-size: var(--text-base);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}

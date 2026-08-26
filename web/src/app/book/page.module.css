@@ -1,0 +1,729 @@
+.page {
+  background-color: var(--color-cream);
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-8) var(--space-4) var(--space-16);
+}
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* --- Stepper Progress Bar --- */
+.stepperWrapper {
+  margin-bottom: var(--space-6);
+}
+
+.stepper {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.stepper::before {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  right: 20px;
+  height: 3px;
+  background-color: var(--color-gray-300);
+  z-index: 1;
+}
+
+.stepNode {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nodeCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-white);
+  border: 2px solid var(--color-gray-300);
+  color: var(--color-gray-500);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.activeNode .nodeCircle {
+  background-color: var(--color-navy);
+  border-color: var(--color-navy);
+  color: var(--color-white);
+}
+
+.currentNode .nodeCircle {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold);
+  color: var(--color-navy);
+  box-shadow: 0 0 0 4px rgba(201, 161, 74, 0.2);
+}
+
+.nodeLabel {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-gray-500);
+}
+
+.activeNode .nodeLabel {
+  color: var(--color-navy);
+  font-weight: var(--font-semibold);
+}
+
+/* --- Flow Card --- */
+.flowCard {
+  background-color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.cardTitle {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+  margin-bottom: var(--space-1);
+}
+
+.cardSubtitle {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  margin-bottom: var(--space-6);
+}
+
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rowTwo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 639px) {
+  .rowTwo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.smartCoverageNotice {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: rgba(30, 91, 58, 0.08);
+  border-left: 4px solid var(--color-green);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-green-dark);
+  margin-top: var(--space-4);
+  line-height: var(--leading-normal);
+}
+
+.noticeEmoji {
+  font-size: var(--text-xl);
+}
+
+.actionRow {
+  margin-top: var(--space-6);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.buttonSplit {
+  margin-top: var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* --- Service Selector Tabs --- */
+.serviceTabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+@media (min-width: 640px) {
+  .serviceTabs {
+    flex-direction: row;
+  }
+}
+
+.tabBtn {
+  flex: 1;
+  padding: var(--space-3) var(--space-2);
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-white);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tabBtn:hover {
+  border-color: var(--color-gold);
+}
+
+.activeTab {
+  border-color: var(--color-gold);
+  background-color: var(--color-cream);
+  color: var(--color-navy);
+}
+
+.serviceSection {
+  border-top: 1px solid var(--color-gray-200);
+  padding-top: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.sectionHeader h3 {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.subtext {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}
+
+.weightSelector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.weightControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.slider {
+  flex: 1;
+  accent-color: var(--color-gold);
+}
+
+.weightBadge {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-gold-dark);
+  background-color: var(--color-cream);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  min-width: 80px;
+  text-align: center;
+}
+
+.estimatorHint {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+}
+
+.minimumAlert {
+  font-size: var(--text-xs);
+  color: #92400E;
+  background-color: #FEF3C7;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-2);
+}
+
+.garmentGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+@media (min-width: 640px) {
+  .garmentGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.garmentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+}
+
+.garmentName {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-navy);
+}
+
+.garmentPrice {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+}
+
+.qtyBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qtyBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-gray-300);
+  background-color: var(--color-white);
+  color: var(--color-navy);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.qtyBtn:disabled {
+  opacity: 0.3;
+}
+
+.qtyNum {
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  min-width: 14px;
+  text-align: center;
+}
+
+/* --- Schedule Box --- */
+.scheduleBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.blackoutAlert {
+  background-color: var(--color-warning-light);
+  color: #92400E;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.fieldLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-navy);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.windowOptions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 639px) {
+  .windowOptions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.windowCard {
+  padding: var(--space-4);
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  background-color: var(--color-white);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  transition: all var(--transition-fast);
+}
+
+.windowCard:hover {
+  border-color: var(--color-gold);
+}
+
+.selectedWindow {
+  border-color: var(--color-gold);
+  background-color: var(--color-cream);
+}
+
+.winIcon {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-1);
+}
+
+.windowCard strong {
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+}
+
+.windowCard span {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+}
+
+.expressOptionBox {
+  background-color: var(--color-gray-50);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+}
+
+.expressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.expressTierOptions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 639px) {
+  .expressTierOptions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tierCard {
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-gray-200);
+  background-color: var(--color-white);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: all var(--transition-fast);
+}
+
+.tierCard:hover {
+  border-color: var(--color-gold);
+}
+
+.selectedTier {
+  border-color: var(--color-gold);
+  background-color: var(--color-cream);
+}
+
+.tierTitle {
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.tierBadge {
+  font-size: 10px;
+  color: var(--color-gold-dark);
+  font-weight: var(--font-bold);
+}
+
+.tierDesc {
+  font-size: 10px;
+  color: var(--color-gray-500);
+}
+
+.expressNote {
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+  line-height: var(--leading-relaxed);
+}
+
+/* --- Review Summary --- */
+.reviewSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.summarySection {
+  background-color: var(--color-gray-50);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+}
+
+.summarySection h4 {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  margin-bottom: var(--space-2);
+}
+
+.summarySection p {
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+  margin-bottom: 2px;
+}
+
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+  margin-bottom: var(--space-1);
+}
+
+.freeText {
+  color: var(--color-green);
+  font-weight: var(--font-bold);
+}
+
+.promoSection {
+  border-top: 1px solid var(--color-gray-200);
+  padding-top: var(--space-3);
+}
+
+.promoInputRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.promoApplied {
+  font-size: var(--text-xs);
+  color: var(--color-green);
+  font-weight: var(--font-semibold);
+  margin-top: var(--space-1);
+}
+
+.totalBox {
+  border-top: 2px dashed var(--color-gray-300);
+  padding-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+}
+
+.totalRowDiscount {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--color-green);
+  font-weight: var(--font-semibold);
+}
+
+.finalTotalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--color-gray-200);
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.finalAmount {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+/* --- Payment & Vault --- */
+.seeItPayItCallout {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: #FEF9C3;
+  border-left: 4px solid var(--color-gold);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+}
+
+.calloutIcon {
+  font-size: var(--text-2xl);
+}
+
+.seeItPayItCallout strong {
+  display: block;
+  font-size: var(--text-sm);
+  color: #854D0E;
+  margin-bottom: 2px;
+}
+
+.seeItPayItCallout p {
+  font-size: var(--text-xs);
+  color: #713F12;
+  line-height: var(--leading-relaxed);
+}
+
+.cardVaultBox {
+  background-color: var(--color-gray-50);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cardHeaderSmall {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+  margin-bottom: var(--space-1);
+}
+
+.badgeSecure {
+  font-size: var(--text-xs);
+  padding: 2px var(--space-2);
+  background-color: var(--color-success-light);
+  color: var(--color-green);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-semibold);
+}
+
+/* --- Confirmation Screen --- */
+.confirmationCard {
+  background-color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+}
+
+.confHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+.confIcon {
+  font-size: var(--text-5xl);
+}
+
+.confTitle {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+.confSubtitle {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  max-width: 500px;
+  line-height: var(--leading-relaxed);
+}
+
+.trackerContainer {
+  background-color: var(--color-gray-50);
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-gray-200);
+  margin-bottom: var(--space-8);
+  text-align: left;
+}
+
+.trackerContainer h3 {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.stageTimeline {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 639px) {
+  .stageTimeline {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+.stageStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-1);
+  opacity: 0.4;
+}
+
+.stageActive {
+  opacity: 1;
+}
+
+.stageDot {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-white);
+  border: 2px solid var(--color-gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+}
+
+.stageActive .stageDot {
+  border-color: var(--color-gold);
+  background-color: var(--color-cream);
+  box-shadow: 0 0 0 3px rgba(201, 161, 74, 0.3);
+}
+
+.stageName {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+}
+
+.trackerNote {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  text-align: center;
+  line-height: var(--leading-relaxed);
+}
+
+.confActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
