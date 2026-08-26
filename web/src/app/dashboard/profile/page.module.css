@@ -1,0 +1,207 @@
+.page {
+  background-color: var(--color-gray-50);
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-8) var(--space-4) var(--space-16);
+}
+
+.container {
+  max-width: var(--container-lg);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.topNav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.backLink {
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+  font-weight: var(--font-semibold);
+}
+
+.backLink:hover {
+  color: var(--color-gold-dark);
+}
+
+/* --- Header Profile Banner --- */
+.profileBanner {
+  background: linear-gradient(135deg, var(--color-navy) 0%, #1e3a8a 100%);
+  color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-6);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+  .profileBanner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-6);
+  }
+}
+
+.bannerUser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.avatarCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: var(--color-navy);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-white);
+  margin-bottom: 2px;
+}
+
+.userEmail {
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.userBadges {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* --- Settings Grid --- */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.cardTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoLabel {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.infoValue {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+}
+
+.addressSummaryItem {
+  background-color: var(--color-gray-50);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.addressSummaryText {
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+  font-weight: var(--font-medium);
+}
+
+.addressNotesPreview {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  margin-top: 2px;
+}
+
+.prefPillGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.prefPill {
+  background-color: var(--color-cream);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-navy);
+}
+
+.prefPill strong {
+  display: block;
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  color: var(--color-gold-dark);
+}
+
+.logoutSection {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

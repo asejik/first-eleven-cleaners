@@ -1,0 +1,436 @@
+.page {
+  background-color: var(--color-white);
+  min-height: 100vh;
+}
+
+.headerSection {
+  background: linear-gradient(160deg, var(--color-navy) 0%, var(--color-navy-dark) 100%);
+  color: var(--color-white);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.container {
+  max-width: var(--container-xl);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  background-color: rgba(201, 161, 74, 0.15);
+  border: 1px solid rgba(201, 161, 74, 0.3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--color-gold);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.pageTitle {
+  font-size: var(--text-4xl);
+  font-weight: var(--font-black);
+  color: var(--color-white);
+  margin-bottom: var(--space-3);
+}
+
+.pageSubtitle {
+  font-size: var(--text-base);
+  color: var(--color-gray-300);
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: var(--leading-relaxed);
+}
+
+.mainContent {
+  padding-top: var(--space-10);
+  padding-bottom: var(--space-16);
+}
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .layoutGrid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+}
+
+.pricingTables {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.priceCard {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.cardIcon {
+  font-size: var(--text-2xl);
+  display: inline-block;
+  margin-bottom: var(--space-1);
+}
+
+.cardTitle {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.priceTag {
+  text-align: right;
+}
+
+.priceNumber {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-gold-dark);
+}
+
+.priceUnit {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+}
+
+.perItemBadge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  padding: 4px var(--space-2);
+  background-color: var(--color-cream);
+  color: var(--color-navy);
+  border-radius: var(--radius-sm);
+}
+
+.cardDescription {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-4);
+}
+
+.minimumNotice {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background-color: #FEF3C7;
+  border-left: 4px solid var(--color-gold);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: #92400E;
+  margin-bottom: var(--space-4);
+  line-height: var(--leading-normal);
+}
+
+.noticeIcon {
+  font-size: var(--text-base);
+}
+
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+}
+
+.menuGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-top: 1px solid var(--color-gray-100);
+  padding-top: var(--space-3);
+}
+
+.menuRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.itemName {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-navy);
+}
+
+.itemPrice {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  font-weight: var(--font-semibold);
+}
+
+.quantityControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qtyBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-gray-300);
+  background-color: var(--color-white);
+  color: var(--color-navy);
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.qtyBtn:hover:not(:disabled) {
+  border-color: var(--color-gold);
+  color: var(--color-gold-dark);
+  background-color: var(--color-cream);
+}
+
+.qtyBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.qtyValue {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  min-width: 16px;
+  text-align: center;
+}
+
+.expressCard {
+  background-color: var(--color-cream);
+  border-radius: var(--radius-2xl);
+}
+
+.statusBadge {
+  font-size: var(--text-xs);
+  padding: 4px var(--space-2);
+  background-color: rgba(30, 91, 58, 0.1);
+  color: var(--color-green);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-semibold);
+}
+
+.expressGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.expressBox {
+  padding: var(--space-3);
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-cream-dark);
+  text-align: center;
+}
+
+.expressBox strong {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+}
+
+.expressBox p {
+  color: var(--color-gold-dark);
+  font-weight: var(--font-bold);
+  font-size: var(--text-sm);
+  margin: 2px 0;
+}
+
+.expressBox span {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}
+
+/* === Calculator Column (Sticky) === */
+.calculatorColumn {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+.calculatorCard {
+  background-color: var(--color-white);
+  border: 2px solid var(--color-gold);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.calcTitle {
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+  margin-bottom: 2px;
+}
+
+.calcSubtitle {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  margin-bottom: var(--space-4);
+}
+
+.calcBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.calcSection {
+  border-top: 1px solid var(--color-gray-100);
+  padding-top: var(--space-3);
+}
+
+.calcRowHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+  margin-bottom: var(--space-2);
+}
+
+.weightValue {
+  color: var(--color-gold-dark);
+  font-size: var(--text-base);
+}
+
+.rangeSlider {
+  width: 100%;
+  accent-color: var(--color-gold);
+}
+
+.floorNotice {
+  font-size: var(--text-xs);
+  color: #92400E;
+  margin-top: var(--space-1);
+}
+
+.selectedItemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-xs);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.selectedItem {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-gray-700);
+}
+
+.emptyNote {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+  font-style: italic;
+}
+
+.calcLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.expressOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.expressOptionBtn {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  background-color: var(--color-white);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.expressOptionBtn:hover {
+  background-color: var(--color-cream);
+}
+
+.activeOption {
+  border-color: var(--color-gold);
+  background-color: var(--color-cream);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+}
+
+.breakdown {
+  border-top: 2px dashed var(--color-gray-200);
+  padding-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+}
+
+.freeBadge {
+  color: var(--color-green);
+  font-weight: var(--font-bold);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--color-gray-200);
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  font-size: var(--text-base);
+}
+
+.totalAmount {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+.promiseCallout {
+  font-size: var(--text-xs);
+  text-align: center;
+  color: var(--color-gray-500);
+  line-height: var(--leading-normal);
+  margin-top: var(--space-2);
+}

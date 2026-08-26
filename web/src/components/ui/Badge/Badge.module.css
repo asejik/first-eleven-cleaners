@@ -1,0 +1,84 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* --- Sizes --- */
+.sm {
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.md {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* --- Variants --- */
+.default {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+.success {
+  background-color: var(--color-success-light);
+  color: #15803D;
+}
+
+.warning {
+  background-color: var(--color-warning-light);
+  color: #A16207;
+}
+
+.error {
+  background-color: var(--color-error-light);
+  color: #B91C1C;
+}
+
+.info {
+  background-color: var(--color-info-light);
+  color: #1D4ED8;
+}
+
+/* Order Status Variants */
+.booked {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.picked_up {
+  background-color: #EDE9FE;
+  color: #6D28D9;
+}
+
+.weighed {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.cleaning {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.out_for_delivery {
+  background-color: #FFEDD5;
+  color: #9A3412;
+}
+
+.delivered {
+  background-color: var(--color-success-light);
+  color: #15803D;
+}
+
+/* --- Dot Indicator --- */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: currentColor;
+}
