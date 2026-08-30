@@ -189,8 +189,113 @@
   white-space: pre-wrap;
 }
 
-.msgText strong {
+.markdownBody {
+  line-height: 1.55;
+  font-size: var(--text-xs);
+}
+
+.markdownBody h1,
+.markdownBody h2,
+.markdownBody h3,
+.markdownBody h4 {
   color: var(--color-gold);
+  margin: 8px 0 4px;
+  font-weight: var(--font-black);
+}
+
+.markdownBody h1 {
+  font-size: var(--text-sm);
+}
+
+.markdownBody h2 {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.markdownBody h3 {
+  font-size: var(--text-xs);
+}
+
+.markdownBody p {
+  margin: 4px 0 8px;
+}
+
+.markdownBody p:last-child {
+  margin-bottom: 0;
+}
+
+.markdownBody hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin: 8px 0;
+}
+
+.markdownBody ul,
+.markdownBody ol {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+
+.markdownBody li {
+  margin-bottom: 3px;
+}
+
+.markdownBody strong {
+  color: #ffffff;
+  font-weight: var(--font-black);
+}
+
+.markdownBody blockquote {
+  border-left: 3px solid var(--color-gold);
+  background: rgba(201, 161, 74, 0.12);
+  padding: 6px 10px;
+  margin: 6px 0;
+  border-radius: 0 6px 6px 0;
+  font-style: normal;
+}
+
+.markdownBody blockquote p {
+  margin: 0;
+}
+
+/* Markdown Tables */
+.markdownBody table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 11px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.markdownBody th {
+  background: rgba(201, 161, 74, 0.2);
+  color: var(--color-gold);
+  font-weight: var(--font-bold);
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.markdownBody td {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+}
+
+.markdownBody tr:last-child td {
+  border-bottom: none;
+}
+
+.markdownBody code {
+  background: rgba(0, 0, 0, 0.3);
+  color: #38bdf8;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 11px;
 }
 
 .actionCard {
