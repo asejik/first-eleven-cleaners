@@ -17,6 +17,27 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
 import styles from './page.module.css';
 
+// Helper to format local date to YYYY-MM-DD (avoiding UTC timezone shift)
+function formatLocalDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper to format display date (e.g. Wednesday, Sep 2, 2026)
+function formatDisplayDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 // Helper to calculate earliest allowable pickup date based on turnaround tier
 function getMinPickupDate(tier: 'standard' | 'express_8hr' | 'express_4hr' = 'standard') {
   const d = new Date();
@@ -25,8 +46,24 @@ function getMinPickupDate(tier: 'standard' | 'express_8hr' | 'express_4hr' = 'st
   } else {
     d.setDate(d.getDate() + 1); // Express available starting next-day
   }
-  if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Skip Sunday
-  return d.toISOString().split('T')[0];
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Skip Sunday (plant closed)
+  return formatLocalDate(d);
+}
+
+// Helper to calculate estimated delivery date based on pickup date and tier
+function getEstimatedDeliveryDate(pickupDateStr: string, tier: 'standard' | 'express_8hr' | 'express_4hr' = 'standard') {
+  if (!pickupDateStr) return '';
+  const [y, m, d] = pickupDateStr.split('-').map(Number);
+  const delivery = new Date(y, m - 1, d);
+  if (tier === 'standard') {
+    delivery.setDate(delivery.getDate() + 2); // 48 hours standard turnaround
+  } else {
+    delivery.setDate(delivery.getDate() + 1); // Rush express
+  }
+  if (delivery.getDay() === 0) {
+    delivery.setDate(delivery.getDate() + 1); // Skip Sunday delivery to Monday
+  }
+  return formatDisplayDate(formatLocalDate(delivery));
 }
 
 export default function BookingPage() {
@@ -460,15 +497,64 @@ export default function BookingPage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   const minVal = getMinPickupDate(expressTier);
-                  setPickupDate(val < minVal ? minVal : val);
+                  if (!val) return;
+                  if (val < minVal) {
+                    setPickupDate(minVal);
+                    addToast({
+                      type: 'warning',
+                      title: '48-Hour Turnaround Rule',
+                      message: `${expressTier === 'standard' ? '48-Hour Standard' : 'Express'} service requires advance booking. Earliest available pickup is ${formatDisplayDate(minVal)}.`,
+                    });
+                    return;
+                  }
+                  const [y, m, d] = val.split('-').map(Number);
+                  const selectedDay = new Date(y, m - 1, d).getDay();
+                  if (selectedDay === 0) {
+                    const monday = new Date(y, m - 1, d + 1);
+                    const mondayStr = formatLocalDate(monday);
+                    setPickupDate(mondayStr);
+                    addToast({
+                      type: 'warning',
+                      title: 'Plant Closed Sundays',
+                      message: 'We operate Monday through Saturday. Your pickup date has been moved to Monday.',
+                    });
+                    return;
+                  }
+                  setPickupDate(val);
                 }}
                 helperText={
                   expressTier === 'standard'
-                    ? '📅 48-Hr Standard turnaround requires at least 48 hours notice from today.'
-                    : '⚡ Express Turnaround: Rush slots unlocked for earlier pickup.'
+                    ? `📅 48-Hr Standard turnaround: Earliest pickup is ${formatDisplayDate(getMinPickupDate('standard'))}.`
+                    : `⚡ Express Turnaround: Rush pickup unlocked for ${formatDisplayDate(getMinPickupDate(expressTier))}.`
                 }
                 required
               />
+
+              {/* Real-time Turnaround & Delivery Timeline Card */}
+              {pickupDate && (
+                <div style={{
+                  background: 'rgba(201, 161, 74, 0.08)',
+                  border: '1px solid rgba(201, 161, 74, 0.3)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginBottom: 'var(--space-4)',
+                }}>
+                  <div>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-gold-dark)', fontWeight: 'bold', display: 'block' }}>
+                      ✨ Match-Ready Guarantee Timeline
+                    </span>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-navy)', display: 'block', marginTop: '2px' }}>
+                      Pickup: {formatDisplayDate(pickupDate)} → Delivery: {getEstimatedDeliveryDate(pickupDate, expressTier)}
+                    </strong>
+                  </div>
+                  <Badge variant="success">🛡️ 48-Hr Match-Ready</Badge>
+                </div>
+              )}
 
               {slotData?.is_available === false && (
                 <div className={styles.blackoutAlert}>
@@ -574,12 +660,15 @@ export default function BookingPage() {
             <div className={styles.reviewSummary}>
               {/* Pickup info */}
               <div className={styles.summarySection}>
-                <h4>📍 Pickup & Delivery</h4>
+                <h4>📍 Pickup & Delivery Schedule</h4>
                 <p>
                   <strong>Address:</strong> {street} {unit && `(${unit})`}, {city}, TX {zip}
                 </p>
                 <p>
-                  <strong>Pickup:</strong> {pickupDate} ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'})
+                  <strong>Pickup Date:</strong> {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'})
+                </p>
+                <p>
+                  <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier)} ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'})
                 </p>
                 <p>
                   <strong>Contact:</strong> {fullName} ({phone})
