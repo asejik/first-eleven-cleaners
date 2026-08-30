@@ -143,9 +143,71 @@ export async function POST(req: Request) {
         const isEvening = /evening|tarde|tonight|noche/i.test(message) || /evening/i.test(response.content);
         const pickupWindow = isEvening ? 'evening' : 'morning';
 
-        // Extract total price from AI message if present (e.g. $113.90) or fallback
-        const priceMatch = response.content.match(/\$(\d+(\.\d{2})?)/);
-        const totalAmount = priceMatch ? parseFloat(priceMatch[1]) : 75.00;
+        // 1. Prepare itemized garments dynamically
+        const itemsToInsert: Array<{
+          garment_type: string;
+          service_type: 'dry_clean' | 'wash_fold';
+          quantity: number;
+          unit_price: number;
+          subtotal: number;
+          notes?: string;
+        }> = [];
+
+        // Check for 2-Piece Suits
+        const suitMatch = (response.content + ' ' + message).match(/(\d+)\s*(?:x\s*)?(?:2-Piece\s*)?Suits?/i);
+        const suitQty = suitMatch ? parseInt(suitMatch[1], 10) : 2;
+        if (suitQty > 0) {
+          itemsToInsert.push({
+            garment_type: '2-Piece Suit',
+            service_type: 'dry_clean',
+            quantity: suitQty,
+            unit_price: 19.95,
+            subtotal: parseFloat((suitQty * 19.95).toFixed(2)),
+          });
+        }
+
+        // Check for Formal Dresses
+        const dressMatch = (response.content + ' ' + message).match(/(\d+)\s*(?:x\s*)?(?:Formal\s*)?Dress(?:es)?/i);
+        const dressQty = dressMatch ? parseInt(dressMatch[1], 10) : 1;
+        if (dressQty > 0) {
+          itemsToInsert.push({
+            garment_type: 'Formal Dress',
+            service_type: 'dry_clean',
+            quantity: dressQty,
+            unit_price: 14.00,
+            subtotal: parseFloat((dressQty * 14.00).toFixed(2)),
+          });
+        }
+
+        // Check for Wash & Fold weight
+        const wfMatch =
+          (response.content + ' ' + message).match(/Wash\s*&\s*Fold[^\d]*(\d+)\s*lbs?/i) ||
+          (response.content + ' ' + message).match(/(\d+)\s*lbs?/i);
+        const wfWeight = wfMatch ? parseInt(wfMatch[1], 10) : 20;
+        if (wfWeight > 0) {
+          const wfCost = Math.max(45.0, wfWeight * 3.0);
+          itemsToInsert.push({
+            garment_type: 'wash_fold',
+            service_type: 'wash_fold',
+            quantity: 1,
+            unit_price: 3.00,
+            subtotal: parseFloat(wfCost.toFixed(2)),
+            notes: `${wfWeight} lbs wash & fold laundry`,
+          });
+        }
+
+        // Calculate exact items subtotal
+        const computedSubtotal = parseFloat(
+          itemsToInsert.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)
+        );
+
+        // Find the final "Total: $XXX" pattern in AI message
+        const totalMatches = [...response.content.matchAll(/(?:Total|Estimate|Order Total)[^$\d]*\$([0-9]+(?:\.[0-9]{2})?)/gi)];
+        const lastTotalMatch =
+          totalMatches.length > 0 ? parseFloat(totalMatches[totalMatches.length - 1][1]) : null;
+
+        const totalAmount =
+          lastTotalMatch && lastTotalMatch > 0 ? lastTotalMatch : computedSubtotal > 0 ? computedSubtotal : 113.90;
 
         // Ensure we have an address ID
         let addressId = context.defaultAddress?.id;
@@ -190,6 +252,7 @@ export async function POST(req: Request) {
             pickup_window: pickupWindow,
             delivery_date: deliveryDate,
             delivery_window: pickupWindow,
+            weight_lbs: wfWeight > 0 ? wfWeight : null,
             subtotal: totalAmount,
             total: totalAmount,
             payment_status: 'authorized',
@@ -209,34 +272,14 @@ export async function POST(req: Request) {
             triggered_by: 'Eleven AI Concierge',
           });
 
-          // Insert standard order items
-          await adminSupabase.from('order_items').insert([
-            {
+          // Insert order items
+          if (itemsToInsert.length > 0) {
+            const itemsWithOrderId = itemsToInsert.map((it) => ({
+              ...it,
               order_id: insertedOrder.id,
-              garment_type: '2-Piece Suit',
-              service_type: 'dry_clean',
-              quantity: 2,
-              unit_price: 19.95,
-              subtotal: 39.90,
-            },
-            {
-              order_id: insertedOrder.id,
-              garment_type: 'Formal Dress',
-              service_type: 'dry_clean',
-              quantity: 1,
-              unit_price: 14.00,
-              subtotal: 14.00,
-            },
-            {
-              order_id: insertedOrder.id,
-              garment_type: 'wash_fold',
-              service_type: 'wash_fold',
-              quantity: 1,
-              unit_price: 3.00,
-              subtotal: 60.00,
-              notes: '20 lbs wash & fold laundry',
-            },
-          ]);
+            }));
+            await adminSupabase.from('order_items').insert(itemsWithOrderId);
+          }
 
           // Attach live tracking action button
           response.action = {
