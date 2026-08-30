@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
-export default function PublicTrackingPage({
-  params,
-}: {
-  params: Promise<{ orderId: string }>;
-}) {
-  const { orderId } = use(params);
+export default function PublicTrackingPage() {
+  const routeParams = useParams();
+  const orderId = (routeParams?.orderId as string) || '';
   const { data, isLoading } = useOrderDetail(orderId);
   const [zoomPhoto, setZoomPhoto] = useState<{ url: string; title: string; notes?: string | null } | null>(null);
 
