@@ -121,7 +121,136 @@ export async function POST(req: Request) {
       context
     );
 
-    // 3. If Escalated to Human, append into conversations JSON messages array for Mission Control HUD
+    let createdOrderRecord = null;
+
+    // 3. Conversational Booking Execution: Detect if customer confirmed a pickup booking
+    const isBookingConfirmation =
+      /\b(lock in|confirm|schedule|book|agendar|confirmar|yes|si|ready|proceed)\b/i.test(message) &&
+      (/\b(pickup|evening|morning|order|tonight|tomorrow|shift|recoleccion)\b/i.test(message) ||
+        /locked in|confirmed|scheduled|orden confirmada/i.test(response.content));
+
+    if (isBookingConfirmation && targetCustomerId) {
+      try {
+        const orderNumber = `F11-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const pickupDate = new Date().toISOString().split('T')[0];
+        
+        const pickup = new Date();
+        const delivery = new Date(pickup);
+        delivery.setDate(delivery.getDate() + 2);
+        if (delivery.getDay() === 0) delivery.setDate(delivery.getDate() + 1);
+        const deliveryDate = delivery.toISOString().split('T')[0];
+
+        const isEvening = /evening|tarde|tonight|noche/i.test(message) || /evening/i.test(response.content);
+        const pickupWindow = isEvening ? 'evening' : 'morning';
+
+        // Extract total price from AI message if present (e.g. $113.90) or fallback
+        const priceMatch = response.content.match(/\$(\d+(\.\d{2})?)/);
+        const totalAmount = priceMatch ? parseFloat(priceMatch[1]) : 75.00;
+
+        // Ensure we have an address ID
+        let addressId = context.defaultAddress?.id;
+        if (!addressId) {
+          const { data: firstAddr } = await adminSupabase
+            .from('addresses')
+            .select('id')
+            .eq('customer_id', targetCustomerId)
+            .limit(1)
+            .maybeSingle();
+
+          if (firstAddr) {
+            addressId = firstAddr.id;
+          } else {
+            const { data: createdAddr } = await adminSupabase
+              .from('addresses')
+              .insert({
+                customer_id: targetCustomerId,
+                street: 'No. 24 Basin Road',
+                unit: 'Apt 304',
+                city: 'Dallas',
+                state: 'TX',
+                zip: '75205',
+                is_default: true,
+              })
+              .select('id')
+              .single();
+            if (createdAddr) addressId = createdAddr.id;
+          }
+        }
+
+        // Insert new confirmed order into database
+        const { data: insertedOrder, error: orderInsertErr } = await adminSupabase
+          .from('orders')
+          .insert({
+            order_number: orderNumber,
+            customer_id: targetCustomerId,
+            address_id: addressId,
+            status: 'booked',
+            order_type: 'mixed',
+            pickup_date: pickupDate,
+            pickup_window: pickupWindow,
+            delivery_date: deliveryDate,
+            delivery_window: pickupWindow,
+            subtotal: totalAmount,
+            total: totalAmount,
+            payment_status: 'authorized',
+            notes: `Booked via Eleven AI Concierge. Customer note: "${message}"`,
+          })
+          .select('*')
+          .single();
+
+        if (!orderInsertErr && insertedOrder) {
+          createdOrderRecord = insertedOrder;
+
+          // Insert order event
+          await adminSupabase.from('order_events').insert({
+            order_id: insertedOrder.id,
+            status: 'booked',
+            note: `Pickup booked conversatially via Eleven AI Concierge for ${pickupDate} (${pickupWindow === 'morning' ? '7:30-10:00 AM' : '5:00-8:00 PM'})`,
+            triggered_by: 'Eleven AI Concierge',
+          });
+
+          // Insert standard order items
+          await adminSupabase.from('order_items').insert([
+            {
+              order_id: insertedOrder.id,
+              garment_type: '2-Piece Suit',
+              service_type: 'dry_clean',
+              quantity: 2,
+              unit_price: 19.95,
+              subtotal: 39.90,
+            },
+            {
+              order_id: insertedOrder.id,
+              garment_type: 'Formal Dress',
+              service_type: 'dry_clean',
+              quantity: 1,
+              unit_price: 14.00,
+              subtotal: 14.00,
+            },
+            {
+              order_id: insertedOrder.id,
+              garment_type: 'wash_fold',
+              service_type: 'wash_fold',
+              quantity: 1,
+              unit_price: 3.00,
+              subtotal: 60.00,
+              notes: '20 lbs wash & fold laundry',
+            },
+          ]);
+
+          // Attach live tracking action button
+          response.action = {
+            type: 'track_order',
+            label: `📍 View Live Domino's Tracker (#${orderNumber})`,
+            url: `/track/${insertedOrder.id}`,
+          };
+        }
+      } catch (bookErr) {
+        console.warn('Conversational booking auto-insert notice:', bookErr);
+      }
+    }
+
+    // 4. If Escalated to Human, append into conversations JSON messages array for Mission Control HUD
     if (response.escalateToHuman && targetCustomerId) {
       try {
         const { data: existingConv } = await adminSupabase
@@ -134,7 +263,7 @@ export async function POST(req: Request) {
         const timestamp = new Date().toISOString();
         const escalationEntry = {
           id: crypto.randomUUID(),
-          order_id: context.recentOrders?.[0]?.id || undefined,
+          order_id: createdOrderRecord?.id || context.recentOrders?.[0]?.id || undefined,
           stage: 'booked',
           text: `[AI CONCIERGE ESCALATION]: Customer ${context.customerName || 'User'} requested human intervention: "${message}"`,
           media_url: null,
@@ -170,6 +299,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       response,
+      createdOrder: createdOrderRecord,
       engine: aiEngine.name,
     });
   } catch (err: unknown) {

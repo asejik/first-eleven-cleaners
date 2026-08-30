@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AIConversationMessage, AIResponse } from '@/lib/ai/types';
 
 export function useConcierge() {
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<AIConversationMessage[]>([
     {
       role: 'assistant',
@@ -29,7 +30,12 @@ export function useConcierge() {
         throw new Error(errorData.error || 'Failed to communicate with Eleven AI Concierge.');
       }
 
-      return res.json() as Promise<{ success: boolean; response: AIResponse; engine: string }>;
+      return res.json() as Promise<{
+        success: boolean;
+        response: AIResponse;
+        createdOrder?: unknown;
+        engine: string;
+      }>;
     },
   });
 
@@ -53,6 +59,12 @@ export function useConcierge() {
           customerId,
         });
 
+        if (result.createdOrder || result.response?.action?.type === 'track_order') {
+          queryClient.invalidateQueries({ queryKey: ['orders'] });
+          queryClient.invalidateQueries({ queryKey: ['activeOrders'] });
+          queryClient.invalidateQueries({ queryKey: ['order'] });
+        }
+
         const assistantMsg: AIConversationMessage = {
           role: 'assistant',
           content: result.response.content,
@@ -70,7 +82,7 @@ export function useConcierge() {
         setMessages((prev) => [...prev, errorMsg]);
       }
     },
-    [messages, mutation]
+    [messages, mutation, queryClient]
   );
 
   const resetChat = useCallback(() => {
