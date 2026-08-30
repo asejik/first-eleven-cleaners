@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
@@ -9,12 +9,9 @@ import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTime
 import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
-export default function OrderDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function OrderDetailPage() {
+  const routeParams = useParams();
+  const id = (routeParams?.id as string) || '';
   const { data, isLoading, error } = useOrderDetail(id);
   const { data: claimsData } = useOrderClaims(id);
 

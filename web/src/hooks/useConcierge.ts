@@ -1,17 +1,48 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AIConversationMessage, AIResponse } from '@/lib/ai/types';
 
+const STORAGE_KEY = 'f11_eleven_chat_history_v1';
+
+const INITIAL_GREETING: AIConversationMessage = {
+  role: 'assistant',
+  content:
+    'Hello! I am **Eleven**, your Match-Ready AI Concierge. I have access to your saved preferences, active orders, and DFW route schedules. How can I assist your wardrobe today?',
+  timestamp: new Date().toISOString(),
+};
+
 export function useConcierge() {
   const queryClient = useQueryClient();
-  const [messages, setMessages] = useState<AIConversationMessage[]>([
-    {
-      role: 'assistant',
-      content:
-        'Hello! I am **Eleven**, your Match-Ready AI Concierge. I have access to your saved preferences, active orders, and DFW route schedules. How can I assist your wardrobe today?',
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  const [messages, setMessages] = useState<AIConversationMessage[]>([INITIAL_GREETING]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Restore chat history from localStorage on browser mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not restore chat history:', e);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  // Save to localStorage whenever messages change (after initial hydration)
+  useEffect(() => {
+    if (isHydrated && messages.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (e) {
+        console.warn('Could not save chat history:', e);
+      }
+    }
+  }, [messages, isHydrated]);
 
   const mutation = useMutation({
     mutationFn: async (payload: { message: string; history: AIConversationMessage[]; customerId?: string }) => {
@@ -86,14 +117,13 @@ export function useConcierge() {
   );
 
   const resetChat = useCallback(() => {
-    setMessages([
-      {
-        role: 'assistant',
-        content:
-          'Hello! I am **Eleven**, your Match-Ready AI Concierge. How can I assist with your garments today?',
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    const fresh = [INITIAL_GREETING];
+    setMessages(fresh);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+    } catch {
+      // ignore
+    }
   }, []);
 
   return {

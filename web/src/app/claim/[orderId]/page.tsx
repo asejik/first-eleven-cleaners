@@ -1,6 +1,7 @@
 'use client';
 
-import { use, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims, useSubmitClaim } from '@/hooks/useClaims';
@@ -9,12 +10,9 @@ import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
-export default function ClaimPage({
-  params,
-}: {
-  params: Promise<{ orderId: string }>;
-}) {
-  const { orderId } = use(params);
+export default function ClaimPage() {
+  const routeParams = useParams();
+  const orderId = (routeParams?.orderId as string) || '';
   const { data: orderData, isLoading: isOrderLoading } = useOrderDetail(orderId);
   const { data: claimsData, isLoading: isClaimsLoading } = useOrderClaims(orderId);
   const submitClaim = useSubmitClaim();
