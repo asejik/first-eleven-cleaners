@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, type FormEvent } from 'react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useConcierge } from '@/hooks/useConcierge';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './ConciergeWidget.module.css';
@@ -107,7 +109,15 @@ export function ConciergeWidget() {
                   key={idx}
                   className={`${styles.messageBubble} ${isUser ? styles.userMsg : styles.assistantMsg}`}
                 >
-                  <div className={styles.msgText}>{msg.content}</div>
+                  {isUser ? (
+                    <div className={styles.msgText}>{msg.content}</div>
+                  ) : (
+                    <div className={styles.markdownBody}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
 
                   {msg.action && (
                     <div className={styles.actionCard}>
