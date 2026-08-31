@@ -784,8 +784,11 @@ export default function BookingPage() {
               <div>
                 <strong>&quot;See It, Then Pay It&quot; Promise:</strong>
                 <p>
-                  For Wash & Fold, your card is held securely on file. Our intake team weighs and photographs your clothes,
-                  and sends your digital photo receipt before the charge lands. Zero surprise fees.
+                  {serviceType === 'mixed'
+                    ? 'For Mixed Orders (Wash & Fold + Dry Cleaning), your card is vaulted securely. Our intake team counts your dry clean pieces and weighs your laundry on calibrated scales. You receive full photo verification before the single consolidated charge lands.'
+                    : serviceType === 'wash_fold'
+                    ? 'For Wash & Fold, your card is held securely on file. Our intake team weighs and photographs your clothes, and sends your digital photo receipt before the charge lands. Zero surprise fees.'
+                    : 'Your card is vaulted securely with Square. Garments are inspected and photographed at intake under our Carvana-Standard Garment Passport™ before final processing.'}
                 </p>
               </div>
             </div>
