@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { Button } from '@/components/ui';
@@ -42,11 +43,14 @@ export function Header() {
       <div className={styles.container}>
         {/* Logo */}
         <Link href={ROUTES.home} className={styles.logo} aria-label="First Eleven Cleaners — Home">
-          <span className={styles.logoIcon}>⚽</span>
-          <span className={styles.logoText}>
-            <span className={styles.logoFirst}>FIRST ELEVEN</span>
-            <span className={styles.logoCleaner}>CLEANERS</span>
-          </span>
+          <Image
+            src="/logo.png"
+            alt="First Eleven Cleaners"
+            width={180}
+            height={44}
+            priority
+            className={styles.logoImg}
+          />
         </Link>
 
         {/* Desktop Navigation */}

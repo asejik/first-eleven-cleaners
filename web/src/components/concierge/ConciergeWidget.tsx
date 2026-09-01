@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, type FormEvent } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useConcierge } from '@/hooks/useConcierge';
@@ -23,20 +24,16 @@ export function ConciergeWidget() {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
     if (isOpen) {
-      scrollToBottom();
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
-    sendMessage(inputText, user?.id);
+    if (!inputText.trim() || isLoading) return;
+    sendMessage(inputText.trim(), user?.id);
     setInputText('');
   };
 
@@ -55,7 +52,13 @@ export function ConciergeWidget() {
           aria-label="Open Eleven AI Concierge"
         >
           <div className={styles.avatarBadge}>
-            <span>✨</span>
+            <Image
+              src="/icon.png"
+              alt="Eleven AI"
+              width={34}
+              height={34}
+              style={{ borderRadius: '50%', objectFit: 'cover' }}
+            />
             <span className={styles.onlinePulse} />
           </div>
           <div className={styles.triggerText}>
@@ -71,7 +74,13 @@ export function ConciergeWidget() {
           {/* Header */}
           <div className={styles.drawerHeader}>
             <div className={styles.headerBrand}>
-              <span style={{ fontSize: 'var(--text-xl)' }}>✨</span>
+              <Image
+                src="/icon.png"
+                alt="Eleven AI"
+                width={36}
+                height={36}
+                style={{ borderRadius: '50%', border: '1px solid var(--color-gold)' }}
+              />
               <div>
                 <h2 className={styles.headerTitle}>Eleven Concierge</h2>
                 <p className={styles.headerSub}>

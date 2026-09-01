@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useDriverManifest, useDriverAction } from '@/hooks/useDriver';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
@@ -96,7 +97,13 @@ export default function DriverPage() {
         {/* Driver Top Header */}
         <div className={styles.driverHeader}>
           <div className={styles.brandCol}>
-            <span className={styles.vanIcon}>🚐</span>
+            <Image
+              src="/icon.png"
+              alt="First Eleven"
+              width={42}
+              height={42}
+              style={{ borderRadius: '8px', objectFit: 'cover' }}
+            />
             <div>
               <h1 className={styles.driverTitle}>First Eleven Driver</h1>
               <p className={styles.driverSub}>DFW Mobile Route Manifest</p>
