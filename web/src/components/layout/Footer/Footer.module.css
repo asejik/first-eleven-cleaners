@@ -36,14 +36,21 @@
   gap: var(--space-3);
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.logoLink {
+  display: inline-block;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
 }
 
-.logoIcon {
-  font-size: var(--text-2xl);
+.logoLink:hover {
+  opacity: 0.9;
+}
+
+.footerLogoImg {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .logoText {

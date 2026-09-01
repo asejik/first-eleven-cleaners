@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './not-found.module.css';
@@ -7,7 +8,13 @@ export default function NotFound() {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <span className={styles.icon}>⚽</span>
+        <Image
+          src="/icon.png"
+          alt="First Eleven Cleaners"
+          width={64}
+          height={64}
+          style={{ borderRadius: '16px', margin: '0 auto var(--space-4)', display: 'block' }}
+        />
         <h1 className={styles.code}>404</h1>
         <h2 className={styles.title}>Out of Bounds</h2>
         <p className={styles.description}>

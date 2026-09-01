@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
@@ -25,8 +26,17 @@ export default function PublicTrackingPage() {
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <span className={styles.logoBadge}>⚽ FIRST ELEVEN CLEANERS</span>
-          <h1 className={styles.title}>Live Order Tracker</h1>
+          <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
+            <Image
+              src="/logo.png"
+              alt="First Eleven Cleaners"
+              width={220}
+              height={55}
+              priority
+              style={{ height: '48px', width: 'auto', margin: '0 auto' }}
+            />
+          </Link>
+          <h1 className={styles.title}>Live Garment Tracker</h1>
           <p className={styles.orderNumber}>Tracking Order #{order?.order_number || orderId}</p>
         </div>
 

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ROUTES, APP_NAME } from '@/lib/constants';
 import styles from './Footer.module.css';
 
@@ -12,13 +13,15 @@ export function Footer() {
         <div className={styles.top}>
           {/* Brand */}
           <div className={styles.brand}>
-            <div className={styles.logo}>
-              <span className={styles.logoIcon}>⚽</span>
-              <span className={styles.logoText}>
-                <span className={styles.logoFirst}>FIRST ELEVEN</span>
-                <span className={styles.logoCleaner}>CLEANERS</span>
-              </span>
-            </div>
+            <Link href={ROUTES.home} className={styles.logoLink}>
+              <Image
+                src="/logo.png"
+                alt={APP_NAME}
+                width={170}
+                height={42}
+                className={styles.footerLogoImg}
+              />
+            </Link>
             <p className={styles.tagline}>
               Born on the world&apos;s biggest stage.<br />
               Now serving yours.

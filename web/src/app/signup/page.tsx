@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
@@ -55,7 +56,16 @@ export default function SignupPage() {
     <div className={styles.container}>
       <Card variant="bordered" padding="lg" className={styles.authCard}>
         <div className={styles.header}>
-          <span className={styles.logoIcon}>⚽</span>
+          <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
+            <Image
+              src="/logo.png"
+              alt="First Eleven Cleaners"
+              width={200}
+              height={50}
+              priority
+              style={{ height: '44px', width: 'auto', margin: '0 auto' }}
+            />
+          </Link>
           <h1 className={styles.title}>Join the Starting Lineup</h1>
           <p className={styles.subtitle}>
             Create your account and claim {PROMO_DISCOUNT_PERCENT}% off with code <strong>{PROMO_CODE_LAUNCH}</strong>

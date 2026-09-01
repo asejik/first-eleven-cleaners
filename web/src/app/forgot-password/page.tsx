@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input, Card } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
@@ -34,7 +35,16 @@ export default function ForgotPasswordPage() {
     <div className={styles.container}>
       <Card variant="bordered" padding="lg" className={styles.authCard}>
         <div className={styles.header}>
-          <span className={styles.logoIcon}>🔑</span>
+          <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
+            <Image
+              src="/logo.png"
+              alt="First Eleven Cleaners"
+              width={200}
+              height={50}
+              priority
+              style={{ height: '44px', width: 'auto', margin: '0 auto' }}
+            />
+          </Link>
           <h1 className={styles.title}>Reset Password</h1>
           <p className={styles.subtitle}>Enter your email address to receive password reset instructions</p>
         </div>

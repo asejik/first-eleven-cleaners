@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useIntakeQueue, useSubmitIntake } from '@/hooks/useIntake';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
@@ -161,7 +162,13 @@ export default function CentralIntakePage() {
         {/* Header */}
         <div className={styles.headerRow}>
           <div className={styles.brandArea}>
-            <span className={styles.scaleIcon}>⚖️</span>
+            <Image
+              src="/icon.png"
+              alt="First Eleven"
+              width={42}
+              height={42}
+              style={{ borderRadius: '8px', objectFit: 'cover' }}
+            />
             <div>
               <h1 className={styles.title}>Central Intake Station</h1>
               <p className={styles.subtitle}>Digital Weighing, Garment Passport Itemization & Photo Verification</p>

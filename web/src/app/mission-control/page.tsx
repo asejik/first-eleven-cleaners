@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useMissionControl, useAdvanceOrderStage, useResolveClaim } from '@/hooks/useMissionControl';
 import { useNotifications, useDispatchNotification } from '@/hooks/useNotifications';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
@@ -94,7 +95,6 @@ export default function MissionControlPage() {
       await dispatchNotif.mutateAsync({
         order_id: orderId,
         stage: testStage,
-        channel: 'sms',
       });
       addToast({
         type: 'info',
@@ -116,7 +116,13 @@ export default function MissionControlPage() {
         {/* Top Header */}
         <div className={styles.topBar}>
           <div className={styles.brandCol}>
-            <span className={styles.badgeLogo}>⚽</span>
+            <Image
+              src="/icon.png"
+              alt="First Eleven"
+              width={44}
+              height={44}
+              style={{ borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+            />
             <div>
               <h1 className={styles.title}>Mission Control Ops</h1>
               <p className={styles.subtitle}>

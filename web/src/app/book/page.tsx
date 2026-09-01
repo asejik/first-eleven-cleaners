@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   DRY_CLEAN_PRICES,
@@ -840,7 +841,13 @@ export default function BookingPage() {
         {step === 6 && confirmedOrder && (
           <Card variant="bordered" padding="lg" className={styles.confirmationCard}>
             <div className={styles.confHeader}>
-              <span className={styles.confIcon}>⚽</span>
+              <Image
+                src="/icon.png"
+                alt="First Eleven"
+                width={52}
+                height={52}
+                style={{ borderRadius: '12px', margin: '0 auto', display: 'block' }}
+              />
               <Badge variant="success" size="md">
                 Pickup Scheduled
               </Badge>
