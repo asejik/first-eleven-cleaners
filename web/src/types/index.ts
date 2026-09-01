@@ -4,6 +4,9 @@
 
 import type { OrderStatusKey, ServiceTypeKey } from '@/lib/constants';
 
+// --- User Roles ---
+export type UserRole = 'customer' | 'driver' | 'intake_staff' | 'admin';
+
 // --- Customer ---
 export interface Customer {
   id: string;
@@ -11,7 +14,7 @@ export interface Customer {
   email: string;
   phone: string;
   full_name: string;
-  role?: 'customer' | 'staff' | 'admin';
+  role?: UserRole;
   created_at: string;
   updated_at: string;
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useIntakeQueue, useSubmitIntake } from '@/hooks/useIntake';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
 import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, ROUTES } from '@/lib/constants';
 import type { Order } from '@/types';
@@ -157,8 +158,9 @@ export default function CentralIntakePage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
+    <AuthGuard allowedRoles={['admin', 'intake_staff']}>
+      <div className={styles.page}>
+        <div className={styles.container}>
         {/* Header */}
         <div className={styles.headerRow}>
           <div className={styles.brandArea}>
@@ -456,5 +458,6 @@ export default function CentralIntakePage() {
         </Modal>
       </div>
     </div>
+    </AuthGuard>
   );
 }

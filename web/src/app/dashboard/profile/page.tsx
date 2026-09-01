@@ -31,7 +31,7 @@ export default function ProfilePage() {
   const initial = user?.full_name?.charAt(0).toUpperCase() || 'U';
 
   return (
-    <AuthGuard>
+    <AuthGuard allowedRoles={['admin', 'customer']}>
       <div className={styles.page}>
         <div className={styles.container}>
           {/* Top Nav */}

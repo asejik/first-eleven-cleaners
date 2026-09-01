@@ -9,6 +9,7 @@ import {
   usePayCommercialInvoice,
 } from '@/hooks/useCommercial';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
 import type { CommercialInvoice, RecurringSchedule } from '@/lib/commercial/types';
 import styles from './page.module.css';
@@ -155,8 +156,9 @@ export default function CommercialPortalPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
+    <AuthGuard allowedRoles={['admin', 'customer']}>
+      <div className={styles.page}>
+        <div className={styles.container}>
         {/* Executive Account Hero */}
         <div className={styles.heroCard}>
           <div className={styles.heroHeader}>
@@ -589,5 +591,6 @@ export default function CommercialPortalPage() {
         </Modal>
       </div>
     </div>
+    </AuthGuard>
   );
 }

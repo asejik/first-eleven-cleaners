@@ -5,8 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
-import { Button } from '@/components/ui';
+import { Button, Badge } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
+import type { UserRole } from '@/types';
 import styles from './Header.module.css';
 
 export function Header() {
@@ -27,14 +28,42 @@ export function Header() {
   };
 
   const isAuth = mounted && isAuthenticated;
+  const role: UserRole = user?.role || 'customer';
 
-  const navLinks = [
-    { href: ROUTES.home, label: 'Home' },
-    { href: ROUTES.pricing, label: 'Pricing' },
-    { href: ROUTES.book, label: 'Book a Pickup' },
-    { href: ROUTES.commercial, label: 'For Business' },
-    ...(isAuth ? [{ href: ROUTES.dashboard, label: 'Dashboard' }] : []),
-  ];
+  // Role-specific home destination and navigation menus
+  let homeHref: string = ROUTES.home;
+  let navLinks: Array<{ href: string; label: string }> = [];
+
+  if (isAuth && role === 'driver') {
+    homeHref = ROUTES.staffDriver;
+    navLinks = [
+      { href: ROUTES.staffDriver, label: '🚐 Fleet Route Manifest' },
+    ];
+  } else if (isAuth && role === 'intake_staff') {
+    homeHref = ROUTES.intake;
+    navLinks = [
+      { href: ROUTES.intake, label: '⚖️ Central Intake Station' },
+    ];
+  } else if (isAuth && role === 'admin') {
+    homeHref = ROUTES.missionControl;
+    navLinks = [
+      { href: ROUTES.missionControl, label: '⚡ Mission Control' },
+      { href: ROUTES.intake, label: '⚖️ Intake' },
+      { href: ROUTES.staffDriver, label: '🚐 Driver' },
+      { href: ROUTES.portal, label: '🏢 B2B Portal' },
+      { href: ROUTES.dashboard, label: '👤 Customer View' },
+    ];
+  } else {
+    // Customer or Guest
+    homeHref = ROUTES.home;
+    navLinks = [
+      { href: ROUTES.home, label: 'Home' },
+      { href: ROUTES.pricing, label: 'Pricing' },
+      { href: ROUTES.book, label: 'Book a Pickup' },
+      { href: ROUTES.commercial, label: 'For Business' },
+      ...(isAuth ? [{ href: ROUTES.dashboard, label: 'Dashboard' }] : []),
+    ];
+  }
 
   const firstName = user?.full_name?.split(' ')[0] || 'My Account';
 
@@ -42,7 +71,7 @@ export function Header() {
     <header className={styles.header}>
       <div className={styles.container}>
         {/* Logo */}
-        <Link href={ROUTES.home} className={styles.logo} aria-label="First Eleven Cleaners — Home">
+        <Link href={homeHref} className={styles.logo} aria-label="First Eleven Cleaners">
           <Image
             src="/logo.png?v=2"
             alt="First Eleven Cleaners"
@@ -72,16 +101,33 @@ export function Header() {
         <div className={styles.desktopActions}>
           {isAuth ? (
             <div className={styles.userActions}>
-              <Link href={ROUTES.profile}>
-                <Button variant="ghostLight" size="sm">
-                  👤 {firstName}
-                </Button>
-              </Link>
-              <Link href={ROUTES.book}>
-                <Button variant="primary" size="sm">
-                  + Schedule Pickup
-                </Button>
-              </Link>
+              {role === 'driver' ? (
+                <Badge variant="warning" size="md">
+                  🚐 {user?.full_name || 'Driver'}
+                </Badge>
+              ) : role === 'intake_staff' ? (
+                <Badge variant="info" size="md">
+                  ⚖️ {user?.full_name || 'Intake Specialist'}
+                </Badge>
+              ) : role === 'admin' ? (
+                <Badge variant="delivered" size="md">
+                  ⚡ {user?.full_name || 'Plant Director'}
+                </Badge>
+              ) : (
+                <>
+                  <Link href={ROUTES.profile}>
+                    <Button variant="ghostLight" size="sm">
+                      👤 {firstName}
+                    </Button>
+                  </Link>
+                  <Link href={ROUTES.book}>
+                    <Button variant="primary" size="sm">
+                      + Schedule Pickup
+                    </Button>
+                  </Link>
+                </>
+              )}
+
               <button
                 type="button"
                 className={styles.logoutBtn}
@@ -131,7 +177,8 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          {isAuth && (
+
+          {isAuth && role === 'customer' && (
             <>
               <Link
                 href={ROUTES.profile}
@@ -156,12 +203,15 @@ export function Header() {
               </Link>
             </>
           )}
+
           <div className={styles.mobileActions}>
             {isAuth ? (
               <>
-                <Link href={ROUTES.book} onClick={() => setIsMobileOpen(false)}>
-                  <Button variant="primary" fullWidth>Schedule Pickup</Button>
-                </Link>
+                {role === 'customer' && (
+                  <Link href={ROUTES.book} onClick={() => setIsMobileOpen(false)}>
+                    <Button variant="primary" fullWidth>Schedule Pickup</Button>
+                  </Link>
+                )}
                 <Button variant="outlineLight" fullWidth onClick={handleLogout}>
                   Log Out ({firstName})
                 </Button>
