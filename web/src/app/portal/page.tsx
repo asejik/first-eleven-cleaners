@@ -23,6 +23,9 @@ export default function CommercialPortalPage() {
 
   // Statement Modal State
   const [selectedInvoice, setSelectedInvoice] = useState<CommercialInvoice | null>(null);
+  const [statementEmail, setStatementEmail] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
 
   // Edit Schedule Modal State
   const [isEditScheduleOpen, setIsEditScheduleOpen] = useState(false);
@@ -98,6 +101,56 @@ export default function CommercialPortalPage() {
         title: 'Settlement Failed',
         message: (err as Error).message,
       });
+    }
+  };
+
+  const handleSendStatementEmail = async () => {
+    if (!selectedInvoice || !statementEmail.trim()) {
+      addToast({
+        type: 'error',
+        title: 'Email Required',
+        message: 'Please enter a valid recipient email address.',
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const res = await fetch('/api/portal/email-statement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_email: statementEmail.trim(),
+          business_name: activeAccount?.business_name,
+          invoice_number: selectedInvoice.invoice_number,
+          billing_period: selectedInvoice.billing_period,
+          subtotal: selectedInvoice.subtotal,
+          tax: selectedInvoice.tax,
+          total: selectedInvoice.total,
+          status: selectedInvoice.status,
+          items: selectedInvoice.items,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to send statement email.');
+      }
+
+      addToast({
+        type: 'success',
+        title: 'Statement Dispatched!',
+        message: `Statement #${selectedInvoice.invoice_number} sent to ${statementEmail.trim()} via Resend.`,
+      });
+      setShowEmailInput(false);
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Email Dispatch Failed',
+        message: (err as Error).message,
+      });
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -382,7 +435,40 @@ export default function CommercialPortalPage() {
                 <div className={styles.totalRow}>Total Amount Due: <strong>${selectedInvoice.total.toFixed(2)}</strong></div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-200)', paddingTop: '12px' }}>
+              {/* Resend Email Input Card */}
+              {showEmailInput ? (
+                <div style={{ marginTop: '16px', padding: '14px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'bold', color: 'var(--color-navy)', marginBottom: '6px' }}>
+                    Send Luxury Statement via Resend:
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="email"
+                      placeholder="Enter billing email (e.g. ap@company.com or your email)"
+                      value={statementEmail}
+                      onChange={(e) => setStatementEmail(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', fontSize: 'var(--text-xs)', borderRadius: '6px', border: '1px solid #94a3b8' }}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSendStatementEmail}
+                      isLoading={isSendingEmail}
+                    >
+                      🚀 Send Email
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowEmailInput(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-200)', paddingTop: '12px', marginTop: '16px' }}>
                 <div>
                   {selectedInvoice.status !== 'paid' ? (
                     <Button
@@ -399,10 +485,22 @@ export default function CommercialPortalPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <Button variant="outline" size="sm" onClick={() => window.print()}>
-                    🖨️ Print Statement
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!statementEmail && activeAccount?.contact_phone) {
+                        setStatementEmail('billing@' + activeAccount.business_name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com');
+                      }
+                      setShowEmailInput(true);
+                    }}
+                  >
+                    📧 Email Statement (Resend)
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)}>
+                  <Button variant="outline" size="sm" onClick={() => window.print()}>
+                    🖨️ Print
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setSelectedInvoice(null); setShowEmailInput(false); }}>
                     Close
                   </Button>
                 </div>

@@ -35,6 +35,8 @@ export default function MissionControlPage() {
 
   // Simulator test message state
   const [testStage, setTestStage] = useState<OrderStatusKey>('booked');
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
 
   const orders = data?.orders || [];
   const stats = data?.stats;
@@ -107,6 +109,49 @@ export default function MissionControlPage() {
         title: 'Dispatch Failed',
         message: (err as Error).message,
       });
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailRecipient.trim()) {
+      addToast({
+        type: 'error',
+        title: 'Email Required',
+        message: 'Please enter your email address to test Resend.',
+      });
+      return;
+    }
+
+    setIsSendingTestEmail(true);
+    try {
+      const res = await fetch('/api/notifications/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_email: testEmailRecipient.trim(),
+          customer_name: 'DFW Customer',
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to dispatch test email.');
+      }
+
+      addToast({
+        type: 'success',
+        title: 'Email Dispatched via Resend!',
+        message: `Test email successfully sent to ${testEmailRecipient.trim()}. Check your inbox!`,
+      });
+      setTestEmailRecipient('');
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Resend Test Failed',
+        message: (err as Error).message,
+      });
+    } finally {
+      setIsSendingTestEmail(false);
     }
   };
 
@@ -386,10 +431,36 @@ export default function MissionControlPage() {
                   Audit log of outgoing status messages dispatched to customers via Simulated Provider or Live Twilio.
                 </p>
 
+                {/* Live Resend Email Tester */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#131d35', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid #1e293b' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-gold)', fontWeight: 'bold' }}>
+                      📧 Test Live Resend Email Dispatch (RESEND_API_KEY):
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="email"
+                      placeholder="Enter your test email (e.g. you@example.com)"
+                      value={testEmailRecipient}
+                      onChange={(e) => setTestEmailRecipient(e.target.value)}
+                      style={{ flex: 1, padding: '6px 10px', fontSize: 'var(--text-xs)', background: '#1e293b', color: '#ffffff', border: '1px solid #475569', borderRadius: '4px' }}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSendTestEmail}
+                      isLoading={isSendingTestEmail}
+                    >
+                      ✉️ Send Test Email
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Quick Dispatch Test Trigger */}
                 {orders.length > 0 && (
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#131d35', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: '#cbd5e1' }}>Test Broadcast:</span>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: '#cbd5e1' }}>Test SMS/WhatsApp:</span>
                     <select
                       value={testStage}
                       onChange={(e) => setTestStage(e.target.value as OrderStatusKey)}
