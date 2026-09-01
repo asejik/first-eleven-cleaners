@@ -156,7 +156,7 @@ export default function CommercialPortalPage() {
   };
 
   return (
-    <AuthGuard allowedRoles={['admin', 'customer']}>
+    <AuthGuard allowedRoles={['admin']}>
       <div className={styles.page}>
         <div className={styles.container}>
         {/* Executive Account Hero */}
