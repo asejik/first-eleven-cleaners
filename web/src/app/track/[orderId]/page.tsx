@@ -28,12 +28,13 @@ export default function PublicTrackingPage() {
         <div className={styles.header}>
           <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
             <Image
-              src="/logo.png"
+              src="/logo.png?v=2"
               alt="First Eleven Cleaners"
               width={220}
               height={55}
               priority
-              style={{ height: '48px', width: 'auto', margin: '0 auto' }}
+              unoptimized
+              style={{ height: '48px', width: 'auto', margin: '0 auto', objectFit: 'contain' }}
             />
           </Link>
           <h1 className={styles.title}>Live Garment Tracker</h1>

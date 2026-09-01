@@ -58,12 +58,13 @@ export default function SignupPage() {
         <div className={styles.header}>
           <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
             <Image
-              src="/logo.png"
+              src="/logo.png?v=2"
               alt="First Eleven Cleaners"
               width={200}
               height={50}
               priority
-              style={{ height: '44px', width: 'auto', margin: '0 auto' }}
+              unoptimized
+              style={{ height: '44px', width: 'auto', margin: '0 auto', objectFit: 'contain' }}
             />
           </Link>
           <h1 className={styles.title}>Join the Starting Lineup</h1>
