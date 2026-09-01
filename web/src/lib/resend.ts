@@ -23,10 +23,11 @@ export async function sendEmail({
   to,
   subject,
   html,
-  from = 'First Eleven Cleaners <onboarding@resend.dev>',
-  replyTo,
+  from,
+  replyTo = 'concierge@firstelevencleaners.com',
 }: SendEmailOptions): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
+  const sender = from || process.env.RESEND_FROM_EMAIL || 'First Eleven Cleaners <concierge@firstelevencleaners.com>';
 
   if (!apiKey) {
     console.warn('RESEND_API_KEY is not configured in .env.local');
@@ -46,7 +47,7 @@ export async function sendEmail({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from,
+        from: sender,
         to: recipients,
         reply_to: replyTo,
         subject,
