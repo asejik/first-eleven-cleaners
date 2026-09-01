@@ -101,7 +101,7 @@ export default function AddressesPage() {
   };
 
   return (
-    <AuthGuard>
+    <AuthGuard allowedRoles={['admin', 'customer']}>
       <div className={styles.page}>
         <div className={styles.container}>
           <div className={styles.topNav}>

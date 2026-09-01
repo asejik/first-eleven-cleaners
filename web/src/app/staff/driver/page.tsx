@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useDriverManifest, useDriverAction } from '@/hooks/useDriver';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
@@ -92,8 +93,9 @@ export default function DriverPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
+    <AuthGuard allowedRoles={['admin', 'driver']}>
+      <div className={styles.page}>
+        <div className={styles.container}>
         {/* Driver Top Header */}
         <div className={styles.driverHeader}>
           <div className={styles.brandCol}>
@@ -476,5 +478,6 @@ export default function DriverPage() {
         </Modal>
       </div>
     </div>
+    </AuthGuard>
   );
 }

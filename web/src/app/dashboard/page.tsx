@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const claims = claimsData?.claims || [];
 
   return (
-    <AuthGuard>
+    <AuthGuard allowedRoles={['admin', 'customer']}>
       <div className={styles.page}>
         <div className={styles.container}>
           {/* Top Welcome Bar */}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
 import { Button, Card, Badge, Loader } from '@/components/ui';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
 import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
@@ -36,8 +37,9 @@ export default function OrderDetailPage() {
   const orderClaims = claimsData?.claims || [];
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
+    <AuthGuard allowedRoles={['admin', 'customer']}>
+      <div className={styles.page}>
+        <div className={styles.container}>
         {/* Top Breadcrumb Nav */}
         <div className={styles.navRow}>
           <Link href={ROUTES.dashboard} className={styles.backLink}>
@@ -243,5 +245,6 @@ export default function OrderDetailPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

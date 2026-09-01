@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react';
-import type { Customer } from '@/types';
+import type { Customer, UserRole } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 
 interface AuthState {
   user: Customer | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, pass: string) => Promise<{ error?: string; role?: string }>;
+  login: (email: string, pass: string) => Promise<{ error?: string; role?: UserRole }>;
   signup: (data: { full_name: string; email: string; phone: string; password?: string }) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
@@ -17,6 +17,20 @@ interface AuthState {
 const MOCK_STORAGE_KEY = 'f11_mock_user';
 const AUTH_CACHE_KEY = 'f11_auth_customer';
 
+function determineRole(email: string, metaRole?: string, dbRole?: string): UserRole {
+  if (dbRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(dbRole)) {
+    return dbRole as UserRole;
+  }
+  if (metaRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(metaRole)) {
+    return metaRole as UserRole;
+  }
+  const clean = email.toLowerCase().trim();
+  if (clean.startsWith('admin@') || clean.includes('admin')) return 'admin';
+  if (clean.startsWith('driver@') || clean.includes('driver')) return 'driver';
+  if (clean.startsWith('intake@') || clean.includes('intake')) return 'intake_staff';
+  return 'customer';
+}
+
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -24,6 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const updateCustomerState = useCallback((newCustomer: Customer | null) => {
+    if (newCustomer && !newCustomer.role) {
+      newCustomer.role = determineRole(newCustomer.email);
+    }
     setUser(newCustomer);
     if (typeof window !== 'undefined') {
       if (newCustomer) {
@@ -47,10 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const cached = localStorage.getItem(AUTH_CACHE_KEY) || localStorage.getItem(MOCK_STORAGE_KEY);
       if (cached) {
-        setUser(JSON.parse(cached));
+        const parsed: Customer = JSON.parse(cached);
+        if (!parsed.role) {
+          parsed.role = determineRole(parsed.email);
+        }
+        setUser(parsed);
         setIsLoading(false);
       }
     } catch {}
+
     async function initAuth() {
       if (isSupabaseConfigured) {
         try {
@@ -64,8 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .eq('auth_id', session.user.id)
               .maybeSingle();
 
+            const role = determineRole(
+              session.user.email || '',
+              session.user.user_metadata?.role,
+              data?.role
+            );
+
             if (data) {
-              updateCustomerState(data as Customer);
+              const fullCustomer: Customer = {
+                ...(data as Customer),
+                role,
+              };
+              updateCustomerState(fullCustomer);
             } else {
               // Fallback user from auth session
               const fallback: Customer = {
@@ -74,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: session.user.email || '',
                 phone: session.user.user_metadata?.phone || '',
                 full_name: session.user.user_metadata?.full_name || (session.user.email?.split('@')[0] ?? 'Valued Customer'),
+                role,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               };
@@ -96,7 +129,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const stored = localStorage.getItem(AUTH_CACHE_KEY) || localStorage.getItem(MOCK_STORAGE_KEY);
         if (stored) {
-          updateCustomerState(JSON.parse(stored));
+          const parsed: Customer = JSON.parse(stored);
+          if (!parsed.role) {
+            parsed.role = determineRole(parsed.email);
+          }
+          updateCustomerState(parsed);
         }
       } catch {
         // Ignore local storage error
@@ -107,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isSupabaseConfigured, updateCustomerState]);
 
   const login = useCallback(
-    async (email: string, pass: string): Promise<{ error?: string; role?: string }> => {
+    async (email: string, pass: string): Promise<{ error?: string; role?: UserRole }> => {
       if (isSupabaseConfigured) {
         try {
           const supabase = createClient();
@@ -121,10 +158,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .eq('auth_id', data.user.id)
               .maybeSingle();
 
-            const role = (data.user.user_metadata?.role as string) || (email.includes('admin') ? 'admin' : email.includes('driver') ? 'driver' : email.includes('intake') ? 'intake_staff' : 'customer');
+            const role = determineRole(
+              data.user.email || email,
+              data.user.user_metadata?.role,
+              customerData?.role
+            );
 
             if (customerData) {
-              updateCustomerState(customerData as Customer);
+              const fullCust: Customer = {
+                ...(customerData as Customer),
+                role,
+              };
+              updateCustomerState(fullCust);
               return { role };
             } else {
               const fallback: Customer = {
@@ -133,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: data.user.email || email,
                 phone: data.user.user_metadata?.phone || '',
                 full_name: data.user.user_metadata?.full_name || email.split('@')[0],
+                role,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               };
@@ -146,12 +192,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Mock login for local testing
-      const mockRole = email.includes('admin') ? 'admin' : email.includes('driver') ? 'driver' : email.includes('intake') ? 'intake_staff' : 'customer';
+      const mockRole = determineRole(email);
       const mockCustomer: Customer = {
         id: 'c0000000-0000-0000-0000-000000000001',
         email,
         phone: '(214) 555-0199',
         full_name: email.split('@')[0].replace('.', ' ').toUpperCase() || 'Valued Customer',
+        role: mockRole,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

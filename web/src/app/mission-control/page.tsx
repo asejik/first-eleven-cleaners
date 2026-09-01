@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useMissionControl, useAdvanceOrderStage, useResolveClaim } from '@/hooks/useMissionControl';
 import { useNotifications, useDispatchNotification } from '@/hooks/useNotifications';
 import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
 import { ORDER_STATUS_MAP, type OrderStatusKey } from '@/lib/constants';
 import type { Order, Claim } from '@/types';
@@ -156,8 +157,9 @@ export default function MissionControlPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.container}>
+    <AuthGuard allowedRoles={['admin']}>
+      <div className={styles.page}>
+        <div className={styles.container}>
         {/* Top Header */}
         <div className={styles.topBar}>
           <div className={styles.brandCol}>
@@ -620,5 +622,6 @@ export default function MissionControlPage() {
         </Modal>
       </div>
     </div>
+    </AuthGuard>
   );
 }
