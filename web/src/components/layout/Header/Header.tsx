@@ -44,11 +44,13 @@ export function Header() {
         {/* Logo */}
         <Link href={ROUTES.home} className={styles.logo} aria-label="First Eleven Cleaners — Home">
           <Image
-            src="/logo.png"
+            src="/logo.png?v=2"
             alt="First Eleven Cleaners"
             width={180}
             height={44}
             priority
+            unoptimized
+            style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
             className={styles.logoImg}
           />
         </Link>

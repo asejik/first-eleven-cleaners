@@ -15,10 +15,12 @@ export function Footer() {
           <div className={styles.brand}>
             <Link href={ROUTES.home} className={styles.logoLink}>
               <Image
-                src="/logo.png"
+                src="/logo.png?v=2"
                 alt={APP_NAME}
                 width={170}
                 height={42}
+                unoptimized
+                style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
                 className={styles.footerLogoImg}
               />
             </Link>
