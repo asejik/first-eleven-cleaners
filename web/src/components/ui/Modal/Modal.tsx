@@ -41,14 +41,20 @@ export function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
+    <div
+      className={styles.overlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? 'modal-title' : undefined}
+    >
       <div
         className={`${styles.modal} ${styles[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className={styles.header}>
-          {title && <h3 className={styles.title}>{title}</h3>}
+          {title && <h3 id="modal-title" className={styles.title}>{title}</h3>}
           <button
             className={styles.closeButton}
             onClick={onClose}

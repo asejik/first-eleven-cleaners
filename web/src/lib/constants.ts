@@ -48,6 +48,7 @@ export const ORDER_STATUSES = [
   { key: 'in_cleaning', label: 'In Cleaning', icon: '✨', color: 'var(--color-status-cleaning)', message: 'Your garments are being cleaned with care.' },
   { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🚚', color: 'var(--color-status-out-for-delivery)', message: 'Your clothes are on the way!' },
   { key: 'delivered', label: 'Delivered', icon: '✅', color: 'var(--color-status-delivered)', message: 'Delivered! Fresh. Pressed. Game-ready.' },
+  { key: 'cancelled', label: 'Cancelled', icon: '❌', color: 'var(--color-error)', message: 'Your pickup has been cancelled.' },
 ] as const;
 
 export type OrderStatusKey = typeof ORDER_STATUSES[number]['key'];
@@ -75,6 +76,7 @@ export const EXPRESS_TIERS = [
 // --- Routes ---
 export const ROUTES = {
   home: '/',
+  about: '/about',
   pricing: '/pricing',
   book: '/book',
   login: '/login',
@@ -85,11 +87,25 @@ export const ROUTES = {
   preferences: '/dashboard/preferences',
   addresses: '/dashboard/addresses',
   profile: '/dashboard/profile',
+  billing: '/dashboard/billing',
   track: (id: string) => `/track/${id}`,
   claim: (id: string) => `/claim/${id}`,
   commercial: '/commercial',
   portal: '/portal',
+  admin: '/admin',
   missionControl: '/mission-control',
   intake: '/mission-control/intake',
   staffDriver: '/staff/driver',
+  privacy: '/privacy',
+  terms: '/terms',
+} as const;
+
+// --- Legal & Compliance ---
+export const LEGAL_CONFIG = {
+  governingState: 'Texas',
+  jurisdiction: 'Dallas County, Texas',
+  claimsReportingWindowDays: 7,
+  maxLiabilityMultiplier: 10,
+  contactEmail: 'legal@firstelevencleaners.com',
+  privacyEmail: 'privacy@firstelevencleaners.com',
 } as const;

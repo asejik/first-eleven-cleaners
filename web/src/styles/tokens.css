@@ -18,6 +18,11 @@
   --color-cream: #F4F2EC;
   --color-cream-dark: #E8E4DA;
 
+  /* === Accessible Text Tokens (WCAG 2.2 AA >= 4.5:1 on light backgrounds) === */
+  --color-gold-text: #8A6515;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #64748B;
+
   /* === Neutral Colors === */
   --color-white: #FFFFFF;
   --color-black: #000000;

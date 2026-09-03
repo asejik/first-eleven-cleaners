@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { SAMPLE_INVOICES } from '@/lib/commercial';
+import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 
 export async function GET(req: Request) {
+  const auth = await verifyApiAuth(['admin'], req);
+  if (auth.errorResponse) return auth.errorResponse;
+
   const { searchParams } = new URL(req.url);
   const accountId = searchParams.get('account_id');
 
@@ -17,6 +21,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const auth = await verifyApiAuth(['admin'], req);
+  if (auth.errorResponse) return auth.errorResponse;
+
   try {
     const body = await req.json();
     const { invoice_id, action } = body;

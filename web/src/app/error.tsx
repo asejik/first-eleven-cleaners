@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import styles from './error.module.css';
 
@@ -11,6 +12,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+
   useEffect(() => {
     // Log error to console or error_logs table
     console.error('Unhandled Client Error:', error);
@@ -31,7 +34,7 @@ export default function GlobalError({
           <Button
             variant="outline"
             size="lg"
-            onClick={() => (window.location.href = '/')}
+            onClick={() => router.push('/')}
           >
             Return to Home
           </Button>

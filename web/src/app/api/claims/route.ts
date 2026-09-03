@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 
 // Maps incoming form values to exact PostgreSQL check constraint: ('damage', 'lost_item', 'quality', 'wrong_item', 'other')
 function normalizeIssueType(type: string): 'damage' | 'lost_item' | 'quality' | 'wrong_item' | 'other' {
@@ -34,20 +34,26 @@ export async function GET(request: Request) {
   }
 
   try {
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-
+    const { customer } = await getAuthenticatedCustomer(request);
     const supabase = createAdminClient();
 
     let query = supabase
       .from('claims')
       .select(`
-        *,
+        id,
+        order_id,
+        customer_id,
+        issue_type,
+        description,
+        photo_urls,
+        status,
+        resolution_notes,
+        created_at,
+        updated_at,
         order:orders(id, order_number, pickup_date, total, status)
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     if (orderId) {
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
@@ -66,16 +72,8 @@ export async function GET(request: Request) {
           return NextResponse.json({ claims: [] });
         }
       }
-    } else if (user) {
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-        .maybeSingle();
-
-      if (customer) {
-        query = query.eq('customer_id', customer.id);
-      }
+    } else if (customer) {
+      query = query.eq('customer_id', customer.id);
     }
 
     const { data: claims, error } = await query;
@@ -109,43 +107,40 @@ export async function POST(request: Request) {
       !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
 
     if (isSupabaseConfigured) {
-      const authClient = await createClient();
-      const {
-        data: { user },
-      } = await authClient.auth.getUser();
-
-      const supabase = createAdminClient();
-
-      // 1. Resolve Order ID & Customer ID
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id);
-      let resolvedOrderId = order_id;
-      let resolvedCustomerId: string | null = null;
-
-      const { data: orderRow } = isUUID
-        ? await supabase.from('orders').select('id, customer_id').eq('id', order_id).maybeSingle()
-        : await supabase.from('orders').select('id, customer_id').eq('order_number', order_id).maybeSingle();
-
-      if (orderRow) {
-        resolvedOrderId = orderRow.id;
-        resolvedCustomerId = orderRow.customer_id;
-      }
-
-      if (!resolvedCustomerId && user) {
-        const { data: cust } = await supabase
-          .from('customers')
-          .select('id')
-          .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-          .maybeSingle();
-        if (cust) resolvedCustomerId = cust.id;
-      }
-
-      if (!resolvedOrderId || !resolvedCustomerId) {
+      const { customer, user } = await getAuthenticatedCustomer(request);
+      if (!user || !customer) {
         return NextResponse.json(
-          { error: 'Could not find a matching order to attach this claim to.' },
-          { status: 400 }
+          { error: 'Unauthorized: You must be logged in to submit a claim.' },
+          { status: 401 }
         );
       }
 
+      const supabase = createAdminClient();
+
+      // 1. Resolve Order ID & verify ownership
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id);
+
+      const { data: orderRow } = isUUID
+        ? await supabase.from('orders').select('id, customer_id, status').eq('id', order_id).maybeSingle()
+        : await supabase.from('orders').select('id, customer_id, status').eq('order_number', order_id).maybeSingle();
+
+      if (!orderRow) {
+        return NextResponse.json(
+          { error: 'Could not find a matching order to attach this claim to.' },
+          { status: 404 }
+        );
+      }
+
+      // IDOR Guard: User can only claim against their own order, unless admin
+      if (orderRow.customer_id !== customer.id && customer.role !== 'admin') {
+        return NextResponse.json(
+          { error: 'Forbidden: You can only submit claims for your own orders.' },
+          { status: 403 }
+        );
+      }
+
+      const resolvedOrderId = orderRow.id;
+      const resolvedCustomerId = orderRow.customer_id;
       const validIssueType = normalizeIssueType(issue_type);
 
       const { data: insertedClaim, error: claimErr } = await supabase
@@ -158,7 +153,7 @@ export async function POST(request: Request) {
           photo_urls: photo_urls || [],
           status: 'open',
         })
-        .select('*')
+        .select('id, order_id, customer_id, issue_type, description, photo_urls, status, created_at')
         .single();
 
       if (claimErr) {
@@ -172,7 +167,7 @@ export async function POST(request: Request) {
       // Log event in order timeline
       await supabase.from('order_events').insert({
         order_id: resolvedOrderId,
-        status: 'in_cleaning',
+        status: orderRow.status,
         note: `Make It Right claim #${insertedClaim.id.slice(0, 8)} logged (${validIssueType}).`,
         triggered_by: 'Customer (Make It Right)',
       });

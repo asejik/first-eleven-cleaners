@@ -13,6 +13,7 @@
 
 .modal {
   background-color: var(--color-white);
+  color: var(--color-navy);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-xl);
   width: 100%;
@@ -58,10 +59,14 @@
   border: none;
   font-size: var(--text-2xl);
   line-height: 1;
-  color: var(--color-gray-400);
+  color: var(--color-gray-500);
   cursor: pointer;
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
 

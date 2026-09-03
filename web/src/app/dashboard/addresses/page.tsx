@@ -38,7 +38,7 @@ export default function AddressesPage() {
     }
   };
 
-  const handleDelete = async (id: string, isDefault: boolean) => {
+  const handleDelete = async (id: string) => {
     if (addresses.length <= 1) {
       addToast({
         type: 'warning',
@@ -262,7 +262,7 @@ export default function AddressesPage() {
                     <button
                       type="button"
                       className={styles.deleteBtn}
-                      onClick={() => handleDelete(addr.id, addr.is_default)}
+                      onClick={() => handleDelete(addr.id)}
                       title="Delete this address"
                       disabled={deleteAddressMutation.isPending}
                     >

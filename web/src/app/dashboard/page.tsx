@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomerOrders } from '@/hooks/useOrders';
 import { useCustomerClaims } from '@/hooks/useClaims';
@@ -11,6 +13,22 @@ import styles from './page.module.css';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isCustomerPreview = searchParams?.get('view') === 'customer';
+
+  // If staff/admin lands on customer portal without explicit preview flag, route to their command center
+  useEffect(() => {
+    if (isCustomerPreview) return;
+    if (user?.role === 'admin') {
+      router.replace(ROUTES.missionControl);
+    } else if (user?.role === 'driver') {
+      router.replace(ROUTES.staffDriver);
+    } else if (user?.role === 'intake_staff') {
+      router.replace(ROUTES.intake);
+    }
+  }, [user, router, isCustomerPreview]);
+
   const { data, isLoading } = useCustomerOrders();
   const { data: claimsData } = useCustomerClaims();
 
@@ -19,10 +37,38 @@ export default function DashboardPage() {
   const completedOrders = orders.filter((o) => o.status === 'delivered');
   const claims = claimsData?.claims || [];
 
+  const activeClaims = claims.filter((c) => c.status === 'open' || c.status === 'investigating');
+  const resolvedClaims = claims.filter((c) => c.status === 'resolved' || c.status === 'refunded' || c.status === 'closed');
+
   return (
     <AuthGuard allowedRoles={['admin', 'customer']}>
       <div className={styles.page}>
         <div className={styles.container}>
+          {/* Admin Preview Banner */}
+          {user?.role === 'admin' && (
+            <div
+              style={{
+                backgroundColor: 'var(--color-navy)',
+                color: 'var(--color-white)',
+                padding: 'var(--space-2) var(--space-4)',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: 'var(--space-4)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                border: '1px solid var(--color-gold)',
+                fontSize: 'var(--text-xs)',
+              }}
+            >
+              <span>⚡ <strong>Administrator Mode:</strong> You are viewing the customer portal preview.</span>
+              <Link href={ROUTES.missionControl}>
+                <Button variant="outline" size="sm" style={{ borderColor: 'var(--color-gold)', color: 'var(--color-gold)' }}>
+                  Return to Mission Control →
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Top Welcome Bar */}
           <div className={styles.topBar}>
             <div>
@@ -32,6 +78,11 @@ export default function DashboardPage() {
               </h1>
             </div>
             <div className={styles.topActions}>
+              <Link href={ROUTES.billing}>
+                <Button variant="outline" size="md">
+                  💳 Billing &amp; Cards
+                </Button>
+              </Link>
               <Link href={ROUTES.addresses}>
                 <Button variant="outline" size="md">
                   📍 Addresses
@@ -82,9 +133,21 @@ export default function DashboardPage() {
               <span className={styles.statIcon}>🛡️</span>
               <div>
                 <p className={styles.statLabel}>Make It Right</p>
-                {claims.length > 0 ? (
-                  <Link href={ROUTES.claim(claims[0].order_id)} className={styles.statLink} style={{ color: 'var(--color-gold-dark)', fontWeight: 'bold' }}>
-                    {claims.length} {claims.length === 1 ? 'Claim Active' : 'Claims Active'} →
+                {activeClaims.length > 0 ? (
+                  <Link
+                    href={ROUTES.claim(activeClaims[0].order_id)}
+                    className={styles.statLink}
+                    style={{ color: 'var(--color-gold-dark)', fontWeight: 'bold' }}
+                  >
+                    {activeClaims.length} {activeClaims.length === 1 ? 'Claim Active' : 'Claims Active'} →
+                  </Link>
+                ) : resolvedClaims.length > 0 ? (
+                  <Link
+                    href={ROUTES.claim(resolvedClaims[0].order_id)}
+                    className={styles.statLink}
+                    style={{ color: 'var(--color-green)', fontWeight: '600' }}
+                  >
+                    {resolvedClaims.length} {resolvedClaims.length === 1 ? 'Claim' : 'Claims'} Resolved ✅
                   </Link>
                 ) : (
                   <p className={styles.statNumber} style={{ fontSize: 'var(--text-base)', color: 'var(--color-gray-500)', marginTop: '2px' }}>
@@ -132,20 +195,25 @@ export default function DashboardPage() {
                               Pickup: {order.pickup_date} ({order.pickup_window})
                             </span>
                           </div>
-                          <Badge
-                            variant={
-                              order.status === 'in_cleaning'
-                                ? 'cleaning'
-                                : order.status === 'out_for_delivery'
-                                ? 'out_for_delivery'
-                                : order.status === 'weighed_itemized'
-                                ? 'weighed'
-                                : 'booked'
-                            }
-                            dot
-                          >
-                            {statusMeta?.label || order.status}
-                          </Badge>
+                          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                            {order.notes?.includes('Recurring Plan') && (
+                              <Badge variant="success">🔄 Subscription</Badge>
+                            )}
+                            <Badge
+                              variant={
+                                order.status === 'in_cleaning'
+                                  ? 'cleaning'
+                                  : order.status === 'out_for_delivery'
+                                  ? 'out_for_delivery'
+                                  : order.status === 'weighed_itemized'
+                                  ? 'weighed'
+                                  : 'booked'
+                              }
+                              dot
+                            >
+                              {statusMeta?.label || order.status}
+                            </Badge>
+                          </div>
                         </div>
 
                         <div className={styles.orderSummaryText}>

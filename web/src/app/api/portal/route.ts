@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import {
   COMMERCIAL_RATE_CARDS,
   SAMPLE_RECURRING_SCHEDULES,
@@ -7,6 +8,9 @@ import {
 import type { CommercialAccount } from '@/lib/commercial/types';
 
 export async function GET(req: Request) {
+  const auth = await verifyApiAuth(['admin'], req);
+  if (auth.errorResponse) return auth.errorResponse;
+
   const { searchParams } = new URL(req.url);
   const accountId = searchParams.get('account_id');
 
@@ -14,7 +18,7 @@ export async function GET(req: Request) {
     const supabase = createAdminClient();
     const { data: dbAccounts, error } = await supabase
       .from('commercial_accounts')
-      .select('*')
+      .select('id, business_name, contact_name, contact_email, contact_phone, billing_email, rate_card_id, payment_terms, created_at')
       .order('business_name', { ascending: true });
 
     if (error) {
@@ -78,6 +82,9 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    const auth = await verifyApiAuth(['admin'], req);
+    if (auth.errorResponse) return auth.errorResponse;
+
     const body = await req.json();
     const { account_id, schedule } = body;
 

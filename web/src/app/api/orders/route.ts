@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { Order } from '@/types';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 
 // Mock sample orders for instant testing & visual verification
 const MOCK_ORDERS: Order[] = [
@@ -151,65 +151,92 @@ const MOCK_ORDERS: Order[] = [
   },
 ];
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+  const offset = (page - 1) * limit;
+
   const isSupabaseConfigured =
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
 
   if (isSupabaseConfigured) {
     try {
-      const authClient = await createClient();
-      const {
-        data: { user },
-      } = await authClient.auth.getUser();
+      const { customer, user } = await getAuthenticatedCustomer(request);
 
-      if (!user) {
-        return NextResponse.json({ orders: [], total_count: 0 });
+      if (!user || !customer) {
+        return NextResponse.json({
+          orders: [],
+          total_count: 0,
+          page,
+          limit,
+          total_pages: 0,
+        });
       }
 
       const supabase = createAdminClient();
 
-      // 1. Find customer record for this user
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-        .maybeSingle();
-
-      if (!customer) {
-        return NextResponse.json({ orders: [], total_count: 0 });
-      }
-
-      // 2. Fetch customer's real orders with related items, events, and photos
-      const { data: orders, error } = await supabase
+      // Fetch customer's orders with exact pagination and selective column projections
+      const { data: orders, count, error } = await supabase
         .from('orders')
         .select(`
-          *,
-          items:order_items(*),
-          events:order_events(*),
-          photos:garment_photos(*),
-          address:addresses(*)
-        `)
+          id,
+          order_number,
+          customer_id,
+          address_id,
+          status,
+          order_type,
+          pickup_date,
+          pickup_window,
+          delivery_date,
+          delivery_window,
+          weight_lbs,
+          subtotal,
+          express_tier,
+          promo_code,
+          discount_amount,
+          total,
+          payment_id,
+          payment_status,
+          notes,
+          created_at,
+          updated_at,
+          items:order_items(id, order_id, garment_type, service_type, quantity, unit_price, subtotal, notes),
+          events:order_events(id, order_id, status, timestamp, note, triggered_by),
+          photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
+          address:addresses(id, street, unit, city, state, zip, delivery_notes)
+        `, { count: 'exact' })
         .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) {
         console.error('Supabase orders query error:', error);
-        return NextResponse.json({ orders: [], total_count: 0 });
+        return NextResponse.json({ orders: [], total_count: 0, page, limit, total_pages: 0 });
       }
+
+      const totalCount = count ?? (orders?.length || 0);
 
       return NextResponse.json({
         orders: orders || [],
-        total_count: orders?.length || 0,
+        total_count: totalCount,
+        page,
+        limit,
+        total_pages: Math.ceil(totalCount / limit),
       });
     } catch (err) {
       console.error('Supabase get orders error:', err);
-      return NextResponse.json({ orders: [], total_count: 0 });
+      return NextResponse.json({ orders: [], total_count: 0, page, limit, total_pages: 0 });
     }
   }
 
+  const paginatedMocks = MOCK_ORDERS.slice(offset, offset + limit);
   return NextResponse.json({
-    orders: MOCK_ORDERS,
+    orders: paginatedMocks,
     total_count: MOCK_ORDERS.length,
+    page,
+    limit,
+    total_pages: Math.ceil(MOCK_ORDERS.length / limit),
   });
 }

@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/resend';
+import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
   try {
+    const auth = await verifyApiAuth(['admin'], request);
+    if (auth.errorResponse) return auth.errorResponse;
+
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`test_email:${clientIp}`, 5, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded for test emails. Please wait a minute.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { recipient_email, customer_name = 'Valued Customer' } = body;
 

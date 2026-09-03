@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 
-export async function GET() {
+export async function GET(request: Request) {
   const isSupabaseConfigured =
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
@@ -12,32 +12,18 @@ export async function GET() {
   }
 
   try {
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    const { customer, user } = await getAuthenticatedCustomer(request);
 
-    if (!user) {
+    if (!user || !customer) {
       return NextResponse.json({ preferences: null });
     }
 
     const supabase = createAdminClient();
 
-    // 1. Find customer id
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-      .maybeSingle();
-
-    if (!customer) {
-      return NextResponse.json({ preferences: null });
-    }
-
-    // 2. Fetch preferences
+    // Fetch preferences with explicit columns
     const { data: prefs } = await supabase
       .from('customer_preferences')
-      .select('*')
+      .select('customer_id, starch_level, fold_vs_hang, detergent_sensitivity, gate_code, delivery_instructions, special_notes, updated_at')
       .eq('customer_id', customer.id)
       .maybeSingle();
 
@@ -68,29 +54,15 @@ export async function POST(request: Request) {
       special_notes = null,
     } = body;
 
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    const { customer, user } = await getAuthenticatedCustomer(request);
 
-    if (!user) {
+    if (!user || !customer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = createAdminClient();
 
-    // 1. Find customer record
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-      .maybeSingle();
-
-    if (!customer) {
-      return NextResponse.json({ error: 'Customer record not found' }, { status: 404 });
-    }
-
-    // 2. Upsert customer preferences
+    // Upsert customer preferences
     const payload = {
       customer_id: customer.id,
       starch_level,
@@ -105,7 +77,7 @@ export async function POST(request: Request) {
     const { data: savedPrefs, error } = await supabase
       .from('customer_preferences')
       .upsert(payload, { onConflict: 'customer_id' })
-      .select('*')
+      .select('customer_id, starch_level, fold_vs_hang, detergent_sensitivity, gate_code, delivery_instructions, special_notes, updated_at')
       .single();
 
     if (error) {

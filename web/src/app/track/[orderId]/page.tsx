@@ -22,18 +22,26 @@ export default function PublicTrackingPage() {
   const order = data?.order;
   const currentStageIndex = order ? ORDER_STATUSES.findIndex((s) => s.key === order.status) : 0;
 
+  const isDelayed = (() => {
+    if (!order || order.status === 'delivered' || !order.delivery_date) return false;
+    const [year, month, day] = order.delivery_date.split('-').map(Number);
+    if (!year || !month || !day) return false;
+    const endHour = order.delivery_window === 'morning' ? 12 : 20;
+    const targetDeadline = new Date(year, month - 1, day, endHour, 0, 0);
+    return new Date() > targetDeadline;
+  })();
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.header}>
           <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
             <Image
-              src="/logo.png?v=2"
+              src="/logo.png"
               alt="First Eleven Cleaners"
               width={220}
               height={55}
               priority
-              unoptimized
               style={{ height: '48px', width: 'auto', margin: '0 auto', objectFit: 'contain' }}
             />
           </Link>
@@ -71,18 +79,44 @@ export default function PublicTrackingPage() {
             </div>
 
             {/* Match-Ready Countdown */}
-            <div className={styles.countdownBox}>
-              <span className={styles.clockIcon}>{order.status === 'delivered' ? '✅' : '⏱️'}</span>
-              <div>
-                <strong>{order.status === 'delivered' ? 'Delivered on Schedule' : 'Estimated Delivery'}</strong>
-                <p>
-                  {order.status === 'delivered' ? 'Delivered on ' : 'Target delivery by '}
+            <div
+              className={styles.countdownBox}
+              style={
+                isDelayed
+                  ? { border: '1px solid rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.05)' }
+                  : undefined
+              }
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: 1 }}>
+                <span className={styles.clockIcon}>{order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}</span>
+                <div>
                   <strong>
-                    {order.delivery_date} ({order.delivery_window || 'Evening'})
+                    {order.status === 'delivered'
+                      ? 'Delivered on Schedule'
+                      : isDelayed
+                      ? 'Delivery Delayed — Expediting Under Guarantee'
+                      : 'Estimated Delivery'}
                   </strong>
-                  {order.status === 'delivered' && ' • 100% Match-Ready'}
-                </p>
+                  <p>
+                    {order.status === 'delivered'
+                      ? 'Delivered on '
+                      : isDelayed
+                      ? 'Target delivery was '
+                      : 'Target delivery by '}
+                    <strong>
+                      {order.delivery_date} ({order.delivery_window || 'Evening'})
+                    </strong>
+                    {order.status === 'delivered'
+                      ? ' • 100% Match-Ready'
+                      : isDelayed
+                      ? ' • Plant operations team is prioritizing drop-off'
+                      : ''}
+                  </p>
+                </div>
               </div>
+              <Badge variant={order.status === 'delivered' ? 'delivered' : isDelayed ? 'warning' : 'success'}>
+                {order.status === 'delivered' ? 'Completed' : isDelayed ? 'Delayed' : 'On Schedule'}
+              </Badge>
             </div>
 
             {/* Visual 6-Stage Timeline */}

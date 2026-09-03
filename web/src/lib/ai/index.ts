@@ -3,7 +3,6 @@ import type {
   AIConversationMessage,
   AIResponse,
   ConciergeContext,
-  ConciergeIntent,
   IAIEngineProvider,
 } from './types';
 

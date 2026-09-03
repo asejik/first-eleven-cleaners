@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useOrderDetail } from '@/hooks/useOrders';
+import { useOrderDetail, useCancelOrder } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
-import { Button, Card, Badge, Loader } from '@/components/ui';
+import { useUIStore } from '@/stores/ui-store';
+import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
 import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
@@ -15,6 +17,9 @@ export default function OrderDetailPage() {
   const id = (routeParams?.id as string) || '';
   const { data, isLoading, error } = useOrderDetail(id);
   const { data: claimsData } = useOrderClaims(id);
+  const cancelOrderMutation = useCancelOrder();
+  const addToast = useUIStore((s) => s.addToast);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   if (isLoading) {
     return <Loader fullScreen text="Loading live garment status..." />;
@@ -36,6 +41,34 @@ export default function OrderDetailPage() {
   const currentStageIndex = ORDER_STATUSES.findIndex((s) => s.key === order.status);
   const orderClaims = claimsData?.claims || [];
 
+  const isDelayed = (() => {
+    if (order.status === 'delivered') return false;
+    if (!order.delivery_date) return false;
+    const [year, month, day] = order.delivery_date.split('-').map(Number);
+    if (!year || !month || !day) return false;
+    const endHour = order.delivery_window === 'morning' ? 12 : 20;
+    const targetDeadline = new Date(year, month - 1, day, endHour, 0, 0);
+    return new Date() > targetDeadline;
+  })();
+
+  const handleConfirmCancel = async () => {
+    try {
+      await cancelOrderMutation.mutateAsync(order.id);
+      setIsCancelModalOpen(false);
+      addToast({
+        type: 'success',
+        title: 'Pickup Cancelled',
+        message: 'Your pickup has been successfully cancelled. Zero charges were applied.',
+      });
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Cancellation Failed',
+        message: (err as Error).message || 'Could not cancel pickup. Please try again.',
+      });
+    }
+  };
+
   return (
     <AuthGuard allowedRoles={['admin', 'customer']}>
       <div className={styles.page}>
@@ -45,11 +78,23 @@ export default function OrderDetailPage() {
           <Link href={ROUTES.dashboard} className={styles.backLink}>
             ← Back to Dashboard
           </Link>
-          <Link href={ROUTES.claim(order.id)}>
-            <Button variant="outline" size="sm">
-              🛡️ Make It Right Claim
-            </Button>
-          </Link>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            {order.status === 'booked' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCancelModalOpen(true)}
+                style={{ borderColor: 'var(--color-error)', color: 'var(--color-error)' }}
+              >
+                🚫 Cancel Pickup
+              </Button>
+            )}
+            <Link href={ROUTES.claim(order.id)}>
+              <Button variant="outline" size="sm">
+                🛡️ Make It Right Claim
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Order Hero Card */}
@@ -84,22 +129,43 @@ export default function OrderDetailPage() {
             </Badge>
           </div>
 
-          <div className={styles.countdownBox}>
+          <div
+            className={styles.countdownBox}
+            style={
+              isDelayed
+                ? { border: '1px solid rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.05)' }
+                : undefined
+            }
+          >
             <div className={styles.countdownLeft}>
-              <span className={styles.clockIcon}>{order.status === 'delivered' ? '✅' : '⏱️'}</span>
+              <span className={styles.clockIcon}>{order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}</span>
               <div>
-                <strong>{order.status === 'delivered' ? 'Delivered on Schedule' : '48-Hour Match-Ready Guarantee'}</strong>
+                <strong>
+                  {order.status === 'delivered'
+                    ? 'Delivered on Schedule'
+                    : isDelayed
+                    ? '48-Hour Guarantee: Plant Rescheduling In Progress'
+                    : '48-Hour Match-Ready Guarantee'}
+                </strong>
                 <p>
-                  {order.status === 'delivered' ? 'Delivered on ' : 'Target delivery by '}
+                  {order.status === 'delivered'
+                    ? 'Delivered on '
+                    : isDelayed
+                    ? 'Target delivery was '
+                    : 'Target delivery by '}
                   <strong>
                     {order.delivery_date} ({order.delivery_window || 'evening'})
                   </strong>
-                  {order.status === 'delivered' && ' • 100% Make It Right Protected'}
+                  {order.status === 'delivered'
+                    ? ' • 100% Make It Right Protected'
+                    : isDelayed
+                    ? ' • Concierge operations is actively prioritizing dispatch'
+                    : ''}
                 </p>
               </div>
             </div>
-            <Badge variant={order.status === 'delivered' ? 'delivered' : 'success'}>
-              {order.status === 'delivered' ? 'Completed' : 'On Schedule'}
+            <Badge variant={order.status === 'delivered' ? 'delivered' : isDelayed ? 'warning' : 'success'}>
+              {order.status === 'delivered' ? 'Completed' : isDelayed ? 'Delayed' : 'On Schedule'}
             </Badge>
           </div>
         </Card>
@@ -244,6 +310,40 @@ export default function OrderDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Cancellation Confirmation Modal */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        title="Cancel Upcoming Pickup?"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ color: 'var(--color-gray-700)', fontSize: 'var(--text-sm)', lineHeight: '1.6', margin: 0 }}>
+            Are you sure you want to cancel pickup for <strong>Order #{order.order_number || order.id.slice(0, 8)}</strong> scheduled for <strong>{order.pickup_date} ({order.pickup_window})</strong>?
+          </p>
+          <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-gray-200)' }}>
+            <p style={{ color: 'var(--color-navy)', fontSize: 'var(--text-xs)', margin: 0, fontWeight: 'bold' }}>
+              💡 Zero Risk Checkout Promise:
+            </p>
+            <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--text-xs)', margin: '4px 0 0' }}>
+              Because your payment card is only charged after digital intake &amp; scale weighing at our plant, zero fees have been charged to your card.
+            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+            <Button variant="outline" size="sm" onClick={() => setIsCancelModalOpen(false)}>
+              Keep Pickup
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              isLoading={cancelOrderMutation.isPending}
+              onClick={handleConfirmCancel}
+            >
+              Yes, Cancel Pickup
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
     </AuthGuard>
   );

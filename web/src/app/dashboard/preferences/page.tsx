@@ -1,20 +1,22 @@
 'use client';
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { Button, Input, Card, Loader } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { useCustomerPreferences, useUpdatePreferences } from '@/hooks/usePreferences';
 import { ROUTES } from '@/lib/constants';
+import type { CustomerPreferences } from '@/types';
 import styles from './page.module.css';
 
-export default function PreferencesPage() {
-  const { data, isLoading } = useCustomerPreferences();
+interface PreferencesFormProps {
+  initial: CustomerPreferences | null | undefined;
+}
+
+function PreferencesForm({ initial }: PreferencesFormProps) {
   const updatePreferencesMutation = useUpdatePreferences();
   const addToast = useUIStore((s) => s.addToast);
-
-  const initial = data?.preferences;
 
   const [starchLevel, setStarchLevel] = useState<'none' | 'light' | 'medium' | 'heavy'>(
     initial?.starch_level || 'none'
@@ -30,19 +32,6 @@ export default function PreferencesPage() {
     initial?.delivery_instructions || ''
   );
   const [specialNotes, setSpecialNotes] = useState(initial?.special_notes || '');
-
-  // Populate from Supabase when loaded
-  useEffect(() => {
-    if (data?.preferences) {
-      const p = data.preferences;
-      if (p.starch_level) setStarchLevel(p.starch_level);
-      if (p.fold_vs_hang) setFoldVsHang(p.fold_vs_hang);
-      setDetergentSensitivity(p.detergent_sensitivity || '');
-      setGateCode(p.gate_code || '');
-      setDeliveryInstructions(p.delivery_instructions || '');
-      setSpecialNotes(p.special_notes || '');
-    }
-  }, [data?.preferences]);
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -71,6 +60,120 @@ export default function PreferencesPage() {
   };
 
   return (
+    <form onSubmit={handleSave} className={styles.form}>
+      {/* Starch Level */}
+      <div className={styles.fieldGroup}>
+        <span className={styles.groupLabel}>Shirt Starch Level</span>
+        <div className={styles.optionsGrid} role="group" aria-label="Shirt Starch Level">
+          {(['none', 'light', 'medium', 'heavy'] as const).map((level) => (
+            <button
+              key={level}
+              type="button"
+              className={`${styles.optionCard} ${starchLevel === level ? styles.selectedOption : ''}`}
+              onClick={() => setStarchLevel(level)}
+              aria-pressed={starchLevel === level}
+            >
+              <span className={styles.optionCapital}>{level.toUpperCase()}</span>
+              <span className={styles.optionDesc}>
+                {level === 'none'
+                  ? 'Soft natural feel'
+                  : level === 'light'
+                  ? 'Slight crispness'
+                  : level === 'medium'
+                  ? 'Firm hold'
+                  : 'Maximum stiffness'}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Fold vs Hang */}
+      <div className={styles.fieldGroup}>
+        <span className={styles.groupLabel}>Wash &amp; Fold Presentation</span>
+        <div className={styles.optionsGrid} role="group" aria-label="Wash and Fold Presentation">
+          <button
+            type="button"
+            className={`${styles.optionCard} ${foldVsHang === 'hang' ? styles.selectedOption : ''}`}
+            onClick={() => setFoldVsHang('hang')}
+            aria-pressed={foldVsHang === 'hang'}
+          >
+            <span className={styles.optionCapital}>👔 ON HANGERS</span>
+            <span className={styles.optionDesc}>Suits, button-downs, and dresses hung with tissue</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.optionCard} ${foldVsHang === 'fold' ? styles.selectedOption : ''}`}
+            onClick={() => setFoldVsHang('fold')}
+            aria-pressed={foldVsHang === 'fold'}
+          >
+            <span className={styles.optionCapital}>🧺 NEATLY FOLDED</span>
+            <span className={styles.optionDesc}>Stacked and wrapped in protective weatherproof wrap</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Detergent & Sensitivities */}
+      <div className={styles.fieldGroup}>
+        <Input
+          id="detergent-sensitivity"
+          label="Detergent & Scent Sensitivities"
+          placeholder="e.g. Hypoallergenic only, Fragrance-free, Woolite for knits"
+          value={detergentSensitivity}
+          onChange={(e) => setDetergentSensitivity(e.target.value)}
+          helperText="We stock premium botanical eco-friendly detergents."
+        />
+      </div>
+
+      {/* Gate Code & Porch Instructions */}
+      <div className={styles.rowTwo}>
+        <Input
+          id="gate-code"
+          label="Gate Code / Callbox"
+          placeholder="#1100"
+          value={gateCode}
+          onChange={(e) => setGateCode(e.target.value)}
+        />
+        <Input
+          id="delivery-instructions"
+          label="Delivery Instructions"
+          placeholder="e.g. Behind porch chair"
+          value={deliveryInstructions}
+          onChange={(e) => setDeliveryInstructions(e.target.value)}
+        />
+      </div>
+
+      {/* Special Care Notes */}
+      <div className={styles.fieldGroup}>
+        <label htmlFor="special-notes" className={styles.groupLabel}>Special Care Notes</label>
+        <textarea
+          id="special-notes"
+          className={styles.textarea}
+          rows={3}
+          placeholder="e.g. Always crease trousers on the seam. Check pockets for cufflinks."
+          value={specialNotes}
+          onChange={(e) => setSpecialNotes(e.target.value)}
+        />
+      </div>
+
+      <div className={styles.formActions}>
+        <Button
+          variant="primary"
+          size="lg"
+          type="submit"
+          isLoading={updatePreferencesMutation.isPending}
+        >
+          Save Preferences to Eleven&apos;s Memory 💾
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export default function PreferencesPage() {
+  const { data, isLoading } = useCustomerPreferences();
+
+  return (
     <AuthGuard allowedRoles={['admin', 'customer']}>
       <div className={styles.page}>
         <div className={styles.container}>
@@ -91,100 +194,11 @@ export default function PreferencesPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSave} className={styles.form}>
-              {/* Starch Level */}
-              <div className={styles.fieldGroup}>
-                <label className={styles.groupLabel}>Shirt Starch Level</label>
-                <div className={styles.optionsGrid}>
-                  {(['none', 'light', 'medium', 'heavy'] as const).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      className={`${styles.optionCard} ${starchLevel === level ? styles.selectedOption : ''}`}
-                      onClick={() => setStarchLevel(level)}
-                    >
-                      <span className={styles.optionCapital}>{level.toUpperCase()}</span>
-                      <span className={styles.optionDesc}>
-                        {level === 'none'
-                          ? 'Soft natural feel'
-                          : level === 'light'
-                          ? 'Slight crispness'
-                          : level === 'medium'
-                          ? 'Firm hold'
-                          : 'Maximum stiffness'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Fold vs Hang */}
-              <div className={styles.fieldGroup}>
-                <label className={styles.groupLabel}>Default Finishing Style</label>
-                <div className={styles.optionsGridTwo}>
-                  <button
-                    type="button"
-                    className={`${styles.optionCard} ${foldVsHang === 'hang' ? styles.selectedOption : ''}`}
-                    onClick={() => setFoldVsHang('hang')}
-                  >
-                    <span className={styles.optionIcon}>👔</span>
-                    <span className={styles.optionTitle}>On Hangers</span>
-                    <span className={styles.optionDesc}>Protected in garment bags, closet-ready</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.optionCard} ${foldVsHang === 'fold' ? styles.selectedOption : ''}`}
-                    onClick={() => setFoldVsHang('fold')}
-                  >
-                    <span className={styles.optionIcon}>🧺</span>
-                    <span className={styles.optionTitle}>Neatly Folded</span>
-                    <span className={styles.optionDesc}>Drawer-ready, stacked in bundle packs</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Detergent & Sensitivities */}
-              <Input
-                label="Detergent & Fabric Sensitivities"
-                value={detergentSensitivity}
-                onChange={(e) => setDetergentSensitivity(e.target.value)}
-                placeholder="e.g. Free & Clear, no scents, hypoallergenic"
-                helperText="We stock premium hypoallergenic solutions for sensitive skin"
-              />
-
-              {/* Gate Code */}
-              <Input
-                label="Gate Code / Building Entry"
-                value={gateCode}
-                onChange={(e) => setGateCode(e.target.value)}
-                placeholder="e.g. Gate #1234, Call box code"
-              />
-
-              {/* Delivery Instructions */}
-              <Input
-                label="Porch / Concierge Delivery Notes"
-                value={deliveryInstructions}
-                onChange={(e) => setDeliveryInstructions(e.target.value)}
-                placeholder="e.g. Leave inside screened porch"
-              />
-
-              {/* Special Instructions */}
-              <div className={styles.textareaGroup}>
-                <label htmlFor="specialNotes">Special Garment Notes for Eleven</label>
-                <textarea
-                  id="specialNotes"
-                  rows={3}
-                  value={specialNotes}
-                  onChange={(e) => setSpecialNotes(e.target.value)}
-                  className={styles.textarea}
-                  placeholder="e.g. Always check trouser hems, treat cuffs with extra stain focus..."
-                />
-              </div>
-
-              <Button type="submit" variant="primary" size="lg" isLoading={updatePreferencesMutation.isPending}>
-                Save Preferences to Eleven
-              </Button>
-            </form>
+            {isLoading ? (
+              <Loader text="Loading your saved preferences..." />
+            ) : (
+              <PreferencesForm initial={data?.preferences} />
+            )}
           </Card>
         </div>
       </div>

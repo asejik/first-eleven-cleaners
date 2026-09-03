@@ -1,0 +1,114 @@
+.banner {
+  position: fixed;
+  bottom: var(--space-4);
+  left: var(--space-4);
+  right: var(--space-4);
+  max-width: 540px;
+  background-color: var(--color-navy);
+  color: var(--color-white);
+  border: 1px solid rgba(201, 161, 74, 0.4);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  box-shadow: 0 16px 32px rgba(10, 25, 47, 0.4);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  color: var(--color-gold);
+  background: rgba(201, 161, 74, 0.15);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+  margin: 0;
+}
+
+.description {
+  font-size: var(--text-xs);
+  color: var(--color-gray-300);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+
+.link {
+  color: var(--color-gold);
+  text-decoration: underline;
+  margin-left: var(--space-1);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.acceptBtn {
+  flex: 1;
+  background: var(--color-gold);
+  color: var(--color-navy);
+  border: none;
+  font-weight: var(--font-bold);
+  font-size: var(--text-xs);
+  padding: 8px var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.acceptBtn:hover {
+  opacity: 0.9;
+}
+
+.essentialBtn {
+  flex: 1;
+  background: transparent;
+  color: var(--color-gray-300);
+  border: 1px solid var(--color-gray-600);
+  font-size: var(--text-xs);
+  padding: 8px var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.essentialBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-white);
+}
+
+@media (min-width: 640px) {
+  .banner {
+    left: var(--space-6);
+    right: auto;
+  }
+}

@@ -49,7 +49,6 @@ export function useUpdatePreferences() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['preferences'], { preferences: data.preferences });
-      queryClient.invalidateQueries({ queryKey: ['preferences'] });
     },
   });
 }
