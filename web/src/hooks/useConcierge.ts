@@ -11,38 +11,34 @@ const INITIAL_GREETING: AIConversationMessage = {
   timestamp: new Date().toISOString(),
 };
 
+function getInitialMessages(): AIConversationMessage[] {
+  if (typeof window === 'undefined') return [INITIAL_GREETING];
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return [INITIAL_GREETING];
+}
+
 export function useConcierge() {
   const queryClient = useQueryClient();
-  const [messages, setMessages] = useState<AIConversationMessage[]>([INITIAL_GREETING]);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [messages, setMessages] = useState<AIConversationMessage[]>(getInitialMessages);
 
-  // Restore chat history from localStorage on browser mount
+  // Save to localStorage whenever messages change
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-        }
-      }
-    } catch (e) {
-      console.warn('Could not restore chat history:', e);
-    } finally {
-      setIsHydrated(true);
-    }
-  }, []);
-
-  // Save to localStorage whenever messages change (after initial hydration)
-  useEffect(() => {
-    if (isHydrated && messages.length > 0) {
+    if (typeof window !== 'undefined' && messages.length > 0) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
       } catch (e) {
         console.warn('Could not save chat history:', e);
       }
     }
-  }, [messages, isHydrated]);
+  }, [messages]);
 
   const mutation = useMutation({
     mutationFn: async (payload: { message: string; history: AIConversationMessage[]; customerId?: string }) => {

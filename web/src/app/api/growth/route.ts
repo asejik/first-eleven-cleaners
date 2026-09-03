@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import {
   POS_ATTACH_RECOMMENDATIONS,
   evaluateChurnWinbackList,
   generatePostDeliveryReviewPrompt,
 } from '@/lib/growth';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await verifyApiAuth(['admin'], req);
+    if (auth.errorResponse) return auth.errorResponse;
+
     const supabase = createAdminClient();
 
     // Fetch delivered orders for review triggers
@@ -60,6 +64,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const auth = await verifyApiAuth(['admin'], req);
+    if (auth.errorResponse) return auth.errorResponse;
+
     const body = await req.json();
     const { action, customer_id, phone, text } = body;
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PICKUP_WINDOWS } from '@/lib/constants';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -22,20 +23,57 @@ export async function GET(request: Request) {
     });
   }
 
+  // Query actual booked counts from orders table for this date
+  const bookedMap: Record<string, number> = { morning: 0, evening: 0 };
+  const isSupabaseConfigured =
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
+
+  if (isSupabaseConfigured) {
+    try {
+      const supabase = createAdminClient();
+      const [{ count: morningCount }, { count: eveningCount }] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('pickup_date', dateParam)
+          .eq('pickup_window', 'morning')
+          .neq('status', 'cancelled'),
+        supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('pickup_date', dateParam)
+          .eq('pickup_window', 'evening')
+          .neq('status', 'cancelled'),
+      ]);
+
+      bookedMap.morning = morningCount ?? 0;
+      bookedMap.evening = eveningCount ?? 0;
+    } catch {
+      // Fallback cleanly to 0 if database read fails
+    }
+  }
+
   // Return available morning and evening slots
-  const slots = PICKUP_WINDOWS.map((window) => ({
-    id: `${dateParam}-${window.id}`,
-    date: dateParam,
-    window: window.id,
-    label: `${window.label} (${window.start} – ${window.end})`,
-    capacity: 25,
-    booked_count: Math.floor(Math.random() * 8), // simulated current load
-    is_available: true,
-  }));
+  const slots = PICKUP_WINDOWS.map((window) => {
+    const booked = bookedMap[window.id] ?? 0;
+    const capacity = 25;
+    const isAvailable = booked < capacity;
+
+    return {
+      id: `${dateParam}-${window.id}`,
+      date: dateParam,
+      window: window.id,
+      label: `${window.label} (${window.start} – ${window.end})`,
+      capacity,
+      booked_count: booked,
+      is_available: isAvailable,
+    };
+  });
 
   return NextResponse.json({
     date: dateParam,
-    is_available: true,
+    is_available: slots.some((s) => s.is_available),
     slots,
   });
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Order } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -30,6 +31,7 @@ const BookingSchema = z.object({
     pickup_date: z.string(),
     pickup_window: z.enum(['morning', 'evening']),
     express_tier: z.enum(['standard', 'express_8hr', 'express_4hr']).default('standard'),
+    frequency: z.enum(['one_time', 'weekly', 'biweekly']).optional().default('one_time'),
   }),
   pricing: z.object({
     subtotal: z.number(),
@@ -40,11 +42,21 @@ const BookingSchema = z.object({
   payment_method: z.object({
     card_brand: z.string().default('visa'),
     last_4: z.string().default('4242'),
+    payment_token: z.string().optional().nullable(),
   }).optional(),
 });
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`booking:${clientIp}`, 10, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Too many booking requests from this network. Please wait a minute and try again.' },
+        { status: 429 }
+      );
+    }
+
     const rawBody = await request.json();
     const validated = BookingSchema.parse(rawBody);
 
@@ -59,7 +71,7 @@ export async function POST(request: Request) {
 
     const deliveryDateStr = delivery.toISOString().split('T')[0];
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `F11-${new Date().getFullYear()}-${randomSuffix}`;
+    const orderNumber = `F11-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
     const isSupabaseConfigured =
       Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
@@ -117,23 +129,37 @@ export async function POST(request: Request) {
         }
 
         if (customerId) {
-          // 2. Insert Delivery Address
-          const { data: addressRow } = await supabase
-            .from('addresses')
-            .insert({
-              customer_id: customerId,
-              street: validated.address.street,
-              unit: validated.address.unit || null,
-              city: validated.address.city,
-              state: validated.address.state,
-              zip: validated.address.zip,
-              delivery_notes: validated.address.delivery_notes || null,
-              is_default: true,
-            })
-            .select('id')
-            .single();
+          // 2. Resolve or Insert Delivery Address (Address Deduplication)
+          let addressId: string | null = null;
 
-          const addressId = addressRow?.id || null;
+          const { data: existingAddress } = await supabase
+            .from('addresses')
+            .select('id')
+            .eq('customer_id', customerId)
+            .ilike('street', validated.address.street.trim())
+            .eq('zip', validated.address.zip.trim())
+            .maybeSingle();
+
+          if (existingAddress) {
+            addressId = existingAddress.id;
+          } else {
+            const { data: addressRow } = await supabase
+              .from('addresses')
+              .insert({
+                customer_id: customerId,
+                street: validated.address.street.trim(),
+                unit: validated.address.unit || null,
+                city: validated.address.city,
+                state: validated.address.state,
+                zip: validated.address.zip.trim(),
+                delivery_notes: validated.address.delivery_notes || null,
+                is_default: true,
+              })
+              .select('id')
+              .single();
+
+            addressId = addressRow?.id || null;
+          }
 
           // 3. Insert Order
           const { data: insertedOrder, error: orderErr } = await supabase
@@ -154,11 +180,16 @@ export async function POST(request: Request) {
               promo_code: validated.pricing.promo_code || null,
               discount_amount: validated.pricing.discount_amount,
               total: validated.pricing.total,
-              payment_id: `sq_sim_${randomSuffix}`,
+              payment_id: validated.payment_method?.payment_token || `sq_sim_${randomSuffix}`,
               payment_status: validated.services.type === 'wash_fold' ? 'authorized' : 'charged',
-              notes: validated.address.delivery_notes || null,
+              notes: [
+                validated.address.delivery_notes,
+                validated.schedule.frequency && validated.schedule.frequency !== 'one_time'
+                  ? `Recurring Plan: ${validated.schedule.frequency === 'weekly' ? 'Weekly' : 'Bi-Weekly'}`
+                  : null,
+              ].filter(Boolean).join(' | ') || null,
             })
-            .select('*')
+            .select('id, order_number, total, status')
             .single();
 
           if (!orderErr && insertedOrder) {
@@ -201,6 +232,27 @@ export async function POST(request: Request) {
               triggered_by: 'Customer (Web Booking)',
             });
 
+            // 6. Increment promo code usage count in database if promo was used
+            if (validated.pricing.promo_code) {
+              try {
+                const cleanPromo = validated.pricing.promo_code.toUpperCase().trim();
+                const { data: promoRow } = await supabase
+                  .from('promo_codes')
+                  .select('id, current_uses')
+                  .eq('code', cleanPromo)
+                  .maybeSingle();
+
+                if (promoRow) {
+                  await supabase
+                    .from('promo_codes')
+                    .update({ current_uses: (promoRow.current_uses || 0) + 1 })
+                    .eq('id', promoRow.id);
+                }
+              } catch (promoErr) {
+                console.warn('Failed to increment promo code usage counter:', promoErr);
+              }
+            }
+
             return NextResponse.json({
               success: true,
               order: insertedOrder,
@@ -233,7 +285,7 @@ export async function POST(request: Request) {
       promo_code: validated.pricing.promo_code || null,
       discount_amount: validated.pricing.discount_amount,
       total: validated.pricing.total,
-      payment_id: `sq_tok_${crypto.randomUUID().slice(0, 8)}`,
+      payment_id: validated.payment_method?.payment_token || `sq_tok_${crypto.randomUUID().slice(0, 8)}`,
       payment_status: validated.services.type === 'wash_fold' ? 'authorized' : 'charged',
       notes: validated.address.delivery_notes || null,
       created_at: new Date().toISOString(),

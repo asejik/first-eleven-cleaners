@@ -3,7 +3,10 @@ import { Inter, Archivo } from 'next/font/google';
 import { QueryProvider } from '@/providers/query-provider';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { MobileNav } from '@/components/layout/MobileNav';
 import { ToastContainer } from '@/components/ui/Toast';
+import { CookieConsent } from '@/components/ui/CookieConsent';
+import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 import '@/styles/globals.css';
 import '@/styles/animations.css';
 
@@ -21,6 +24,7 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://firstelevencleaners.com'),
   title: {
     default: 'First Eleven Cleaners | Premium Dry Cleaning & Laundry Delivery — Dallas, TX',
     template: '%s | First Eleven Cleaners',
@@ -45,6 +49,13 @@ export const metadata: Metadata = {
     description:
       'Born on the world\'s biggest stage. Now serving yours. Premium pickup & delivery dry cleaning across DFW.',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'First Eleven Cleaners | Premium Dry Cleaning & Laundry Delivery',
+    description:
+      'Born on the world\'s biggest stage. Premium dry cleaning and laundry pickup & delivery across DFW.',
+    images: ['/icon.png'],
+  },
   icons: {
     icon: [
       { url: '/icon.png', sizes: '32x32', type: 'image/png' },
@@ -57,16 +68,66 @@ export const metadata: Metadata = {
     ],
   },
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'First Eleven',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
   themeColor: '#0B1F3A',
+  viewportFit: 'cover',
 };
 
 import { AuthProvider } from '@/hooks/useAuth';
-import { ConciergeWidget } from '@/components/concierge/ConciergeWidget';
+import { DynamicConcierge } from '@/components/concierge/DynamicConcierge';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'DryCleaningOrLaundryService',
+  name: 'First Eleven Cleaners',
+  image: 'https://firstelevencleaners.com/icon.png',
+  '@id': 'https://firstelevencleaners.com',
+  url: 'https://firstelevencleaners.com',
+  telephone: '+1-214-555-0199',
+  priceRange: '$$',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Downtown Dallas',
+    addressLocality: 'Dallas',
+    addressRegion: 'TX',
+    postalCode: '75201',
+    addressCountry: 'US',
+  },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: 32.7767,
+    longitude: -96.797,
+  },
+  areaServed: [
+    { '@type': 'City', name: 'Dallas' },
+    { '@type': 'City', name: 'Highland Park' },
+    { '@type': 'City', name: 'University Park' },
+    { '@type': 'City', name: 'Frisco' },
+    { '@type': 'City', name: 'Plano' },
+    { '@type': 'City', name: 'Fort Worth' },
+  ],
+  openingHoursSpecification: [
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      opens: '07:00',
+      closes: '20:00',
+    },
+  ],
+};
 
 export default function RootLayout({
   children,
@@ -75,14 +136,26 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${archivo.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <QueryProvider>
           <AuthProvider>
             <Header />
-            <main>{children}</main>
+            <main id="main-content">{children}</main>
             <Footer />
+            <MobileNav />
             <ToastContainer />
-            <ConciergeWidget />
+            <DynamicConcierge />
+            <CookieConsent />
+            <ServiceWorkerRegister />
           </AuthProvider>
         </QueryProvider>
       </body>

@@ -1,17 +1,22 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import type { OrderStatusKey } from '@/lib/constants';
 
 export async function GET(request: Request) {
+  const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff'], request);
+  if (auth.errorResponse) return auth.errorResponse;
+
   const { searchParams } = new URL(request.url);
   const orderId = searchParams.get('order_id');
 
   try {
     const supabase = createAdminClient();
 
-    let query = supabase
+    const query = supabase
       .from('conversations')
       .select(`
         id,
@@ -87,6 +92,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`notif:${clientIp}`, 20, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ error: 'Too many dispatch requests.' }, { status: 429 });
+    }
+
+    const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff'], request);
+    if (auth.errorResponse) return auth.errorResponse;
+
     const body = await request.json();
     const { order_id, stage, channel = 'sms', photo_url } = body;
 

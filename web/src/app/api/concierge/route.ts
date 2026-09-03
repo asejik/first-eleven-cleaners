@@ -1,119 +1,82 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
+import type { Address, Order, CustomerPreferences } from '@/types';
 
 export async function POST(req: Request) {
   try {
+    // 1. IP Rate Limiting (15 requests / minute)
+    const clientIp = getClientIp(req);
+    const rateCheck = checkRateLimit(`concierge:${clientIp}`, 15, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment before sending another message.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
-    const { message, history = [], customer_id } = body;
+    const { message, history = [] } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
     const adminSupabase = createAdminClient();
-    const cookieStore = await cookies();
-    const ssrSupabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ycxdryyhkdiuktkdtjwb.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljeGRyeXloa2RpdWt0a2R0andiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0Nzc5ODEsImV4cCI6MjEwMzA1Mzk4MX0.fGjD8lR3GfVpL9l105mR237qN0W0L6F7V4G0V1F5G8E',
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore in route handlers
-            }
-          },
-        },
-      }
-    );
 
-    // 1. Identify user / customer context
-    let targetCustomerId = customer_id;
-    if (!targetCustomerId) {
-      const {
-        data: { user },
-      } = await ssrSupabase.auth.getUser();
+    // 2. Identify user / customer context strictly via authenticated session
+    let targetCustomerId: string | null = null;
+    const { customer } = await getAuthenticatedCustomer(req);
 
-      if (user) {
-        const { data: cust } = await adminSupabase
-          .from('customers')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-        if (cust) targetCustomerId = cust.id;
-      }
-    }
-
-    // Fallback: If still no customer_id found, query customer accounts (not staff)
-    if (!targetCustomerId) {
-      const { data: clientCustomer } = await adminSupabase
-        .from('customers')
-        .select('id')
-        .eq('role', 'customer')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (clientCustomer) targetCustomerId = clientCustomer.id;
+    if (customer) {
+      targetCustomerId = customer.id;
     }
 
     const context: ConciergeContext = {};
 
-    if (targetCustomerId) {
-      // Fetch Customer
-      const { data: customer } = await adminSupabase
-        .from('customers')
-        .select('*')
-        .eq('id', targetCustomerId)
-        .maybeSingle();
-
-      if (customer) {
-        context.customerId = customer.id;
-        context.customerName = customer.full_name;
-        context.customerPhone = customer.phone;
-        context.customerEmail = customer.email;
-      }
+    if (targetCustomerId && customer) {
+      context.customerId = customer.id;
+      context.customerName = customer.full_name;
+      context.customerPhone = customer.phone;
+      context.customerEmail = customer.email;
 
       // Fetch Preferences (Eleven's Memory)
       const { data: prefs } = await adminSupabase
         .from('customer_preferences')
-        .select('*')
+        .select('customer_id, starch_level, fold_vs_hang, detergent_sensitivity, gate_code, delivery_instructions, special_notes')
         .eq('customer_id', targetCustomerId)
         .maybeSingle();
 
-      context.customerPreferences = prefs;
+      context.customerPreferences = (prefs as unknown as CustomerPreferences) || null;
 
       // Fetch Default Address
       const { data: address } = await adminSupabase
         .from('addresses')
-        .select('*')
+        .select('id, street, unit, city, state, zip, delivery_notes')
         .eq('customer_id', targetCustomerId)
         .eq('is_default', true)
         .maybeSingle();
 
-      context.defaultAddress = address;
+      context.defaultAddress = (address as unknown as Address) || null;
 
       // Fetch Recent Orders
       const { data: orders } = await adminSupabase
         .from('orders')
-        .select('*, address:addresses(*)')
+        .select(`
+          id, order_number, status, order_type, pickup_date, total,
+          address:addresses(street, city, zip)
+        `)
         .eq('customer_id', targetCustomerId)
         .order('created_at', { ascending: false })
         .limit(3);
 
-      context.recentOrders = orders || [];
+      context.recentOrders = (orders as unknown as Order[]) || [];
     }
 
-    // 2. Generate AI Response
+    // 3. Generate AI Response
     const aiEngine = getAIEngine();
     const response = await aiEngine.generateResponse(
       message,
@@ -123,7 +86,7 @@ export async function POST(req: Request) {
 
     let createdOrderRecord = null;
 
-    // 3. Conversational Booking Execution: Detect if customer confirmed a pickup booking
+    // 4. Conversational Booking Execution: Detect if customer confirmed a pickup booking
     const isBookingConfirmation =
       /\b(lock in|confirm|schedule|book|agendar|confirmar|yes|si|ready|proceed)\b/i.test(message) &&
       (/\b(pickup|evening|morning|order|tonight|tomorrow|shift|recoleccion)\b/i.test(message) ||
@@ -133,7 +96,7 @@ export async function POST(req: Request) {
       try {
         const orderNumber = `F11-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         const pickupDate = new Date().toISOString().split('T')[0];
-        
+
         const pickup = new Date();
         const delivery = new Date(pickup);
         delivery.setDate(delivery.getDate() + 2);
@@ -143,7 +106,7 @@ export async function POST(req: Request) {
         const isEvening = /evening|tarde|tonight|noche/i.test(message) || /evening/i.test(response.content);
         const pickupWindow = isEvening ? 'evening' : 'morning';
 
-        // 1. Prepare itemized garments dynamically
+        // Prepare itemized garments dynamically
         const itemsToInsert: Array<{
           garment_type: string;
           service_type: 'dry_clean' | 'wash_fold';
@@ -258,7 +221,7 @@ export async function POST(req: Request) {
             payment_status: 'authorized',
             notes: `Booked via Eleven AI Concierge. Customer note: "${message}"`,
           })
-          .select('*')
+          .select('id, order_number, status, pickup_date, total')
           .single();
 
         if (!orderInsertErr && insertedOrder) {
@@ -293,7 +256,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. If Escalated to Human, append into conversations JSON messages array for Mission Control HUD
+    // 5. If Escalated to Human, append into conversations JSON messages array for Mission Control HUD
     if (response.escalateToHuman && targetCustomerId) {
       try {
         const { data: existingConv } = await adminSupabase

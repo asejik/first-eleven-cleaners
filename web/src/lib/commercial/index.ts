@@ -1,5 +1,4 @@
 import type {
-  CommercialAccount,
   CommercialInvoice,
   CommercialRateCard,
   RecurringSchedule,

@@ -5,7 +5,7 @@
 import type { OrderStatusKey, ServiceTypeKey } from '@/lib/constants';
 
 // --- User Roles ---
-export type UserRole = 'customer' | 'driver' | 'intake_staff' | 'admin';
+export type UserRole = 'customer' | 'driver' | 'intake_staff' | 'admin' | 'staff';
 
 // --- Customer ---
 export interface Customer {
@@ -17,6 +17,35 @@ export interface Customer {
   role?: UserRole;
   created_at: string;
   updated_at: string;
+}
+
+// --- Staff Management ---
+export interface StaffMember {
+  id: string;
+  auth_id: string;
+  email: string;
+  phone: string;
+  full_name: string;
+  role: 'admin' | 'driver' | 'intake_staff';
+  is_active: boolean;
+  created_at: string;
+  last_sign_in_at?: string | null;
+}
+
+export interface CreateStaffPayload {
+  full_name: string;
+  email: string;
+  phone: string;
+  role: 'driver' | 'intake_staff';
+  password?: string;
+}
+
+export interface UpdateStaffPayload {
+  full_name?: string;
+  phone?: string;
+  role?: 'driver' | 'intake_staff';
+  is_active?: boolean;
+  password?: string;
 }
 
 export interface CustomerPreferences {
@@ -75,6 +104,7 @@ export interface Order {
   payment_id: string | null;
   payment_status: 'pending' | 'authorized' | 'charged' | 'failed' | 'refunded';
   notes: string | null;
+  frequency?: 'one_time' | 'weekly' | 'biweekly';
   created_at: string;
   updated_at: string;
   // Joined relations (optional)
@@ -219,4 +249,53 @@ export interface PriceCalculation {
   meets_minimum: boolean;
   minimum_shortfall: number;
   items: Array<{ label: string; quantity: number; unit_price: number; subtotal: number }>;
+}
+
+// --- Booking Submission Payload & Result ---
+export interface BookingSubmissionPayload {
+  customer: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
+  address: {
+    street: string;
+    unit?: string;
+    city?: string;
+    state?: string;
+    zip: string;
+    delivery_notes?: string;
+  };
+  services: {
+    type: ServiceTypeKey;
+    dry_clean_items?: Array<{
+      garment_type: string;
+      quantity: number;
+    }>;
+    estimated_weight_lbs?: number;
+  };
+  schedule: {
+    pickup_date: string;
+    pickup_window: 'morning' | 'evening';
+    express_tier?: 'standard' | 'express_8hr' | 'express_4hr';
+    frequency?: 'one_time' | 'weekly' | 'biweekly';
+  };
+  pricing: {
+    subtotal: number;
+    discount_amount?: number;
+    total: number;
+    promo_code?: string | null;
+  };
+  payment_method?: {
+    card_brand?: string;
+    last_4?: string;
+    payment_token?: string | null;
+  };
+}
+
+export interface BookingSubmissionResult {
+  success: boolean;
+  order: Order;
+  order_number: string;
+  message: string;
 }

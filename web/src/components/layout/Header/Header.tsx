@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -10,16 +10,14 @@ import { useAuth } from '@/hooks/useAuth';
 import type { UserRole } from '@/types';
 import styles from './Header.module.css';
 
+const emptySubscribe = () => () => {};
+
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const handleLogout = async () => {
     await logout();
@@ -27,7 +25,7 @@ export function Header() {
     router.push(ROUTES.home);
   };
 
-  const isAuth = mounted && isAuthenticated;
+  const isAuth = isMounted && isAuthenticated;
   const role: UserRole = user?.role || 'customer';
 
   // Role-specific home destination and navigation menus
@@ -51,13 +49,14 @@ export function Header() {
       { href: ROUTES.intake, label: '⚖️ Intake' },
       { href: ROUTES.staffDriver, label: '🚐 Driver' },
       { href: ROUTES.portal, label: '🏢 B2B Portal' },
-      { href: ROUTES.dashboard, label: '👤 Customer View' },
+      { href: `${ROUTES.dashboard}?view=customer`, label: '👤 Customer Preview' },
     ];
   } else {
     // Customer or Guest
     homeHref = ROUTES.home;
     navLinks = [
       { href: ROUTES.home, label: 'Home' },
+      { href: ROUTES.about, label: 'About' },
       { href: ROUTES.pricing, label: 'Pricing' },
       { href: ROUTES.book, label: 'Book a Pickup' },
       { href: ROUTES.commercial, label: 'For Business' },
@@ -73,12 +72,11 @@ export function Header() {
         {/* Logo */}
         <Link href={homeHref} className={styles.logo} aria-label="First Eleven Cleaners">
           <Image
-            src="/logo.png?v=2"
+            src="/logo.png"
             alt="First Eleven Cleaners"
             width={180}
             height={44}
             priority
-            unoptimized
             style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
             className={styles.logoImg}
           />

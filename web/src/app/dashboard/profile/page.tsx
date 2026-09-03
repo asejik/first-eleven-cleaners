@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -7,9 +8,213 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCustomerAddresses } from '@/hooks/useAddresses';
 import { useCustomerPreferences } from '@/hooks/usePreferences';
 import { useCustomerClaims } from '@/hooks/useClaims';
-import { Button, Card, Badge } from '@/components/ui';
+import { useCustomerProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { useUIStore } from '@/stores/ui-store';
+import { Button, Card, Badge, Input } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
+
+interface ProfileEditorFormProps {
+  initialFullName: string;
+  initialPhone: string;
+  email: string;
+  userId: string;
+  initialChannel?: 'sms' | 'whatsapp' | 'email';
+  initialPromoOptIn?: boolean;
+}
+
+function ProfileEditorForm({
+  initialFullName,
+  initialPhone,
+  email,
+  userId,
+  initialChannel = 'sms',
+  initialPromoOptIn = true,
+}: ProfileEditorFormProps) {
+  const updateProfileMutation = useUpdateProfile();
+  const addToast = useUIStore((s) => s.addToast);
+
+  const [fullName, setFullName] = useState(initialFullName);
+  const [phone, setPhone] = useState(initialPhone);
+  const [preferredChannel, setPreferredChannel] = useState<'sms' | 'whatsapp' | 'email'>(initialChannel);
+  const [promoOptIn, setPromoOptIn] = useState(initialPromoOptIn);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateProfileMutation.mutateAsync({
+        full_name: fullName,
+        phone,
+        preferred_channel: preferredChannel,
+        promo_opt_in: promoOptIn,
+      });
+      addToast({
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Your personal details and communication preferences have been saved.',
+      });
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: (err as Error).message || 'Could not update profile.',
+      });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSave} className={styles.cardBody}>
+        <Input
+          id="profile-fullname"
+          label="Full Name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="e.g. Alex Morgan"
+          required
+        />
+        <div className={styles.infoRow}>
+          <span className={styles.infoLabel}>Email Address (Primary Auth)</span>
+          <span className={styles.infoValue} style={{ color: 'var(--color-gray-600)', background: 'var(--color-gray-100)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+            {email}
+          </span>
+        </div>
+        <Input
+          id="profile-phone"
+          label="Mobile Phone (for ETA &amp; Photos)"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="(214) 555-0199"
+          required
+          helperText="We send live driver arrival notifications & photo receipts here."
+        />
+
+        {/* Preferred Alert Channel */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-bold)', color: 'var(--color-navy)' }}>
+            Notification Channel
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setPreferredChannel('sms')}
+              aria-pressed={preferredChannel === 'sms'}
+              style={{
+                padding: '8px',
+                borderRadius: 'var(--radius-md)',
+                border: preferredChannel === 'sms' ? '2px solid var(--color-gold)' : '1px solid var(--color-gray-300)',
+                background: preferredChannel === 'sms' ? 'var(--color-cream)' : 'var(--color-white)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: preferredChannel === 'sms' ? 'bold' : 'normal',
+                cursor: 'pointer',
+              }}
+            >
+              💬 SMS
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreferredChannel('whatsapp')}
+              aria-pressed={preferredChannel === 'whatsapp'}
+              style={{
+                padding: '8px',
+                borderRadius: 'var(--radius-md)',
+                border: preferredChannel === 'whatsapp' ? '2px solid var(--color-gold)' : '1px solid var(--color-gray-300)',
+                background: preferredChannel === 'whatsapp' ? 'var(--color-cream)' : 'var(--color-white)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: preferredChannel === 'whatsapp' ? 'bold' : 'normal',
+                cursor: 'pointer',
+              }}
+            >
+              🟢 WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreferredChannel('email')}
+              aria-pressed={preferredChannel === 'email'}
+              style={{
+                padding: '8px',
+                borderRadius: 'var(--radius-md)',
+                border: preferredChannel === 'email' ? '2px solid var(--color-gold)' : '1px solid var(--color-gray-300)',
+                background: preferredChannel === 'email' ? 'var(--color-cream)' : 'var(--color-white)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: preferredChannel === 'email' ? 'bold' : 'normal',
+                cursor: 'pointer',
+              }}
+            >
+              ✉️ Email
+            </button>
+          </div>
+        </div>
+
+        {/* TCPA Opt-In Checkbox */}
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)', cursor: 'pointer', marginTop: '4px' }}>
+          <input
+            type="checkbox"
+            checked={promoOptIn}
+            onChange={(e) => setPromoOptIn(e.target.checked)}
+            style={{ accentColor: 'var(--color-gold)', marginTop: '2px' }}
+          />
+          <span>
+            Send me order progress updates, driver ETAs, and occasional match-ready seasonal specials.
+          </span>
+        </label>
+
+        <div className={styles.infoRow} style={{ marginTop: '4px' }}>
+          <span className={styles.infoLabel}>Account ID</span>
+          <span className={styles.infoValue} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-500)', fontFamily: 'monospace' }}>
+            {userId}
+          </span>
+        </div>
+
+        <Button
+          variant="primary"
+          size="md"
+          type="submit"
+          isLoading={updateProfileMutation.isPending}
+          style={{ marginTop: 'auto' }}
+        >
+          Save Profile Changes
+        </Button>
+      </form>
+    );
+}
+
+function ProfilePersonalDetailsEditor({
+  initialFullName,
+  initialPhone,
+  email,
+  userId,
+}: {
+  initialFullName: string;
+  initialPhone: string;
+  email: string;
+  userId: string;
+}) {
+  const { data: profileData } = useCustomerProfile();
+  const profile = profileData?.profile;
+
+  const currentFullName = profile?.full_name || initialFullName;
+  const currentPhone = profile?.phone || initialPhone;
+  const currentChannel = profile?.preferred_channel || 'sms';
+  const currentPromoOptIn = profile?.promo_opt_in ?? true;
+
+  return (
+    <Card variant="bordered" padding="lg" className={styles.card}>
+      <div className={styles.cardHeader}>
+        <h2 className={styles.cardTitle}>👤 Personal Details &amp; Alerts</h2>
+      </div>
+      <ProfileEditorForm
+        key={`${userId}-${currentFullName}-${currentPhone}-${currentChannel}`}
+        initialFullName={currentFullName}
+        initialPhone={currentPhone}
+        email={email}
+        userId={userId}
+        initialChannel={currentChannel}
+        initialPromoOptIn={currentPromoOptIn}
+      />
+    </Card>
+  );
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -66,32 +271,13 @@ export default function ProfilePage() {
 
           {/* Settings Grid */}
           <div className={styles.grid}>
-            {/* Account Details Card */}
-            <Card variant="bordered" padding="lg" className={styles.card}>
-              <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>👤 Personal Details</h2>
-              </div>
-              <div className={styles.cardBody}>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Full Name</span>
-                  <span className={styles.infoValue}>{user?.full_name || 'Not specified'}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Email Address</span>
-                  <span className={styles.infoValue}>{user?.email}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Phone Number</span>
-                  <span className={styles.infoValue}>{user?.phone || 'Not linked'}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Account ID</span>
-                  <span className={styles.infoValue} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-500)', fontFamily: 'monospace' }}>
-                    {user?.id}
-                  </span>
-                </div>
-              </div>
-            </Card>
+            {/* Account Details Card with Interactive Editing */}
+            <ProfilePersonalDetailsEditor
+              initialFullName={user?.full_name || ''}
+              initialPhone={user?.phone || ''}
+              email={user?.email || ''}
+              userId={user?.id || ''}
+            />
 
             {/* Saved Addresses Card */}
             <Card variant="bordered" padding="lg" className={styles.card}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { PriceCalculation } from '@/types';
+import type { PriceCalculation, BookingSubmissionPayload, BookingSubmissionResult } from '@/types';
 
 // 1. Fetch available time slots for a given date
 export function useAvailableSlots(date: string) {
@@ -66,8 +66,8 @@ export function useValidatePromoCode() {
 export function useSubmitBooking() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (bookingPayload: unknown) => {
+  return useMutation<BookingSubmissionResult, Error, BookingSubmissionPayload>({
+    mutationFn: async (bookingPayload: BookingSubmissionPayload): Promise<BookingSubmissionResult> => {
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

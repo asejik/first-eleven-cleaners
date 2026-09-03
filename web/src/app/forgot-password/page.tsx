@@ -37,12 +37,11 @@ export default function ForgotPasswordPage() {
         <div className={styles.header}>
           <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
             <Image
-              src="/logo.png?v=2"
+              src="/logo.png"
               alt="First Eleven Cleaners"
               width={200}
               height={50}
               priority
-              unoptimized
               style={{ height: '44px', width: 'auto', margin: '0 auto', objectFit: 'contain' }}
             />
           </Link>

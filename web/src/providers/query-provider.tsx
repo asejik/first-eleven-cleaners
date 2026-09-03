@@ -10,15 +10,15 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Data is fresh for 30 seconds before background refetch
-            staleTime: 30 * 1000,
+            // Data is fresh for 60 seconds before background refetch
+            staleTime: 60 * 1000,
             // Unused data stays in cache for 10 minutes
             gcTime: 10 * 60 * 1000,
-            // Retry failed queries 3 times with exponential backoff
-            retry: 3,
-            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // Refetch when window regains focus (for fresh order statuses)
-            refetchOnWindowFocus: true,
+            // Retry failed queries once with exponential backoff (prevent retry storms)
+            retry: 1,
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+            // Prevent chatty refetching on every window focus (components override where live polling is needed)
+            refetchOnWindowFocus: false,
           },
           mutations: {
             // Never auto-retry mutations (don't double-charge a card)
@@ -31,7 +31,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {process.env.NODE_ENV === 'development' && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
     </QueryClientProvider>
   );
 }

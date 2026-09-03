@@ -3,19 +3,52 @@
   "short_name": "First Eleven",
   "description": "Premium AI-Augmented Dry Cleaning & Laundry Delivery across Dallas-Fort Worth",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0B1F3A",
   "theme_color": "#0B1F3A",
+  "categories": ["lifestyle", "business", "shopping"],
   "icons": [
     {
       "src": "/icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book Pickup",
+      "short_name": "Book",
+      "description": "Schedule a 48-Hour dry cleaning or laundry pickup",
+      "url": "/book",
+      "icons": [{ "src": "/icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Track Orders",
+      "short_name": "Orders",
+      "description": "View live Garment Passport status and ETAs",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon.png", "sizes": "192x192" }]
     }
   ]
 }

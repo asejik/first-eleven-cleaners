@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 
-export async function GET() {
+export async function GET(request: Request) {
   const isSupabaseConfigured =
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
@@ -12,32 +12,18 @@ export async function GET() {
   }
 
   try {
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    const { customer, user } = await getAuthenticatedCustomer(request);
 
-    if (!user) {
+    if (!user || !customer) {
       return NextResponse.json({ addresses: [] });
     }
 
     const supabase = createAdminClient();
 
-    // 1. Resolve customer
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-      .maybeSingle();
-
-    if (!customer) {
-      return NextResponse.json({ addresses: [] });
-    }
-
-    // 2. Fetch customer addresses
+    // Fetch customer addresses with explicit fields
     const { data: addresses, error } = await supabase
       .from('addresses')
-      .select('*')
+      .select('id, customer_id, street, unit, city, state, zip, lat, lng, is_default, delivery_notes, zone_id, created_at')
       .eq('customer_id', customer.id)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
@@ -66,29 +52,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    const { customer, user } = await getAuthenticatedCustomer(request);
 
-    if (!user) {
+    if (!user || !customer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = createAdminClient();
 
-    // 1. Resolve customer
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-      .maybeSingle();
-
-    if (!customer) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
-    }
-
-    // 2. Check existing addresses count
+    // 1. Check existing addresses count
     const { count } = await supabase
       .from('addresses')
       .select('*', { count: 'exact', head: true })
@@ -96,7 +68,7 @@ export async function POST(request: Request) {
 
     const shouldBeDefault = is_default || (count === 0);
 
-    // 3. If new address is default, unset all others
+    // 2. If new address is default, unset all others
     if (shouldBeDefault) {
       await supabase
         .from('addresses')
@@ -104,7 +76,7 @@ export async function POST(request: Request) {
         .eq('customer_id', customer.id);
     }
 
-    // 4. Insert new address
+    // 3. Insert new address
     const { data: newAddress, error: insertErr } = await supabase
       .from('addresses')
       .insert({
@@ -117,7 +89,7 @@ export async function POST(request: Request) {
         delivery_notes: delivery_notes?.trim() || null,
         is_default: shouldBeDefault,
       })
-      .select('*')
+      .select('id, customer_id, street, unit, city, state, zip, lat, lng, is_default, delivery_notes, zone_id, created_at')
       .single();
 
     if (insertErr) {
@@ -140,27 +112,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'address_id is required' }, { status: 400 });
     }
 
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    const { customer, user } = await getAuthenticatedCustomer(request);
 
-    if (!user) {
+    if (!user || !customer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = createAdminClient();
-
-    // 1. Resolve customer
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-      .maybeSingle();
-
-    if (!customer) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
-    }
 
     if (is_default) {
       // Unset previous defaults
@@ -175,7 +133,7 @@ export async function PATCH(request: Request) {
         .update({ is_default: true })
         .eq('id', address_id)
         .eq('customer_id', customer.id)
-        .select('*')
+        .select('id, customer_id, street, unit, city, state, zip, lat, lng, is_default, delivery_notes, zone_id, created_at')
         .single();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -197,26 +155,13 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Address id parameter is required' }, { status: 400 });
     }
 
-    const authClient = await createClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    const { customer, user } = await getAuthenticatedCustomer(request);
 
-    if (!user) {
+    if (!user || !customer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = createAdminClient();
-
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('id')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
-      .maybeSingle();
-
-    if (!customer) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
-    }
 
     // Check if target was default
     const { data: targetAddr } = await supabase

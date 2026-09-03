@@ -15,11 +15,10 @@ export function Footer() {
           <div className={styles.brand}>
             <Link href={ROUTES.home} className={styles.logoLink}>
               <Image
-                src="/logo.png?v=2"
+                src="/logo.png"
                 alt={APP_NAME}
                 width={170}
                 height={42}
-                unoptimized
                 style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
                 className={styles.footerLogoImg}
               />
@@ -48,8 +47,8 @@ export function Footer() {
             <nav className={styles.columnLinks}>
               <Link href={ROUTES.commercial}>For Business</Link>
               <Link href={ROUTES.portal}>Commercial B2B Portal</Link>
-              <Link href={ROUTES.home}>About Us</Link>
-              <Link href={ROUTES.home}>FIFA World Cup Story</Link>
+              <Link href={ROUTES.about}>About Us</Link>
+              <Link href={ROUTES.about}>FIFA World Cup Story</Link>
             </nav>
           </div>
 
@@ -63,6 +62,16 @@ export function Footer() {
               <Link href={ROUTES.dashboard}>Customer Portal</Link>
             </nav>
           </div>
+
+          {/* Legal */}
+          <div className={styles.column}>
+            <h4 className={styles.columnTitle}>Legal &amp; Trust</h4>
+            <nav className={styles.columnLinks}>
+              <Link href={ROUTES.terms}>Terms of Service</Link>
+              <Link href={ROUTES.privacy}>Privacy Policy</Link>
+              <Link href={ROUTES.pricing}>Satisfaction Guarantee</Link>
+            </nav>
+          </div>
         </div>
 
         {/* Divider */}
@@ -70,9 +79,20 @@ export function Footer() {
 
         {/* Bottom Section */}
         <div className={styles.bottom}>
-          <p className={styles.copyright}>
-            © {currentYear} {APP_NAME}. Operated by Lydia Painting, LLC. All rights reserved.
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <p className={styles.copyright}>
+              © {currentYear} {APP_NAME}. Operated by Lydia Painting, LLC. All rights reserved.
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
+              <Link href={ROUTES.terms} style={{ color: 'var(--color-gray-400)', textDecoration: 'underline' }}>
+                Terms of Service
+              </Link>
+              <span style={{ color: 'var(--color-gray-600)' }}>•</span>
+              <Link href={ROUTES.privacy} style={{ color: 'var(--color-gray-400)', textDecoration: 'underline' }}>
+                Privacy Policy
+              </Link>
+            </div>
+          </div>
           <div className={styles.certifications}>
             <span className={styles.cert}>MBE</span>
             <span className={styles.cert}>SDVOSB</span>

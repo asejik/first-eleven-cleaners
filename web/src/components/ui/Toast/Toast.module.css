@@ -1,7 +1,7 @@
 .container {
   position: fixed;
-  bottom: var(--space-4);
-  right: var(--space-4);
+  top: var(--space-6);
+  right: var(--space-6);
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
@@ -12,6 +12,7 @@
 
 @media (max-width: 639px) {
   .container {
+    top: var(--space-4);
     left: var(--space-4);
     right: var(--space-4);
     max-width: none;

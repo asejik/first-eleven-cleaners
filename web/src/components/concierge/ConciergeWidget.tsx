@@ -57,7 +57,7 @@ export function ConciergeWidget() {
               alt="Eleven AI"
               width={34}
               height={34}
-              style={{ borderRadius: '50%', objectFit: 'cover' }}
+              style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }}
             />
             <span className={styles.onlinePulse} />
           </div>
@@ -79,7 +79,7 @@ export function ConciergeWidget() {
                 alt="Eleven AI"
                 width={36}
                 height={36}
-                style={{ borderRadius: '50%', border: '1px solid var(--color-gold)' }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--color-gold)' }}
               />
               <div>
                 <h2 className={styles.headerTitle}>Eleven Concierge</h2>

@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 import type { Order } from '@/types';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const clientIp = getClientIp(request);
+  const rateCheck = checkRateLimit(`order_detail:${clientIp}`, 60, 60 * 1000);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: 'Too many order lookups from this network. Please wait a minute.' },
+      { status: 429 }
+    );
+  }
+
   const { id } = await params;
 
   const isSupabaseConfigured =
@@ -168,4 +179,87 @@ export async function GET(
   };
 
   return NextResponse.json({ order });
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { action } = body;
+
+    if (action !== 'cancel') {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    const { customer, user } = await getAuthenticatedCustomer(request);
+    if (!user || !customer) {
+      return NextResponse.json({ error: 'Unauthorized: Please log in to cancel this order.' }, { status: 401 });
+    }
+
+    const isSupabaseConfigured =
+      Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
+
+    if (isSupabaseConfigured) {
+      const supabase = createAdminClient();
+
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const query = supabase.from('orders').select('id, customer_id, status, order_number');
+      const { data: order, error } = isUUID
+        ? await query.eq('id', id).maybeSingle()
+        : await query.or(`order_number.eq.${id},id.eq.${id}`).maybeSingle();
+
+      if (error || !order) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+
+      // IDOR check: Only owner or admin can cancel
+      if (order.customer_id !== customer.id && customer.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden: You can only cancel your own orders.' }, { status: 403 });
+      }
+
+      // Only allow cancellation if status is 'booked'
+      if (order.status !== 'booked') {
+        return NextResponse.json(
+          { error: 'Pickups can only be cancelled before a driver is dispatched or pickup has occurred.' },
+          { status: 400 }
+        );
+      }
+
+      // Update order status to 'cancelled'
+      const { data: updatedOrder, error: updateErr } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', order.id)
+        .select()
+        .single();
+
+      if (updateErr) {
+        return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      }
+
+      // Record event
+      await supabase.from('order_events').insert({
+        order_id: order.id,
+        status: 'cancelled',
+        note: 'Pickup cancelled by customer.',
+        triggered_by: customer.full_name || 'Customer',
+        timestamp: new Date().toISOString(),
+      });
+
+      return NextResponse.json({ success: true, order: updatedOrder, message: 'Pickup cancelled successfully.' });
+    }
+
+    // Mock mode response
+    return NextResponse.json({
+      success: true,
+      order: { id, status: 'cancelled' },
+      message: 'Pickup cancelled successfully.',
+    });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
 }

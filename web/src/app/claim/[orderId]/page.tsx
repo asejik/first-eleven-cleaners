@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims, useSubmitClaim } from '@/hooks/useClaims';
-import { Button, Input, Card, Badge, Loader } from '@/components/ui';
+import { Button, Card, Badge, Loader } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
