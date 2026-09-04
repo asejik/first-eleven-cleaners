@@ -21,7 +21,8 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://web.squarecdn.com https://sandbox.web.squarecdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://web.squarecdn.com https://*.squarecdn.com; img-src 'self' blob: data: https://images.unsplash.com https://*.supabase.co https://*.squarecdn.com; font-src 'self' https://fonts.gstatic.com https://web.squarecdn.com https://*.squarecdn.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.squareup.com https://*.squarecdn.com https://*.sentry.io https://*.datadoghq.com; frame-src 'self' https://web.squarecdn.com https://sandbox.web.squarecdn.com https://*.squareup.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://web.squarecdn.com https://sandbox.web.squarecdn.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://web.squarecdn.com https://*.squarecdn.com; img-src 'self' blob: data: https://images.unsplash.com https://*.supabase.co https://*.squarecdn.com; font-src 'self' https://fonts.gstatic.com https://web.squarecdn.com https://*.squarecdn.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.squareup.com https://*.squarecdn.com https://*.sentry.io https://*.datadoghq.com https://vitals.vercel-insights.com; frame-src 'self' https://web.squarecdn.com https://sandbox.web.squarecdn.com https://*.squareup.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none';",
+
           },
           {
             key: "Strict-Transport-Security",

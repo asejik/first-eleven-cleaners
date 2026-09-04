@@ -235,6 +235,58 @@ npm run build
 
 ---
 
+## 🚀 Vercel Production Deployment Guide
+
+First Eleven Cleaners is fully pre-configured for one-click deployment to **Vercel** with zero configuration conflicts.
+
+### 1. Connect Repository
+1. Navigate to the [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New... ➔ Project**.
+2. Import your GitHub repository (`first-eleven-cleaners`).
+
+### 2. Configure Root Directory (Crucial)
+Because the Next.js application resides in the `web/` subfolder:
+1. In the **Project Configuration** screen, find **Root Directory**.
+2. Click **Edit** and choose `web`.
+3. Leave Framework Preset as **Next.js** (Vercel automatically detects Next.js 16 and uses [`web/vercel.json`](web/vercel.json)).
+
+### 3. Configure Environment Variables
+In the **Environment Variables** section in Vercel, add the following production keys:
+
+| Environment Variable | Description | Required |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Your live Supabase project URL (`https://<project-ref>.supabase.co`) | **Yes** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anonymous key for client-side queries | **Yes** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret service-role key for server routes & intake | **Yes** |
+| `NEXT_PUBLIC_SQUARE_APP_ID` | Square Application ID (Sandbox or Production) | **Yes** |
+| `NEXT_PUBLIC_SQUARE_LOCATION_ID` | Square Location ID for DFW plant checkout | **Yes** |
+| `SQUARE_ACCESS_TOKEN` | Square OAuth Access Token | **Yes** |
+| `SQUARE_ENVIRONMENT` | Set to `production` (or `sandbox` during testing) | **Yes** |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Secret signature key for Square Webhook verification | Optional |
+| `TWILIO_ACCOUNT_SID` | Twilio Account SID (defaults to simulator if omitted) | Optional |
+| `TWILIO_AUTH_TOKEN` | Twilio Auth Token | Optional |
+| `TWILIO_PHONE_NUMBER` | Outbound SMS phone number | Optional |
+| `TWILIO_WHATSAPP_NUMBER` | Outbound WhatsApp sender | Optional |
+| `RESEND_API_KEY` | Resend API key for transactional emails | Optional |
+| `RESEND_FROM_EMAIL` | Verified sender (e.g. `concierge@firstelevencleaners.com`) | Optional |
+| `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet API key for Eleven AI | Optional |
+| `NEXT_PUBLIC_APP_NAME` | Set to `First Eleven Cleaners` | **Yes** |
+| `NEXT_PUBLIC_APP_URL` | Custom domain (e.g. `https://firstelevencleaners.com`), or leave unset to auto-resolve | Optional |
+
+> [!TIP]
+> `NEXT_PUBLIC_APP_URL` automatically falls back to `VERCEL_PROJECT_PRODUCTION_URL` or `VERCEL_URL` if omitted, ensuring tracking links and SMS messages automatically resolve to your live Vercel domain.
+
+### 4. Update Supabase Redirect URLs
+1. In your **Supabase Dashboard**, navigate to **Authentication ➔ URL Configuration**.
+2. Add your live Vercel production domain (e.g. `https://firstelevencleaners.com` and `https://*.vercel.app`) to **Redirect URLs**.
+
+### 5. Configure Custom Domain in Vercel
+1. In the Vercel project dashboard, go to **Settings ➔ Domains**.
+2. Add your custom domain (e.g., `firstelevencleaners.com` and `www.firstelevencleaners.com`).
+3. Follow the DNS instructions (CNAME / A records) provided by Vercel. SSL certificates are provisioned and renewed automatically.
+
+
+---
+
 ## 🔒 Security & Regulatory Compliance
 
 * **Zero Secrets in Git:** All secrets, service role keys, and environment files are strictly ignored via `.gitignore`.

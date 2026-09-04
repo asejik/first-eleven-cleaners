@@ -109,3 +109,22 @@ export const LEGAL_CONFIG = {
   contactEmail: 'legal@firstelevencleaners.com',
   privacyEmail: 'privacy@firstelevencleaners.com',
 } as const;
+
+/**
+ * Resolves the application base URL dynamically across local and Vercel environments.
+ * Prioritizes explicitly configured NEXT_PUBLIC_APP_URL, then automatically
+ * resolves Vercel production and preview deployment URLs, falling back to localhost.
+ */
+export function getAppBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, '');
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'http://localhost:3000';
+}
+

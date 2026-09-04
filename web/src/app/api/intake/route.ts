@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
-import { WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, DRY_CLEAN_PRICES } from '@/lib/constants';
+import { WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, DRY_CLEAN_PRICES, getAppBaseUrl } from '@/lib/constants';
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -260,8 +261,9 @@ export async function POST(request: Request) {
 
     if (!wasAlreadyAdvanced) {
       const customer = order.customer as { full_name?: string; phone?: string } | null;
-      const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const origin = getAppBaseUrl();
       const primaryPhotoUrl = photos?.[0]?.photo_url;
+
 
       const payload: MessagePayload = {
         orderId: order.id,

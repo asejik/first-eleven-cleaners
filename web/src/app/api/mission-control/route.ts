@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
-import type { OrderStatusKey } from '@/lib/constants';
+import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
+
 
 export async function GET(request: Request) {
   try {
@@ -173,9 +174,10 @@ export async function POST(request: Request) {
 
       // Dispatch Notification
       const customer = order.customer as { full_name?: string; phone?: string } | null;
-      const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const origin = getAppBaseUrl();
 
       const payload: MessagePayload = {
+
         orderId: order.id,
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customer?.full_name || 'Valued Customer',

@@ -3,8 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
+import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
-import type { OrderStatusKey } from '@/lib/constants';
+
 
 export async function GET(request: Request) {
   const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff'], request);
@@ -121,8 +122,9 @@ export async function POST(request: Request) {
     }
 
     const customer = order.customer as { full_name?: string; phone?: string } | null;
-    const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const origin = getAppBaseUrl();
     const trackingUrl = `${origin}/track/${order.id}`;
+
 
     const payload: MessagePayload = {
       orderId: order.id,
