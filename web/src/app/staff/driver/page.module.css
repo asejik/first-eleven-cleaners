@@ -7,7 +7,7 @@
 }
 
 .container {
-  max-width: 640px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -291,4 +291,94 @@
   object-fit: cover;
   border: 1px solid #334155;
   cursor: pointer;
+}
+
+/* --- View Switcher (All / Pickups / Deliveries) --- */
+.viewModeRow {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  background: #0d1527;
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #1e293b;
+}
+
+.viewModeBtn {
+  flex: 1;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.viewModeBtnActive {
+  background: #1e293b;
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* --- Side-by-Side Tables Grid --- */
+.tablesGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+
+@media (min-width: 960px) {
+  .tablesGridSideBySide {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
+  }
+}
+
+.tablePanel {
+  background: #0b1426;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tableTitle {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pickupTabRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.deliveryTabRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
 }
