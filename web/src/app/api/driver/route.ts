@@ -3,7 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
+import { getAppBaseUrl } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
+
 
 interface DriverContext {
   isDriverRole: boolean;
@@ -328,8 +330,9 @@ export async function POST(request: Request) {
     }
 
     const customer = order.customer as { full_name?: string; phone?: string } | null;
-    const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const origin = getAppBaseUrl();
     const trackingUrl = `${origin}/track/${order.id}`;
+
 
     const basePayload: MessagePayload = {
       orderId: order.id,
