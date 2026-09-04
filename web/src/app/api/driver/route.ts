@@ -72,60 +72,62 @@ export async function GET(request: Request) {
   try {
     const supabase = createAdminClient();
 
-    // 1. Fetch only active driver stops from database (eliminate full table scans)
-    const { data: activeOrders, error: activeErr } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        order_number,
-        customer_id,
-        address_id,
-        status,
-        order_type,
-        pickup_date,
-        pickup_window,
-        delivery_date,
-        delivery_window,
-        notes,
-        created_at,
-        customer:customers(id, full_name, phone, email),
-        address:addresses(id, street, unit, city, state, zip, delivery_notes),
-        photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
-        events:order_events(id, status, triggered_by, timestamp, note)
-      `)
-      .in('status', ['booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'out_for_delivery'])
-      .order('created_at', { ascending: false });
+    // 1. Fetch active driver stops and completed orders concurrently to cut DB latency
+    const [
+      { data: activeOrders, error: activeErr },
+      { data: completedOrders, error: completedErr }
+    ] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          customer_id,
+          address_id,
+          status,
+          order_type,
+          pickup_date,
+          pickup_window,
+          delivery_date,
+          delivery_window,
+          notes,
+          created_at,
+          customer:customers(id, full_name, phone, email),
+          address:addresses(id, street, unit, city, state, zip, delivery_notes),
+          photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
+          events:order_events(id, status, triggered_by, timestamp, note)
+        `)
+        .in('status', ['booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'out_for_delivery'])
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          customer_id,
+          address_id,
+          status,
+          order_type,
+          pickup_date,
+          pickup_window,
+          delivery_date,
+          delivery_window,
+          notes,
+          created_at,
+          updated_at,
+          customer:customers(id, full_name, phone, email),
+          address:addresses(id, street, unit, city, state, zip, delivery_notes),
+          photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
+          events:order_events(id, status, triggered_by, timestamp, note)
+        `)
+        .eq('status', 'delivered')
+        .order('updated_at', { ascending: false })
+        .limit(25)
+    ]);
 
     if (activeErr) {
       console.error('Driver GET active orders error:', activeErr);
     }
-
-    // 2. Fetch only recent completed orders with a strict limit at the DB level
-    const { data: completedOrders, error: completedErr } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        order_number,
-        customer_id,
-        address_id,
-        status,
-        order_type,
-        pickup_date,
-        pickup_window,
-        delivery_date,
-        delivery_window,
-        notes,
-        created_at,
-        updated_at,
-        customer:customers(id, full_name, phone, email),
-        address:addresses(id, street, unit, city, state, zip, delivery_notes),
-        photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
-        events:order_events(id, status, triggered_by, timestamp, note)
-      `)
-      .eq('status', 'delivered')
-      .order('updated_at', { ascending: false })
-      .limit(25);
-
     if (completedErr) {
       console.error('Driver GET completed orders error:', completedErr);
     }

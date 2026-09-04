@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button } from '@/components/ui';
+import { Button, RefreshButton } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from '@/app/mission-control/page.module.css';
 
-export function OpsHeader() {
+interface OpsHeaderProps {
+  onRefresh?: () => Promise<unknown> | void;
+  isRefreshing?: boolean;
+}
+
+export function OpsHeader({ onRefresh, isRefreshing }: OpsHeaderProps) {
   return (
     <div className={styles.topBar}>
       <div className={styles.brandCol}>
@@ -23,6 +28,14 @@ export function OpsHeader() {
         </div>
       </div>
       <div className={styles.topActions}>
+        {onRefresh && (
+          <RefreshButton
+            onRefresh={onRefresh}
+            isRefreshing={isRefreshing}
+            size="sm"
+            variant="glass"
+          />
+        )}
         <Link href={ROUTES.intake}>
           <Button variant="primary" size="sm">
             ⚖️ Central Intake Station

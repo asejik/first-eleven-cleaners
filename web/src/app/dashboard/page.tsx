@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomerOrders } from '@/hooks/useOrders';
 import { useCustomerClaims } from '@/hooks/useClaims';
-import { Button, Card, Badge, Skeleton } from '@/components/ui';
+import { Button, Card, Badge, Skeleton, RefreshButton } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
 import styles from './page.module.css';
@@ -29,8 +29,12 @@ export default function DashboardPage() {
     }
   }, [user, router, isCustomerPreview]);
 
-  const { data, isLoading } = useCustomerOrders();
-  const { data: claimsData } = useCustomerClaims();
+  const { data, isLoading, refetch, isFetching } = useCustomerOrders();
+  const { data: claimsData, refetch: refetchClaims, isFetching: isFetchingClaims } = useCustomerClaims();
+
+  const handleRefresh = async () => {
+    await Promise.all([refetch(), refetchClaims()]);
+  };
 
   const orders = data?.orders || [];
   const activeOrders = orders.filter((o) => o.status !== 'delivered');
@@ -78,6 +82,12 @@ export default function DashboardPage() {
               </h1>
             </div>
             <div className={styles.topActions}>
+              <RefreshButton
+                onRefresh={handleRefresh}
+                isRefreshing={isFetching || isFetchingClaims}
+                size="md"
+                variant="outline"
+              />
               <Link href={ROUTES.billing}>
                 <Button variant="outline" size="md">
                   💳 Billing &amp; Cards

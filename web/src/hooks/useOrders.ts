@@ -35,11 +35,13 @@ export function useCustomerOrders(options?: { page?: number; limit?: number }) {
       if (!res.ok) throw new Error('Failed to load orders');
       return res.json();
     },
-    staleTime: 60 * 1000,
+    staleTime: 5 * 1000,
+    refetchInterval: 8 * 1000, // 8s polling for customer dashboard updates
+    refetchOnWindowFocus: true,
   });
 }
 
-// 2. Fetch single order detail with real-time 30s polling
+// 2. Fetch single order detail with real-time 10s polling
 export function useOrderDetail(orderId: string) {
   return useQuery<{ order: Order }>({
     queryKey: ['order', orderId],
@@ -60,9 +62,11 @@ export function useOrderDetail(orderId: string) {
       return res.json();
     },
     enabled: Boolean(orderId),
-    staleTime: 15 * 1000,
-    refetchInterval: 30 * 1000, // 30s polling for live tracker updates
+    staleTime: 5 * 1000,
+    refetchInterval: 10 * 1000, // 10s polling for live tracker updates
+    refetchOnWindowFocus: true,
   });
+
 }
 
 // 3. Submit a "Make It Right" claim
