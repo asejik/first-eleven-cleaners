@@ -14,13 +14,16 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-8);
+  width: 100%;
+  max-width: 100%;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 768px) {
   .topBar {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-3);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
   }
 }
 
@@ -38,9 +41,47 @@
   color: var(--color-navy);
 }
 
+@media (max-width: 639px) {
+  .welcomeTitle {
+    font-size: var(--text-2xl);
+  }
+}
+
 .topActions {
   display: flex;
   gap: var(--space-2);
+  align-items: center;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .topActions {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+  }
+
+  .topActions::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.actionItem {
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.btnIcon {
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
 /* --- Stats Grid --- */
