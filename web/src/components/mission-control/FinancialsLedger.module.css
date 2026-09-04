@@ -1,0 +1,252 @@
+.ledgerContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* --- KPI Summary Cards --- */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpiCard {
+  background: #0d1527;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.kpiLabel {
+  font-size: var(--text-xs);
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpiValue {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: #ffffff;
+  font-family: var(--font-heading);
+}
+
+.kpiSubtext {
+  font-size: 11px;
+  color: #10b981;
+}
+
+/* --- Ledger Card --- */
+.ledgerCard {
+  background: #0d1527;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ledgerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.ledgerTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controlsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.filterTabs {
+  display: flex;
+  gap: var(--space-2);
+  background: #131d35;
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #1e293b;
+}
+
+.filterBtn {
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterBtnActive {
+  background: var(--color-gold);
+  color: #070d1d;
+  font-weight: 700;
+}
+
+.searchInput {
+  padding: 8px 14px;
+  background: #131d35;
+  border: 1px solid #334155;
+  border-radius: var(--radius-lg);
+  color: #ffffff;
+  font-size: var(--text-xs);
+  min-width: 240px;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-gold);
+}
+
+/* --- Table Styles --- */
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid #1e293b;
+}
+
+.ledgerTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-xs);
+}
+
+.ledgerTable th {
+  background: #131d35;
+  color: #94a3b8;
+  font-weight: 600;
+  padding: 12px 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #1e293b;
+}
+
+.ledgerTable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #1e293b;
+  color: #e2e8f0;
+}
+
+.ledgerTable tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.receiptBtn {
+  padding: 4px 10px;
+  background: rgba(201, 161, 74, 0.15);
+  border: 1px solid var(--color-gold);
+  color: var(--color-gold);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.receiptBtn:hover {
+  background: var(--color-gold);
+  color: #070d1d;
+}
+
+/* --- Receipt Modal Breakdown --- */
+.receiptPaper {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-family: var(--font-body);
+}
+
+.receiptPaperHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px dashed #cbd5e1;
+  padding-bottom: var(--space-4);
+}
+
+.receiptBrand {
+  font-size: var(--text-lg);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+.receiptItemsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: var(--space-3);
+}
+
+.receiptItemRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+}
+
+.receiptTotals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.receiptGrandTotal {
+  font-size: var(--text-lg);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+}
+
+.receiptMeta {
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
