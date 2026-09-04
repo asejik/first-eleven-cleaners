@@ -1,6 +1,8 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# =================================================================
+# FIRST ELEVEN CLEANERS — Web App Git Ignore Configuration
+# =================================================================
 
-# dependencies
+# --- Dependencies ---
 /node_modules
 /.pnp
 .pnp.*
@@ -10,35 +12,63 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
+# --- Testing & Coverage ---
 /coverage
+.nyc_output/
 
-# next.js
+# --- Next.js & Production Builds ---
 /.next/
 /out/
-
-# production
 /build
+/dist
+.turbo/
+.vercel/
 
-# misc
-.DS_Store
-*.pem
+# --- TypeScript ---
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# --- Scratchpad & Temporary ---
+scratch/
 
-# env files (strict security)
+# --- Environment Files & Secrets (Strict Security) ---
 .env*
 !.env.example
 .env.local
 .env.production
 .env.development
+*.env
+*.env.local
 
-# ide & system
+# --- Private Keys, Certificates & Tokens ---
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+service-account*.json
+*service-role*.json
+*.credentials
+credentials.json
+token.json
+
+# --- Debug & Process Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- OS & Editor Metadata ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
+*.bak
+

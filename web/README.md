@@ -12,9 +12,19 @@ npm install
 # Copy environment template
 cp .env.example .env.local
 
-# Run development server
+# Run development server with Turbopack
 npm run dev
 
-# Run production build check
+# Run automated tests (Vitest)
+npm test
+
+# Run ESLint validation
+npm run lint
+
+# Run type check
+npx tsc --noEmit
+
+# Run production build
 npm run build
 ```
+

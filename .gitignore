@@ -1,45 +1,103 @@
-# Dependencies
-node_modules/
-web/node_modules/
-/.pnp
-.pnp.*
+# =================================================================
+# FIRST ELEVEN CLEANERS — Git Ignore Configuration
+# =================================================================
 
-# Production builds
-web/.next/
-web/out/
-web/build/
-dist/
+# --- Confidential Client Resources, Documents & Proposals ---
+resources/
+documents/
+temp_clone/
+scratch/
+web/scratch/
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+ai_prop.txt
+competitive_bench.txt
+market_prop.txt
 
-# Security & Environment Variables
+# --- Security, Secrets & Sensitive Credentials ---
+# Environment variables (Never commit secret keys)
 .env*
 !.env.example
 web/.env*
 !web/.env.example
-web/.env.local
-web/.env.production
-web/.env.development
+*.env
+*.env.local
 
-# Debug logs
+# Private keys, certificates & SSL
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# Cloud, API & Service Account tokens
+service-account*.json
+*service-role*.json
+*.credentials
+credentials.json
+token.json
+
+# --- Dependencies & Package Managers ---
+node_modules/
+web/node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# --- Build Outputs, Caches & Transpilation ---
+.next/
+web/.next/
+out/
+web/out/
+build/
+web/build/
+dist/
+web/dist/
+.turbo/
+web/.turbo/
+.vercel/
+web/.vercel/
+*.tsbuildinfo
+web/*.tsbuildinfo
+tsconfig.tsbuildinfo
+web/tsconfig.tsbuildinfo
+
+# --- Testing & Code Coverage ---
+coverage/
+web/coverage/
+.nyc_output/
+
+# --- Local Databases & Backups ---
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.bak
+
+# --- Logs ---
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# OS & Editor
+# --- Operating System & Editor Metadata ---
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
+*.bak
 
-# Vercel & Turbo
-.vercel
-.turbo
-
-# Confidential Internal Business Documents & Proposals
-documents/
-*.docx
-ai_prop.txt
-competitive_bench.txt
-market_prop.txt
