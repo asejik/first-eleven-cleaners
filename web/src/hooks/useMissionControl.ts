@@ -52,8 +52,8 @@ export function useMissionControl(options?: { page?: number; limit?: number; sta
       if (!res.ok) throw new Error('Failed to load mission control data');
       return res.json();
     },
-    staleTime: 3 * 1000,
-    refetchInterval: 5 * 1000, // 5s live dashboard poll
+    staleTime: 10 * 1000,
+    refetchInterval: 25 * 1000, // 25s quiet live dashboard poll (egress-protected)
     refetchOnWindowFocus: true,
   });
 

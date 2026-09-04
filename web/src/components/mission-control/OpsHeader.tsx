@@ -6,10 +6,9 @@ import styles from '@/app/mission-control/page.module.css';
 
 interface OpsHeaderProps {
   onRefresh?: () => Promise<unknown> | void;
-  isRefreshing?: boolean;
 }
 
-export function OpsHeader({ onRefresh, isRefreshing }: OpsHeaderProps) {
+export function OpsHeader({ onRefresh }: OpsHeaderProps) {
   return (
     <div className={styles.topBar}>
       <div className={styles.brandCol}>
@@ -31,7 +30,6 @@ export function OpsHeader({ onRefresh, isRefreshing }: OpsHeaderProps) {
         {onRefresh && (
           <RefreshButton
             onRefresh={onRefresh}
-            isRefreshing={isRefreshing}
             size="sm"
             variant="glass"
           />

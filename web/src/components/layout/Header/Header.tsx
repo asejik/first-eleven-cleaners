@@ -19,10 +19,10 @@ export function Header() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    logout();
     setIsMobileOpen(false);
-    router.push(ROUTES.home);
+    router.push(ROUTES.login);
   };
 
   const isAuth = isMounted && isAuthenticated;

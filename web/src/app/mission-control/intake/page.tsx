@@ -432,7 +432,7 @@ function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }: Intake
 export default function CentralIntakePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { data, isLoading, error, refetch, isFetching } = useIntakeQueue();
+  const { data, isLoading, error, refetch } = useIntakeQueue();
   const queue = useMemo(() => data?.queue || [], [data?.queue]);
   const intakeHistory = useMemo(() => data?.intakeHistory || [], [data?.intakeHistory]);
   const todayIntakeCount = data?.todayIntakeCount || 0;
@@ -467,7 +467,6 @@ export default function CentralIntakePage() {
             <div className={styles.navLinks}>
               <RefreshButton
                 onRefresh={refetch}
-                isRefreshing={isFetching}
                 size="sm"
                 variant="glass"
               />

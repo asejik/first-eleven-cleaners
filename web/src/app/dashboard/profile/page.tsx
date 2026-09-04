@@ -228,9 +228,9 @@ export default function ProfilePage() {
   const prefs = prefData?.preferences;
   const claims = claimsData?.claims || [];
 
-  const handleLogout = async () => {
-    await logout();
-    router.push(ROUTES.home);
+  const handleLogout = () => {
+    logout();
+    router.push(ROUTES.login);
   };
 
   const initial = user?.full_name?.charAt(0).toUpperCase() || 'U';
