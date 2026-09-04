@@ -52,9 +52,11 @@ export function useMissionControl(options?: { page?: number; limit?: number; sta
       if (!res.ok) throw new Error('Failed to load mission control data');
       return res.json();
     },
-    staleTime: 15 * 1000,
-    refetchInterval: 30 * 1000, // 30s live dashboard poll
+    staleTime: 3 * 1000,
+    refetchInterval: 5 * 1000, // 5s live dashboard poll
+    refetchOnWindowFocus: true,
   });
+
 }
 
 export function useAdvanceOrderStage() {

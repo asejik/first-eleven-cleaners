@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react';
 import type { Customer, UserRole } from '@/types';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
 interface AuthState {
@@ -178,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured) {
       try {
         const supabase = createClient();
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
           if (!isMounted) return;
           if (event === 'SIGNED_OUT') {
             updateCustomerState(null);

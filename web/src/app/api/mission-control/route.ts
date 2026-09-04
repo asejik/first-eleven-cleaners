@@ -56,17 +56,8 @@ export async function GET(request: Request) {
       ordersQuery = ordersQuery.eq('status', status);
     }
 
-    const { data: allOrders, count: totalOrdersCount, error: ordersErr } = await ordersQuery.range(offset, offset + limit - 1);
-
-    if (ordersErr) {
-      console.error('Mission Control GET error:', ordersErr);
-      return NextResponse.json({ orders: [], stats: null, claims: [] });
-    }
-
-    const orders = allOrders || [];
-
-    // 2. Fetch recent claims (bounded to 50 items)
-    const { data: claims } = await supabase
+    // 1 & 2. Fetch orders and recent claims concurrently to avoid sequential roundtrip latency
+    const claimsQuery = supabase
       .from('claims')
       .select(`
         id,
@@ -84,6 +75,21 @@ export async function GET(request: Request) {
       `)
       .order('created_at', { ascending: false })
       .limit(50);
+
+    const [
+      { data: allOrders, count: totalOrdersCount, error: ordersErr },
+      { data: claims }
+    ] = await Promise.all([
+      ordersQuery.range(offset, offset + limit - 1),
+      claimsQuery
+    ]);
+
+    if (ordersErr) {
+      console.error('Mission Control GET error:', ordersErr);
+      return NextResponse.json({ orders: [], stats: null, claims: [] });
+    }
+
+    const orders = allOrders || [];
 
     // 3. Compute KPI Summary
     const activeOrders = orders.filter((o) => o.status !== 'delivered');

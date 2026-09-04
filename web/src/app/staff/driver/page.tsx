@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useDriverManifest, useDriverAction } from '@/hooks/useDriver';
-import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { Button, Badge, Loader, Modal, RefreshButton } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
@@ -16,7 +16,7 @@ export default function DriverPage() {
   const [pickupTab, setPickupTab] = useState<'to_pickup' | 'in_van' | 'picked_up'>('to_pickup');
   const [deliveryTab, setDeliveryTab] = useState<'to_deliver' | 'delivered'>('to_deliver');
   
-  const { data, isLoading } = useDriverManifest(shift);
+  const { data, isLoading, refetch, isFetching } = useDriverManifest(shift);
   const driverAction = useDriverAction();
   const addToast = useUIStore((s) => s.addToast);
 
@@ -164,9 +164,17 @@ export default function DriverPage() {
                 <p className={styles.driverSub}>DFW Mobile Route Manifest</p>
               </div>
             </div>
-            <Link href={ROUTES.dashboard} className={styles.portalLink}>
-              Exit to App →
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <RefreshButton
+                onRefresh={refetch}
+                isRefreshing={isFetching}
+                size="sm"
+                variant="glass"
+              />
+              <Link href={ROUTES.dashboard} className={styles.portalLink}>
+                Exit to App →
+              </Link>
+            </div>
           </div>
 
           {/* Shift Filter */}

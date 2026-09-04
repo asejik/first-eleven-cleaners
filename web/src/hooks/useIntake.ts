@@ -34,9 +34,11 @@ export function useIntakeQueue() {
       }
       return res.json();
     },
-    staleTime: 10 * 1000,
-    refetchInterval: 20 * 1000,
+    staleTime: 3 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchOnWindowFocus: true,
   });
+
 }
 
 export function useSubmitIntake() {

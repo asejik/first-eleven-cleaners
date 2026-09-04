@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useIntakeQueue, useSubmitIntake } from '@/hooks/useIntake';
-import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { Button, Badge, Loader, Modal, RefreshButton } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
@@ -432,7 +432,7 @@ function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }: Intake
 export default function CentralIntakePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { data, isLoading, error } = useIntakeQueue();
+  const { data, isLoading, error, refetch, isFetching } = useIntakeQueue();
   const queue = useMemo(() => data?.queue || [], [data?.queue]);
   const intakeHistory = useMemo(() => data?.intakeHistory || [], [data?.intakeHistory]);
   const todayIntakeCount = data?.todayIntakeCount || 0;
@@ -465,6 +465,12 @@ export default function CentralIntakePage() {
               </div>
             </div>
             <div className={styles.navLinks}>
+              <RefreshButton
+                onRefresh={refetch}
+                isRefreshing={isFetching}
+                size="sm"
+                variant="glass"
+              />
               {isAdmin ? (
                 <>
                   <Link href={ROUTES.missionControl}>

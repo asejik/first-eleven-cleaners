@@ -1,0 +1,128 @@
+/* === RefreshButton Component === */
+.refreshButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.refreshButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.refreshButton:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* --- Sizes --- */
+.sm {
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+  gap: 6px;
+}
+
+.md {
+  padding: 8px 16px;
+  font-size: var(--text-sm);
+  gap: 8px;
+}
+
+/* --- Variants --- */
+.outline {
+  background-color: var(--color-white);
+  color: var(--color-navy);
+  border-color: var(--color-gray-300);
+}
+
+.outline:hover:not(:disabled) {
+  background-color: var(--color-cream);
+  border-color: var(--color-gold);
+  color: var(--color-navy);
+  transform: translateY(-1px);
+}
+
+.outline:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.glass:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--color-gold);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.glass:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-navy);
+  border-color: transparent;
+}
+
+.ghost:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.ghostLight {
+  background: transparent;
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.ghostLight:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* --- Icon & Rotation Animation --- */
+.iconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.sm .iconWrapper {
+  width: 13px;
+  height: 13px;
+}
+
+.icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.spinning {
+  animation: spin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

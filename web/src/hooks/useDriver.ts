@@ -45,9 +45,11 @@ export function useDriverManifest(shift: string = 'all') {
       }
       return res.json();
     },
-    staleTime: 10 * 1000,
-    refetchInterval: 20 * 1000, // 20s poll for real-time stops
+    staleTime: 3 * 1000,
+    refetchInterval: 5 * 1000, // 5s fast poll for real-time stops
+    refetchOnWindowFocus: true,
   });
+
 }
 
 export function useDriverAction() {
