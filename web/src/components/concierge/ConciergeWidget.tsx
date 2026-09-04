@@ -49,7 +49,8 @@ export function ConciergeWidget() {
           type="button"
           className={styles.floatingTrigger}
           onClick={() => setIsOpen(true)}
-          aria-label="Open Eleven AI Concierge"
+          aria-label="Ask Eleven AI Concierge"
+          title="Ask Eleven AI Concierge"
         >
           <div className={styles.avatarBadge}>
             <Image
@@ -57,7 +58,7 @@ export function ConciergeWidget() {
               alt="Eleven AI"
               width={34}
               height={34}
-              style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }}
+              className={styles.triggerAvatar}
             />
             <span className={styles.onlinePulse} />
           </div>
