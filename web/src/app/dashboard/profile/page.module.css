@@ -39,13 +39,17 @@
   align-items: center;
   gap: var(--space-6);
   box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
   .profileBanner {
     flex-direction: column;
     align-items: flex-start;
-    padding: var(--space-6);
+    padding: var(--space-5);
+    gap: var(--space-4);
   }
 }
 
@@ -53,6 +57,13 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .bannerUser {
+    gap: var(--space-3);
+  }
 }
 
 .avatarCircle {
@@ -75,17 +86,21 @@
   font-weight: var(--font-black);
   color: var(--color-white);
   margin-bottom: 2px;
+  word-break: break-word;
 }
 
 .userEmail {
   font-size: var(--text-sm);
   color: rgba(255, 255, 255, 0.8);
+  word-break: break-all;
 }
 
 .userBadges {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-2);
+  max-width: 100%;
 }
 
 /* --- Settings Grid --- */

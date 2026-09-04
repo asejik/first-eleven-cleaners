@@ -3,6 +3,15 @@
 import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  Home,
+  CalendarPlus,
+  Package,
+  User,
+  Zap,
+  Scale,
+  Truck,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/lib/constants';
 import styles from './MobileNav.module.css';
@@ -30,21 +39,18 @@ export function MobileNav() {
           className={`${styles.item} ${isMC ? styles.itemActive : ''}`}
           aria-current={isMC ? 'page' : undefined}
         >
-          <span className={styles.icon}>⚡</span>
-          <span>Ops</span>
+          <Zap className={styles.icon} size={20} strokeWidth={isMC ? 2.2 : 1.7} />
+          <span className={styles.label}>Ops</span>
         </Link>
 
-        {/* Intake Center (Center Button) */}
+        {/* Intake Center */}
         <Link
           href={ROUTES.intake}
-          className={styles.centerItem}
-          aria-label="Intake Station"
+          className={`${styles.item} ${isIntake ? styles.itemActive : ''}`}
           aria-current={isIntake ? 'page' : undefined}
         >
-          <div className={styles.centerButton}>
-            ⚖️
-          </div>
-          <span className={styles.centerLabel}>Intake</span>
+          <Scale className={styles.icon} size={20} strokeWidth={isIntake ? 2.2 : 1.7} />
+          <span className={styles.label}>Intake</span>
         </Link>
 
         {/* Driver Manifest */}
@@ -53,8 +59,8 @@ export function MobileNav() {
           className={`${styles.item} ${isDriver ? styles.itemActive : ''}`}
           aria-current={isDriver ? 'page' : undefined}
         >
-          <span className={styles.icon}>🚐</span>
-          <span>Driver</span>
+          <Truck className={styles.icon} size={20} strokeWidth={isDriver ? 2.2 : 1.7} />
+          <span className={styles.label}>Driver</span>
         </Link>
 
         {/* Customer Portal Preview */}
@@ -63,8 +69,8 @@ export function MobileNav() {
           className={`${styles.item} ${isPreview ? styles.itemActive : ''}`}
           aria-current={isPreview ? 'page' : undefined}
         >
-          <span className={styles.icon}>👤</span>
-          <span>Customer</span>
+          <User className={styles.icon} size={20} strokeWidth={isPreview ? 2.2 : 1.7} />
+          <span className={styles.label}>Customer</span>
         </Link>
       </nav>
     );
@@ -87,40 +93,38 @@ export function MobileNav() {
         className={`${styles.item} ${isHome ? styles.itemActive : ''}`}
         aria-current={isHome ? 'page' : undefined}
       >
-        <span className={styles.icon}>🏠</span>
-        <span>Home</span>
+        <Home className={styles.icon} size={20} strokeWidth={isHome ? 2.2 : 1.7} />
+        <span className={styles.label}>Home</span>
       </Link>
 
-      {/* Book Pickup (Elevated Center Action) */}
+      {/* Book Pickup */}
       <Link
         href={ROUTES.book}
-        className={styles.centerItem}
-        aria-label="Schedule a Pickup"
+        className={`${styles.item} ${isBook ? styles.itemActive : ''}`}
+        aria-current={isBook ? 'page' : undefined}
       >
-        <div className={styles.centerButton}>
-          🧺
-        </div>
-        <span className={styles.centerLabel}>Book</span>
+        <CalendarPlus className={styles.icon} size={20} strokeWidth={isBook ? 2.2 : 1.7} />
+        <span className={styles.label}>Book</span>
       </Link>
 
       {/* Orders / Tracking */}
       <Link
         href={ROUTES.dashboard}
         className={`${styles.item} ${isOrders && !isBook ? styles.itemActive : ''}`}
-        aria-current={isOrders ? 'page' : undefined}
+        aria-current={isOrders && !isBook ? 'page' : undefined}
       >
-        <span className={styles.icon}>📦</span>
-        <span>Orders</span>
+        <Package className={styles.icon} size={20} strokeWidth={isOrders && !isBook ? 2.2 : 1.7} />
+        <span className={styles.label}>Orders</span>
       </Link>
 
-      {/* Profile */}
+      {/* Account / Profile */}
       <Link
         href={ROUTES.profile}
         className={`${styles.item} ${isProfile ? styles.itemActive : ''}`}
         aria-current={isProfile ? 'page' : undefined}
       >
-        <span className={styles.icon}>👤</span>
-        <span>Account</span>
+        <User className={styles.icon} size={20} strokeWidth={isProfile ? 2.2 : 1.7} />
+        <span className={styles.label}>Account</span>
       </Link>
     </nav>
   );
