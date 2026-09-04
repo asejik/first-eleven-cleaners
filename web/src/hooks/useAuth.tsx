@@ -101,10 +101,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isSupabaseConfigured) {
         try {
           const supabase = createClient();
-          const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+          // Instant session check from local storage (0ms) before remote getUser fallback
+          const { data: sessionData } = await supabase.auth.getSession();
+          let authUser = sessionData?.session?.user || null;
+
+          if (!authUser) {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (!userError && userData?.user) {
+              authUser = userData.user;
+            }
+          }
+
           if (!isMounted) return;
 
-          if (authUser && !userError) {
+          if (authUser) {
             // Fetch customer record with specific columns to minimize network egress
             const { data } = await supabase
               .from('customers')
@@ -349,15 +359,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // 1. Immediately clear local auth state and storage in 0ms
+    updateCustomerState(null);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(AUTH_CACHE_KEY);
+        localStorage.removeItem(AUTH_CACHE_TIME_KEY);
+        localStorage.removeItem(MOCK_STORAGE_KEY);
+        localStorage.removeItem('f11_customer_preferences');
+      } catch {}
+    }
+
+    // 2. Perform remote Supabase signOut asynchronously without blocking UI navigation
     if (isSupabaseConfigured) {
       try {
         const supabase = createClient();
-        await supabase.auth.signOut();
+        Promise.race([
+          supabase.auth.signOut(),
+          new Promise((resolve) => setTimeout(resolve, 800)),
+        ]).catch(() => {});
       } catch {
         // Ignore
       }
     }
-    updateCustomerState(null);
   }, [isSupabaseConfigured, updateCustomerState]);
 
   const resetPassword = useCallback(

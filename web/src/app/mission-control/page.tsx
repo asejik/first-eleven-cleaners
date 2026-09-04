@@ -34,7 +34,7 @@ const STAGES: OrderStatusKey[] = [
 export default function MissionControlPage() {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'growth' | 'dispatch'>('pipeline');
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
-  const { data, isLoading, refetch, isFetching } = useMissionControl();
+  const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
   const resolveClaim = useResolveClaim();
   const { data: notifsData } = useNotifications();
@@ -172,7 +172,7 @@ export default function MissionControlPage() {
     <AuthGuard allowedRoles={['admin']}>
       <div className={styles.page}>
         <div className={styles.container}>
-          <OpsHeader onRefresh={refetch} isRefreshing={isFetching} />
+          <OpsHeader onRefresh={refetch} />
 
           {isLoading ? (
             <Loader text="Loading live operations data..." />

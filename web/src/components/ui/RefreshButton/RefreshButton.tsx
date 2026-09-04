@@ -10,10 +10,6 @@ export interface RefreshButtonProps {
    */
   onRefresh: () => Promise<unknown> | void;
   /**
-   * External loading/fetching indicator (e.g. isFetching from react-query)
-   */
-  isRefreshing?: boolean;
-  /**
    * Optional text label displayed next to the icon.
    * Defaults to "Refresh". Pass empty string or null to display icon only.
    */
@@ -38,40 +34,37 @@ export interface RefreshButtonProps {
 
 export function RefreshButton({
   onRefresh,
-  isRefreshing = false,
   label = 'Refresh',
   size = 'sm',
   variant = 'outline',
   className = '',
   title = 'Force refresh live data',
 }: RefreshButtonProps) {
-  const [localRefreshing, setLocalRefreshing] = useState(false);
-
-  const isSpinning = isRefreshing || localRefreshing;
+  const [isClickSpinning, setIsClickSpinning] = useState(false);
 
   const handleClick = useCallback(async () => {
-    if (isSpinning) return;
-    setLocalRefreshing(true);
+    if (isClickSpinning) return;
+    setIsClickSpinning(true);
     const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
     try {
       await Promise.all([Promise.resolve(onRefresh()), minDelay]);
     } catch (err) {
       console.error('Refresh error:', err);
     } finally {
-      setLocalRefreshing(false);
+      setIsClickSpinning(false);
     }
-  }, [isSpinning, onRefresh]);
+  }, [isClickSpinning, onRefresh]);
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      disabled={isSpinning}
+      disabled={isClickSpinning}
       title={title}
       aria-label={label || title}
       className={`${styles.refreshButton} ${styles[variant]} ${styles[size]} ${className}`.trim()}
     >
-      <span className={`${styles.iconWrapper} ${isSpinning ? styles.spinning : ''}`} aria-hidden="true">
+      <span className={`${styles.iconWrapper} ${isClickSpinning ? styles.spinning : ''}`} aria-hidden="true">
         <svg
           className={styles.icon}
           viewBox="0 0 24 24"
@@ -84,7 +77,7 @@ export function RefreshButton({
           <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
         </svg>
       </span>
-      {label && <span>{isSpinning ? 'Refreshing...' : label}</span>}
+      {label && <span>{label}</span>}
     </button>
   );
 }

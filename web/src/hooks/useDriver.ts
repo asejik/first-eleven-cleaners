@@ -45,8 +45,8 @@ export function useDriverManifest(shift: string = 'all') {
       }
       return res.json();
     },
-    staleTime: 3 * 1000,
-    refetchInterval: 5 * 1000, // 5s fast poll for real-time stops
+    staleTime: 10 * 1000,
+    refetchInterval: 25 * 1000, // 25s quiet background poll (egress-protected)
     refetchOnWindowFocus: true,
   });
 

@@ -16,7 +16,7 @@ export default function DriverPage() {
   const [pickupTab, setPickupTab] = useState<'to_pickup' | 'in_van' | 'picked_up'>('to_pickup');
   const [deliveryTab, setDeliveryTab] = useState<'to_deliver' | 'delivered'>('to_deliver');
   
-  const { data, isLoading, refetch, isFetching } = useDriverManifest(shift);
+  const { data, isLoading, refetch } = useDriverManifest(shift);
   const driverAction = useDriverAction();
   const addToast = useUIStore((s) => s.addToast);
 
@@ -167,7 +167,6 @@ export default function DriverPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <RefreshButton
                 onRefresh={refetch}
-                isRefreshing={isFetching}
                 size="sm"
                 variant="glass"
               />
