@@ -1,25 +1,61 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
 import type { OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const auth = await verifyApiAuth(['admin'], request);
+    if (auth.errorResponse) return auth.errorResponse;
+
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const offset = (page - 1) * limit;
+    const status = searchParams.get('status');
+
     const supabase = createAdminClient();
 
-    // 1. Fetch all orders with relations
-    const { data: allOrders, error: ordersErr } = await supabase
+    // 1. Fetch paginated orders with specific relational projections
+    let ordersQuery = supabase
       .from('orders')
       .select(`
-        *,
-        customer:customers(*),
-        address:addresses(*),
-        items:order_items(*),
-        photos:garment_photos(*),
-        events:order_events(*)
-      `)
+        id,
+        order_number,
+        customer_id,
+        address_id,
+        status,
+        order_type,
+        pickup_date,
+        pickup_window,
+        delivery_date,
+        delivery_window,
+        weight_lbs,
+        subtotal,
+        express_tier,
+        promo_code,
+        discount_amount,
+        total,
+        payment_id,
+        payment_status,
+        notes,
+        created_at,
+        updated_at,
+        customer:customers(id, full_name, email, phone, role),
+        address:addresses(id, street, unit, city, state, zip, delivery_notes),
+        items:order_items(id, order_id, garment_type, service_type, quantity, unit_price, subtotal, notes),
+        photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
+        events:order_events(id, order_id, status, timestamp, note, triggered_by)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false });
+
+    if (status) {
+      ordersQuery = ordersQuery.eq('status', status);
+    }
+
+    const { data: allOrders, count: totalOrdersCount, error: ordersErr } = await ordersQuery.range(offset, offset + limit - 1);
 
     if (ordersErr) {
       console.error('Mission Control GET error:', ordersErr);
@@ -28,15 +64,25 @@ export async function GET() {
 
     const orders = allOrders || [];
 
-    // 2. Fetch all claims
+    // 2. Fetch recent claims (bounded to 50 items)
     const { data: claims } = await supabase
       .from('claims')
       .select(`
-        *,
+        id,
+        order_id,
+        customer_id,
+        issue_type,
+        description,
+        photo_urls,
+        status,
+        resolution_notes,
+        created_at,
+        updated_at,
         order:orders(id, order_number, pickup_date, total, status),
         customer:customers(id, full_name, email, phone)
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     // 3. Compute KPI Summary
     const activeOrders = orders.filter((o) => o.status !== 'delivered');
@@ -60,9 +106,12 @@ export async function GET() {
     return NextResponse.json({
       orders,
       claims: claims || [],
+      page,
+      limit,
+      total_count: totalOrdersCount ?? orders.length,
       stats: {
         active_count: activeOrders.length,
-        total_count: orders.length,
+        total_count: totalOrdersCount ?? orders.length,
         today_revenue: todayRevenue > 0 ? todayRevenue : 180.71, // fallback display if brand new day
         all_time_revenue: allTimeRevenue,
         total_lbs: totalLbs > 0 ? totalLbs : 65,
@@ -83,6 +132,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const auth = await verifyApiAuth(['admin'], request);
+    if (auth.errorResponse) return auth.errorResponse;
+
     const body = await request.json();
     const { action = 'advance_stage', order_id, new_stage, claim_id, resolution_notes, refund_amount, claim_status } = body;
 
