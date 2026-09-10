@@ -70,18 +70,30 @@ export default function TermsOfServicePage() {
               All core prices are published transparently on our website prior to booking. Wash-and-fold is priced at $3.00/lb subject to a 15-lb minimum floor ($45.00 minimum charge). Dry cleaning is priced per garment according to our published item catalog.
             </p>
             <p className={styles.paragraph}>
+              <strong>Taxes &amp; Environmental Fees:</strong> All orders are subject to Texas state and local sales tax (currently 8.25%) and an Environmental Fee (3.0%) dedicated to closed-loop solvent recycling, water reclamation systems, and sustainable packaging. All taxes and surcharges are itemized transparently on booking review screens and final digital receipts.
+            </p>
+            <p className={styles.paragraph}>
               <strong>Invisible Checkout Protocol:</strong> When you book a pickup, your card on file is pre-authorized. We do not finalize or settle charges until your garments arrive at our central facility, are weighed on certified scales, itemized, and photographed into your Garment Passport.
             </p>
           </section>
 
           {/* Section 5: Pickup and Delivery Services */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>5. Pickup and Delivery Logistics</h2>
+            <h2 className={styles.sectionTitle}>5. Pickup and Delivery Logistics &amp; Failed Service Policy</h2>
             <p className={styles.paragraph}>
               Couriers operate within designated morning (7:30 AM – 10:00 AM) and evening (5:00 PM – 8:00 PM) windows. Customers must ensure that bags are placed in safe, weather-protected locations or hand-delivered to the courier. Pets must be secured.
             </p>
             <p className={styles.paragraph}>
-              Missed pickups due to inaccessible properties or incorrect gate instructions may be rescheduled or incur a dry-run fee. Delivery times represent estimates backed by our 48-Hour Match-Ready Guarantee, excluding Sundays when our main plant is closed.
+              <strong>Failed Service Attempt Policy:</strong> If our courier arrives during your confirmed service window but cannot complete the pickup or delivery because the garments are unavailable, access information is incorrect or incomplete (e.g., missing gate access code or unreachable concierge), or the required recipient is unavailable, a $15.00 failed-service fee may apply. Policy rules apply as follows:
+            </p>
+            <ul className={styles.list}>
+              <li className={styles.listItem}><strong>First occurrence:</strong> Waived in full as a courtesy.</li>
+              <li className={styles.listItem}><strong>Customer reschedules &ge;2 hours beforehand:</strong> $0 fee.</li>
+              <li className={styles.listItem}><strong>First Eleven courier or plant delay:</strong> $0 fee.</li>
+              <li className={styles.listItem}><strong>Repeat unnotified failed attempts:</strong> $15.00 service fee.</li>
+            </ul>
+            <p className={styles.paragraph}>
+              Delivery times represent estimates backed by our 48-Hour Match-Ready Guarantee, excluding Sundays when our main plant is closed.
             </p>
           </section>
 

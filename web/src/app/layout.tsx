@@ -26,11 +26,11 @@ const archivo = Archivo({
 export const metadata: Metadata = {
   metadataBase: new URL('https://firstelevencleaners.com'),
   title: {
-    default: 'First Eleven Cleaners | Premium Dry Cleaning & Laundry Delivery — Dallas, TX',
+    default: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
     template: '%s | First Eleven Cleaners',
   },
   description:
-    'Born on the world\'s biggest stage. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex. 48-hour Match-Ready guarantee.',
+    'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex. 48-hour Match-Ready guarantee.',
   keywords: [
     'dry cleaning Dallas',
     'laundry delivery DFW',
@@ -45,16 +45,24 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     siteName: 'First Eleven Cleaners',
-    title: 'First Eleven Cleaners | Premium Dry Cleaning & Laundry Delivery',
+    title: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
     description:
-      'Born on the world\'s biggest stage. Now serving yours. Premium pickup & delivery dry cleaning across DFW.',
+      'Every Garment Makes the Lineup. Premium pickup & delivery dry cleaning and wash-and-fold across DFW.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'First Eleven Cleaners - Every Garment Makes the Lineup',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'First Eleven Cleaners | Premium Dry Cleaning & Laundry Delivery',
+    title: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
     description:
-      'Born on the world\'s biggest stage. Premium dry cleaning and laundry pickup & delivery across DFW.',
-    images: ['/icon.png'],
+      'Every Garment Makes the Lineup. Premium dry cleaning and laundry pickup & delivery across DFW.',
+    images: ['/og-image.png'],
   },
   icons: {
     icon: [

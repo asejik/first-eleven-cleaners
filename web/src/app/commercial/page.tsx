@@ -92,6 +92,52 @@ export default function CommercialPage() {
         </div>
       </section>
 
+      {/* Concrete B2B Service Outcomes */}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.badgeGold}>Contracted Delivery</span>
+            <h2 className={styles.sectionHeading}>Six Concrete Enterprise Deliverables</h2>
+            <p className={styles.sectionSubheading}>
+              Every commercial contract is backed by measurable deliverables designed for procurement and operations leads.
+            </p>
+          </div>
+
+          <div className={styles.outcomesGrid}>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}>🚐</span>
+              <h4>Dedicated Route Schedules</h4>
+              <p>Reliable recurring pickup and delivery windows tuned to your business shift changes and peak hours.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}>📄</span>
+              <h4>Consolidated Monthly Invoicing</h4>
+              <p>One itemized monthly statement categorized by location, department, or team member with Net-30 terms.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}>🏷️</span>
+              <h4>Garment-Level Barcoding &amp; Tracking</h4>
+              <p>Full chain of custody: barcode tracking, high-resolution intake photography, and digital condition logging.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}>⏱️</span>
+              <h4>Guaranteed Turnaround SLA</h4>
+              <p>Contractually committed 24-hour, 48-hour, or same-day turnaround backed by service credit penalty guarantees.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}>🤝</span>
+              <h4>Dedicated Commercial Support</h4>
+              <p>A named commercial account manager with direct telephone and WhatsApp escalation lines.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}>📉</span>
+              <h4>Volume-Tiered Rate Cards</h4>
+              <p>Predictable tiered pricing that scales down your per-pound and per-garment costs as volume grows.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Certification Advantage */}
       <section className={`${styles.section} ${styles.sectionAlt}`}>
         <div className={styles.container}>

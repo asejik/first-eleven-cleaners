@@ -331,16 +331,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const customer = order.customer as { full_name?: string; phone?: string } | null;
+    const rawCustomer = order.customer;
+    const customer = (Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer) as { full_name?: string; phone?: string; email?: string } | null;
     const origin = getAppBaseUrl();
     const trackingUrl = `${origin}/track/${order.id}`;
-
 
     const basePayload: MessagePayload = {
       orderId: order.id,
       orderNumber: order.order_number || order.id.slice(0, 8),
       customerName: customer?.full_name || 'Valued Customer',
       customerPhone: customer?.phone || '+12145550199',
+      customerEmail: customer?.email,
       stage: 'picked_up',
       pickupDate: order.pickup_date,
       pickupWindow: order.pickup_window,

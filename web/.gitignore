@@ -30,6 +30,9 @@ tsconfig.tsbuildinfo
 
 # --- Scratchpad & Temporary ---
 scratch/
+*TESTING_GUIDE*
+*testing_guide*
+TESTING_GUIDE.md
 
 # --- Environment Files & Secrets (Strict Security) ---
 .env*

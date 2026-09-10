@@ -260,7 +260,8 @@ export async function POST(request: Request) {
     const wasAlreadyAdvanced = order.status === 'in_cleaning' || order.status === 'out_for_delivery' || order.status === 'delivered';
 
     if (!wasAlreadyAdvanced) {
-      const customer = order.customer as { full_name?: string; phone?: string } | null;
+      const rawCustomer = order.customer;
+      const customer = (Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer) as { full_name?: string; phone?: string; email?: string } | null;
       const origin = getAppBaseUrl();
       const primaryPhotoUrl = photos?.[0]?.photo_url;
 
@@ -270,6 +271,7 @@ export async function POST(request: Request) {
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customer?.full_name || 'Valued Customer',
         customerPhone: customer?.phone || '+12145550199',
+        customerEmail: customer?.email,
         stage: 'weighed_itemized',
         pickupDate: order.pickup_date,
         pickupWindow: order.pickup_window,

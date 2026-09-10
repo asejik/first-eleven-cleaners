@@ -4,6 +4,8 @@ import type { Order } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { messagingService } from '@/lib/messaging';
+import { getAppBaseUrl } from '@/lib/constants';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -253,6 +255,28 @@ export async function POST(request: Request) {
               }
             }
 
+            // 7. Dispatch stage notification for 'booked' (sends SMS/WhatsApp and/or Resend email)
+            try {
+              const origin = getAppBaseUrl();
+              messagingService.dispatchStageNotification({
+                orderId: insertedOrder.id,
+                orderNumber: orderNumber,
+                customerName: validated.customer.full_name,
+                customerPhone: validated.customer.phone,
+                customerEmail: validated.customer.email,
+                stage: 'booked',
+                pickupDate: validated.schedule.pickup_date,
+                pickupWindow: validated.schedule.pickup_window,
+                deliveryDate: deliveryDateStr,
+                deliveryWindow: validated.schedule.pickup_window,
+                weightLbs: validated.services.estimated_weight_lbs,
+                total: validated.pricing.total,
+                trackingUrl: `${origin}/track/${insertedOrder.id}`,
+              }).catch((notifyErr) => console.warn('Booking stage notification notice:', notifyErr));
+            } catch (notifyErr) {
+              console.warn('Booking stage notification error:', notifyErr);
+            }
+
             return NextResponse.json({
               success: true,
               order: insertedOrder,
@@ -291,6 +315,28 @@ export async function POST(request: Request) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+
+    // Dispatch stage notification in fallback mode
+    try {
+      const origin = getAppBaseUrl();
+      messagingService.dispatchStageNotification({
+        orderId: createdOrder.id,
+        orderNumber: orderNumber,
+        customerName: validated.customer.full_name,
+        customerPhone: validated.customer.phone,
+        customerEmail: validated.customer.email,
+        stage: 'booked',
+        pickupDate: validated.schedule.pickup_date,
+        pickupWindow: validated.schedule.pickup_window,
+        deliveryDate: deliveryDateStr,
+        deliveryWindow: validated.schedule.pickup_window,
+        weightLbs: validated.services.estimated_weight_lbs,
+        total: validated.pricing.total,
+        trackingUrl: `${origin}/track/${createdOrder.id}`,
+      }).catch((notifyErr) => console.warn('Booking fallback stage notification notice:', notifyErr));
+    } catch (notifyErr) {
+      console.warn('Booking fallback notification error:', notifyErr);
+    }
 
     return NextResponse.json({
       success: true,

@@ -168,8 +168,185 @@ export function buildStatementEmailHtml({
 
     <!-- Footer -->
     <div style="background-color: #f8fafc; padding: 18px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
-      <p style="margin: 0;">Born on the world's biggest stage. Now serving Dallas-Fort Worth.</p>
-      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas, TX • commercial@firstelevencleaners.com</p>
+      <p style="margin: 0; font-weight: 600; color: #0B1F3A;">Every Garment Makes the Lineup.</p>
+      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • commercial@firstelevencleaners.com</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Branded Welcome Email HTML Template for New Account Registrations
+ */
+export function buildWelcomeEmailHtml({
+  name,
+  promoCode = 'KICKOFF15',
+  discountPercent = 15,
+}: {
+  name: string;
+  promoCode?: string;
+  discountPercent?: number;
+}): string {
+  const firstName = name.split(' ')[0] || 'there';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Welcome to First Eleven Cleaners</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
+    
+    <!-- Header -->
+    <div style="background-color: #0B1F3A; padding: 28px; text-align: center; border-bottom: 3px solid #C9A14A;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 22px; letter-spacing: 1px;">FIRST ELEVEN CLEANERS</h1>
+      <p style="color: #C9A14A; margin: 6px 0 0; font-size: 13px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Every Garment Makes the Lineup.</p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 32px 28px;">
+      <h2 style="color: #0B1F3A; margin: 0 0 16px; font-size: 20px;">Welcome to the Starting Lineup, ${firstName}!</h2>
+      
+      <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px;">
+        Thank you for creating an account with First Eleven Cleaners. We are proud to bring premier, AI-augmented dry cleaning, wash &amp; fold, and doorstep pickup &amp; delivery to homes and businesses across the Dallas-Fort Worth Metroplex.
+      </p>
+
+      <!-- Promo Box -->
+      <div style="background-color: #fef9ee; border: 2px dashed #C9A14A; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0;">
+        <p style="margin: 0; font-size: 13px; color: #854d0e; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Your New Customer Kickoff Gift</p>
+        <p style="margin: 8px 0 4px; font-size: 24px; font-weight: 800; color: #0B1F3A; letter-spacing: 2px;">${promoCode}</p>
+        <p style="margin: 0; font-size: 14px; color: #475569;">Take <strong>${discountPercent}% OFF</strong> your first order at checkout.</p>
+      </div>
+
+      <!-- What to Expect -->
+      <h3 style="color: #0B1F3A; font-size: 16px; margin: 24px 0 12px;">What sets First Eleven apart:</h3>
+      <ul style="color: #475569; font-size: 14px; line-height: 1.8; padding-left: 20px; margin: 0 0 24px;">
+        <li><strong>See It, Then Pay It:</strong> Transparent pricing with itemized photos before your card is charged.</li>
+        <li><strong>Garment Passport:</strong> Studio intake photos &amp; condition tracking for every piece.</li>
+        <li><strong>48-Hour Turnaround:</strong> Door-to-door morning and evening pickup windows across DFW.</li>
+        <li><strong>100% Make It Right Guarantee:</strong> One-tap claims on every receipt — we make it right.</li>
+      </ul>
+
+      <!-- CTA -->
+      <div style="text-align: center; margin: 32px 0 16px;">
+        <a href="https://firstelevencleaners.com/book" style="background-color: #0B1F3A; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
+          Schedule Your First Pickup &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+      <p style="margin: 0; font-weight: 600; color: #0B1F3A;">Every Garment Makes the Lineup.</p>
+      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • Phone: (214) 555-0111</p>
+      <p style="margin: 4px 0 0;">Questions? Reply directly to this email or reach us at <a href="mailto:support@firstelevencleaners.com" style="color: #C9A14A; text-decoration: none;">support@firstelevencleaners.com</a></p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Branded Order Stage Notification Email Template
+ */
+export function buildStageNotificationEmailHtml({
+  stageTitle,
+  customerName,
+  orderNumber,
+  messageBody,
+  pickupDate,
+  pickupWindow,
+  deliveryDate,
+  deliveryWindow,
+  total,
+  trackingUrl,
+}: {
+  stageTitle: string;
+  customerName: string;
+  orderNumber: string;
+  messageBody: string;
+  pickupDate?: string;
+  pickupWindow?: string;
+  deliveryDate?: string;
+  deliveryWindow?: string | null;
+  total?: number;
+  trackingUrl: string;
+}): string {
+  const firstName = customerName.split(' ')[0] || 'Valued Customer';
+  const pWindow = pickupWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : pickupWindow === 'evening' ? 'Evening (5:00–8:00 PM)' : (pickupWindow || '');
+  const dWindow = deliveryWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : deliveryWindow === 'evening' ? 'Evening (5:00–8:00 PM)' : (deliveryWindow || '');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${stageTitle} - Order #${orderNumber}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
+    
+    <!-- Header -->
+    <div style="background-color: #0B1F3A; padding: 24px 28px; text-align: center; border-bottom: 3px solid #C9A14A;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px;">FIRST ELEVEN CLEANERS</h1>
+      <p style="color: #C9A14A; margin: 4px 0 0; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Every Garment Makes the Lineup.</p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 32px 28px;">
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+        <h2 style="color: #166534; margin: 0; font-size: 18px;">${stageTitle}</h2>
+      </div>
+
+      <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 16px;">
+        Hi ${firstName}, here is the latest update on your Order <strong>#${orderNumber}</strong>:
+      </p>
+
+      <div style="background-color: #f8fafc; border-left: 4px solid #0B1F3A; padding: 14px 18px; margin: 16px 0; border-radius: 0 8px 8px 0;">
+        <p style="margin: 0; color: #1e293b; font-size: 15px; line-height: 1.5;">${messageBody}</p>
+      </div>
+
+      <!-- Details Summary -->
+      <table style="width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px;">
+        ${pickupDate ? `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 0; color: #64748b;">Pickup Window:</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 600; text-align: right;">${pickupDate} ${pWindow ? `(${pWindow})` : ''}</td>
+        </tr>` : ''}
+        ${deliveryDate ? `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 0; color: #64748b;">Estimated Delivery:</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 600; text-align: right;">${deliveryDate} ${dWindow ? `(${dWindow})` : ''}</td>
+        </tr>` : ''}
+        ${total !== undefined ? `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 0; color: #64748b;">Order Total:</td>
+          <td style="padding: 10px 0; color: #0B1F3A; font-weight: 700; text-align: right; font-size: 16px;">$${total.toFixed(2)}</td>
+        </tr>` : ''}
+      </table>
+
+      <!-- CTA Button -->
+      <div style="text-align: center; margin: 28px 0 16px;">
+        <a href="${trackingUrl}" style="background-color: #0B1F3A; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
+          Track Your Order Live &rarr;
+        </a>
+      </div>
+
+      <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 16px 0 0;">
+        Backed by our 100% Make It Right Guarantee.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+      <p style="margin: 0; font-weight: 600; color: #0B1F3A;">Every Garment Makes the Lineup.</p>
+      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • Phone: (214) 555-0111</p>
+      <p style="margin: 4px 0 0;">Support: <a href="mailto:support@firstelevencleaners.com" style="color: #C9A14A; text-decoration: none;">support@firstelevencleaners.com</a></p>
     </div>
   </div>
 </body>

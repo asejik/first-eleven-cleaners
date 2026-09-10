@@ -38,18 +38,32 @@ export default function SignupPage() {
       phone,
       password,
     });
+    if (res.error) {
+      setIsSubmitting(false);
+      setError(res.error);
+      return;
+    }
+
+    // Trigger and await transactional welcome email with promo code
+    try {
+      await fetch('/api/auth/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: fullName, email }),
+        keepalive: true,
+      });
+    } catch (triggerErr) {
+      console.warn('Welcome email trigger notice:', triggerErr);
+    }
+
     setIsSubmitting(false);
 
-    if (res.error) {
-      setError(res.error);
-    } else {
-      addToast({
-        type: 'success',
-        title: 'Account Created!',
-        message: `Welcome to First Eleven Cleaners! Use code ${PROMO_CODE_LAUNCH} for ${PROMO_DISCOUNT_PERCENT}% off.`,
-      });
-      router.push(ROUTES.dashboard);
-    }
+    addToast({
+      type: 'success',
+      title: 'Account Created!',
+      message: `Welcome to First Eleven Cleaners! Use code ${PROMO_CODE_LAUNCH} for ${PROMO_DISCOUNT_PERCENT}% off.`,
+    });
+    router.push(ROUTES.dashboard);
   };
 
   return (

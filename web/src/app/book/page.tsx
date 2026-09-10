@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_PRICE,
   PROMO_CODE_LAUNCH,
+  ROUTES,
+  calculateOrderFinancials,
 } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
@@ -126,6 +129,78 @@ export default function BookingPage() {
   const validatePromoMutation = useValidatePromoCode();
   const submitBookingMutation = useSubmitBooking();
 
+  // Load draft from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('f11_booking_draft');
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.fullName && !user?.full_name) setFullName(d.fullName);
+        if (d.email && !user?.email) setEmail(d.email);
+        if (d.phone && !user?.phone) setPhone(d.phone);
+        if (d.street) setStreet(d.street);
+        if (d.unit) setUnit(d.unit);
+        if (d.zip) setZip(d.zip);
+        if (d.deliveryNotes) setDeliveryNotes(d.deliveryNotes);
+        if (d.serviceType) setServiceType(d.serviceType);
+        if (d.washFoldWeight) setWashFoldWeight(d.washFoldWeight);
+        if (d.dryCleanQuantities) setDryCleanQuantities(d.dryCleanQuantities);
+        if (d.expressTier) setExpressTier(d.expressTier);
+        if (d.pickupDate) setPickupDate(d.pickupDate);
+        if (d.pickupWindow) setPickupWindow(d.pickupWindow);
+        if (d.frequency) setFrequency(d.frequency);
+        if (d.step && d.step > 1 && d.step < 6) setStep(d.step);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [user]);
+
+  // Persist draft to sessionStorage on state updates
+  useEffect(() => {
+    if (step === 6) return;
+    try {
+      sessionStorage.setItem(
+        'f11_booking_draft',
+        JSON.stringify({
+          fullName,
+          email,
+          phone,
+          street,
+          unit,
+          zip,
+          deliveryNotes,
+          serviceType,
+          washFoldWeight,
+          dryCleanQuantities,
+          expressTier,
+          pickupDate,
+          pickupWindow,
+          frequency,
+          step,
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [
+    fullName,
+    email,
+    phone,
+    street,
+    unit,
+    zip,
+    deliveryNotes,
+    serviceType,
+    washFoldWeight,
+    dryCleanQuantities,
+    expressTier,
+    pickupDate,
+    pickupWindow,
+    frequency,
+    step,
+  ]);
+
   // Dry clean helper
   const updateDryCleanQty = (key: string, delta: number) => {
     setDryCleanQuantities((prev) => {
@@ -154,11 +229,17 @@ export default function BookingPage() {
   const subtotal = calculatedWashFold + calculatedDryClean;
   const expressMultiplier =
     expressTier === 'express_8hr' ? 0.25 : expressTier === 'express_4hr' ? 0.4 : 0;
-  const expressSurcharge = subtotal * expressMultiplier;
-  const discountedSubtotal = subtotal + expressSurcharge;
   const discountPercent = appliedPromo?.discount_value || 0;
-  const discountAmount = (discountedSubtotal * discountPercent) / 100;
-  const total = Math.max(0, discountedSubtotal - discountAmount);
+
+  const financials = calculateOrderFinancials({
+    subtotal,
+    expressMultiplier,
+    discountPercent,
+  });
+
+  const expressSurcharge = financials.expressSurcharge;
+  const discountAmount = financials.discountAmount;
+  const total = financials.finalTotal;
 
   // Step Validations
   const isStep1Valid = Boolean(fullName && email && phone && street && zip);
@@ -219,6 +300,11 @@ export default function BookingPage() {
 
       const result = await submitBookingMutation.mutateAsync(payload);
       setConfirmedOrder({ order_number: result.order_number, id: result.order.id });
+      try {
+        sessionStorage.removeItem('f11_booking_draft');
+      } catch {
+        // ignore
+      }
       setStep(6);
       addToast({
         type: 'success',
@@ -237,6 +323,40 @@ export default function BookingPage() {
   return (
     <div className={styles.page}>
       <div className={styles.container}>
+        {/* Returning Customer Sign-In Prompt */}
+        {!user && (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #fef9ee 0%, #fef3c7 100%)',
+              border: '1px solid #fde68a',
+              borderRadius: 'var(--radius-lg)',
+              padding: '12px 18px',
+              marginBottom: 'var(--space-6)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: 'var(--text-sm)',
+              color: '#78350f',
+            }}
+          >
+            <span>
+              👋 <strong>Already a customer?</strong> Sign in to prefill your information &amp; preferences.
+            </span>
+            <Link
+              href={`${ROUTES.login}?redirect=${encodeURIComponent(ROUTES.book)}`}
+              style={{
+                color: 'var(--color-navy)',
+                fontWeight: 'bold',
+                textDecoration: 'underline',
+                marginLeft: '12px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Sign In &rarr;
+            </Link>
+          </div>
+        )}
+
         <BookingStepper step={step} />
 
         {step === 1 && (
@@ -322,6 +442,9 @@ export default function BookingPage() {
             discountAmount={discountAmount}
             discountPercent={discountPercent}
             total={total}
+            environmentalFee={financials.environmentalFee}
+            salesTax={financials.salesTax}
+            finalTotal={financials.finalTotal}
             formatDisplayDate={formatDisplayDate}
             getEstimatedDeliveryDate={getEstimatedDeliveryDate}
             onBack={() => setStep(3)}

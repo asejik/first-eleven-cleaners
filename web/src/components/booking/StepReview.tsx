@@ -28,6 +28,9 @@ interface StepReviewProps {
   discountAmount: number;
   discountPercent: number;
   total: number;
+  environmentalFee?: number;
+  salesTax?: number;
+  finalTotal?: number;
   formatDisplayDate: (dateStr: string) => string;
   getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_8hr' | 'express_4hr') => string;
   onBack: () => void;
@@ -59,6 +62,9 @@ export function StepReview({
   discountAmount,
   discountPercent,
   total,
+  environmentalFee,
+  salesTax,
+  finalTotal,
   formatDisplayDate,
   getEstimatedDeliveryDate,
   onBack,
@@ -176,9 +182,25 @@ export function StepReview({
               <span>-${discountAmount.toFixed(2)}</span>
             </div>
           )}
+          <div className={styles.totalRow}>
+            <span>Door-to-Door Delivery</span>
+            <span style={{ color: 'var(--color-green)', fontWeight: 'bold' }}>FREE</span>
+          </div>
+          {environmentalFee !== undefined && environmentalFee > 0 && (
+            <div className={styles.totalRow}>
+              <span>Environmental Fee (3%)</span>
+              <span>+${environmentalFee.toFixed(2)}</span>
+            </div>
+          )}
+          {salesTax !== undefined && salesTax > 0 && (
+            <div className={styles.totalRow}>
+              <span>Texas Sales Tax (8.25%)</span>
+              <span>+${salesTax.toFixed(2)}</span>
+            </div>
+          )}
           <div className={styles.finalTotalRow}>
-            <span>Estimated Total</span>
-            <span className={styles.finalAmount}>${total.toFixed(2)}</span>
+            <span>Authorized Total</span>
+            <span className={styles.finalAmount}>${(finalTotal ?? total).toFixed(2)}</span>
           </div>
         </div>
       </div>

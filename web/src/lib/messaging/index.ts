@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatStageMessage, type MessagePayload, type FormattedMessage } from './templates';
+import { sendEmail, buildStageNotificationEmailHtml } from '@/lib/resend';
 
 export interface DispatchResult {
   success: boolean;
@@ -16,7 +17,7 @@ export interface IMessagingProvider {
   dispatchStageNotification(payload: MessagePayload, channel?: 'sms' | 'whatsapp'): Promise<DispatchResult>;
 }
 
-// 1. Simulated Provider (Stores to Supabase Conversations & Feeds Mission Control Simulator HUD)
+// 1. Simulated Provider (Stores to Supabase Conversations, Feeds Mission Control Simulator HUD, and sends transactional email fallback)
 export class SimulatedMessageProvider implements IMessagingProvider {
   async dispatchStageNotification(payload: MessagePayload, channel: 'sms' | 'whatsapp' = 'sms'): Promise<DispatchResult> {
     const formatted = formatStageMessage(payload);
@@ -24,19 +25,41 @@ export class SimulatedMessageProvider implements IMessagingProvider {
     const timestamp = new Date().toISOString();
     const content = channel === 'whatsapp' ? formatted.whatsappBody : formatted.smsBody;
 
+    let customerEmail = payload.customerEmail;
+
     try {
       const supabase = createAdminClient();
 
-      // Find customer id if needed
+      // Find customer id & email if needed
       let customerId: string | null = null;
       const { data: order } = await supabase
         .from('orders')
-        .select('customer_id')
+        .select('customer_id, customer:customers(email)')
         .eq('id', payload.orderId)
         .maybeSingle();
 
       if (order) {
         customerId = order.customer_id;
+        const fetchedCustomer = order.customer as { email?: string } | Array<{ email?: string }> | null;
+        if (!customerEmail && fetchedCustomer) {
+          if (Array.isArray(fetchedCustomer) && fetchedCustomer[0]?.email) {
+            customerEmail = fetchedCustomer[0].email;
+          } else if ('email' in fetchedCustomer && fetchedCustomer.email) {
+            customerEmail = fetchedCustomer.email;
+          }
+        }
+      }
+
+      // Fail-proof direct customer lookup if relation join was empty
+      if (!customerEmail && customerId) {
+        const { data: directCust } = await supabase
+          .from('customers')
+          .select('email')
+          .eq('id', customerId)
+          .maybeSingle();
+        if (directCust?.email) {
+          customerEmail = directCust.email;
+        }
       }
 
       if (customerId) {
@@ -81,6 +104,40 @@ export class SimulatedMessageProvider implements IMessagingProvider {
       }
     } catch (err) {
       console.warn('Simulated message DB logging notice:', err);
+    }
+
+    // Dispatch stage notification email to customer via Resend
+    if (customerEmail) {
+      try {
+        const emailHtml = buildStageNotificationEmailHtml({
+          stageTitle: formatted.title,
+          customerName: payload.customerName,
+          orderNumber: payload.orderNumber,
+          messageBody: content,
+          pickupDate: payload.pickupDate,
+          pickupWindow: payload.pickupWindow,
+          deliveryDate: payload.deliveryDate,
+          deliveryWindow: payload.deliveryWindow,
+          total: payload.total,
+          trackingUrl: payload.trackingUrl,
+        });
+
+        const emailResult = await sendEmail({
+          to: customerEmail,
+          subject: `${formatted.title} — Order #${payload.orderNumber} | First Eleven Cleaners`,
+          html: emailHtml,
+        });
+
+        if (!emailResult.success) {
+          console.error(`[Notification Engine] Failed to dispatch ${payload.stage} email to ${customerEmail}:`, emailResult.error);
+        } else {
+          console.log(`[Notification Engine] Dispatched ${payload.stage} email to ${customerEmail} (ID: ${emailResult.id})`);
+        }
+      } catch (emailErr) {
+        console.warn('Status notification email dispatch notice:', emailErr);
+      }
+    } else {
+      console.warn(`[Notification Engine] No customerEmail found for order ${payload.orderId}, skipping email dispatch.`);
     }
 
     return {
