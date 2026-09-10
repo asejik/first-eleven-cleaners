@@ -131,29 +131,32 @@ export default function BookingPage() {
 
   // Load draft from sessionStorage on mount
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem('f11_booking_draft');
-      if (saved) {
-        const d = JSON.parse(saved);
-        if (d.fullName && !user?.full_name) setFullName(d.fullName);
-        if (d.email && !user?.email) setEmail(d.email);
-        if (d.phone && !user?.phone) setPhone(d.phone);
-        if (d.street) setStreet(d.street);
-        if (d.unit) setUnit(d.unit);
-        if (d.zip) setZip(d.zip);
-        if (d.deliveryNotes) setDeliveryNotes(d.deliveryNotes);
-        if (d.serviceType) setServiceType(d.serviceType);
-        if (d.washFoldWeight) setWashFoldWeight(d.washFoldWeight);
-        if (d.dryCleanQuantities) setDryCleanQuantities(d.dryCleanQuantities);
-        if (d.expressTier) setExpressTier(d.expressTier);
-        if (d.pickupDate) setPickupDate(d.pickupDate);
-        if (d.pickupWindow) setPickupWindow(d.pickupWindow);
-        if (d.frequency) setFrequency(d.frequency);
-        if (d.step && d.step > 1 && d.step < 6) setStep(d.step);
+    const timer = setTimeout(() => {
+      try {
+        const saved = sessionStorage.getItem('f11_booking_draft');
+        if (saved) {
+          const d = JSON.parse(saved);
+          if (d.fullName && !user?.full_name) setFullName(d.fullName);
+          if (d.email && !user?.email) setEmail(d.email);
+          if (d.phone && !user?.phone) setPhone(d.phone);
+          if (d.street) setStreet(d.street);
+          if (d.unit) setUnit(d.unit);
+          if (d.zip) setZip(d.zip);
+          if (d.deliveryNotes) setDeliveryNotes(d.deliveryNotes);
+          if (d.serviceType) setServiceType(d.serviceType);
+          if (d.washFoldWeight) setWashFoldWeight(d.washFoldWeight);
+          if (d.dryCleanQuantities) setDryCleanQuantities(d.dryCleanQuantities);
+          if (d.expressTier) setExpressTier(d.expressTier);
+          if (d.pickupDate) setPickupDate(d.pickupDate);
+          if (d.pickupWindow) setPickupWindow(d.pickupWindow);
+          if (d.frequency) setFrequency(d.frequency);
+          if (d.step && d.step > 1 && d.step < 6) setStep(d.step);
+        }
+      } catch {
+        // ignore storage errors
       }
-    } catch {
-      // ignore storage errors
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [user]);
 
   // Persist draft to sessionStorage on state updates
