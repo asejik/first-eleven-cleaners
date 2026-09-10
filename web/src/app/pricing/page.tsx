@@ -10,6 +10,8 @@ import {
   EXPRESS_8HR_SURCHARGE,
   EXPRESS_4HR_SURCHARGE,
   ROUTES,
+  FAILED_PICKUP_FEE,
+  calculateOrderFinancials,
 } from '@/lib/constants';
 import { Button, Card } from '@/components/ui';
 import styles from './page.module.css';
@@ -53,8 +55,11 @@ export default function PricingPage() {
       ? EXPRESS_4HR_SURCHARGE
       : 0;
 
-  const expressSurcharge = subtotal * expressMultiplier;
-  const total = subtotal + expressSurcharge;
+  const financials = calculateOrderFinancials({
+    subtotal,
+    expressMultiplier,
+    discountPercent: 0,
+  });
 
   const totalDryCleanItems = Object.values(dryCleanQuantities).reduce((a, b) => a + b, 0);
 
@@ -97,8 +102,8 @@ export default function PricingPage() {
               <div className={styles.minimumNotice}>
                 <span className={styles.noticeIcon}>ℹ️</span>
                 <div>
-                  <strong>15-Pound Published Minimum:</strong> ${WASH_FOLD_MINIMUM_PRICE.toFixed(2)} order floor.
-                  Orders under 15 lbs are billed at the $45 minimum floor.
+                  <strong>{WASH_FOLD_MINIMUM_LBS}-Pound Published Minimum:</strong> ${WASH_FOLD_MINIMUM_PRICE.toFixed(2)} order floor.
+                  Orders under {WASH_FOLD_MINIMUM_LBS} lbs are billed at the ${WASH_FOLD_MINIMUM_PRICE.toFixed(0)} minimum floor.
                 </div>
               </div>
 
@@ -183,6 +188,40 @@ export default function PricingPage() {
                 </div>
               </div>
             </Card>
+
+            {/* Failed Pickup / Delivery Fee Card */}
+            <Card variant="bordered" padding="lg" className={styles.priceCard}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <span className={styles.cardIcon}>🚐</span>
+                  <h2 className={styles.cardTitle}>Failed Pickup or Delivery — ${FAILED_PICKUP_FEE.toFixed(0)}</h2>
+                </div>
+                <span className={styles.perItemBadge}>Policy Clarity</span>
+              </div>
+
+              <p className={styles.cardDescription}>
+                If our driver arrives during your confirmed service window but cannot complete the pickup or delivery because the order is unavailable, access information is incorrect or incomplete, or the required recipient is unavailable, a ${FAILED_PICKUP_FEE.toFixed(0)} failed-service fee may apply.
+              </p>
+
+              <div style={{ marginTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 'var(--text-sm)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
+                  <span>First occurrence:</span>
+                  <strong style={{ color: 'var(--color-green)' }}>Waived as a courtesy</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
+                  <span>Customer reschedules &ge;2 hours beforehand:</span>
+                  <strong style={{ color: 'var(--color-green)' }}>$0 (Free)</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
+                  <span>First Eleven courier or plant fault:</span>
+                  <strong style={{ color: 'var(--color-green)' }}>$0 (Free)</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
+                  <span>Repeat unnotified failed attempt:</span>
+                  <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* Right Column: Live Sticky Calculator */}
@@ -195,7 +234,7 @@ export default function PricingPage() {
                 {/* Wash & Fold Slider */}
                 <div className={styles.calcSection}>
                   <div className={styles.calcRowHeader}>
-                    <label htmlFor="weightSlider">Wash & Fold Weight:</label>
+                    <label htmlFor="weightSlider">Wash &amp; Fold Weight:</label>
                     <span className={styles.weightValue}>{washFoldWeight} lbs</span>
                   </div>
                   <input
@@ -273,7 +312,7 @@ export default function PricingPage() {
                 <div className={styles.breakdown}>
                   {washFoldWeight > 0 && (
                     <div className={styles.breakdownRow}>
-                      <span>Wash & Fold ({washFoldWeight} lbs)</span>
+                      <span>Wash &amp; Fold ({washFoldWeight} lbs)</span>
                       <span>${calculatedWashFold.toFixed(2)}</span>
                     </div>
                   )}
@@ -283,19 +322,31 @@ export default function PricingPage() {
                       <span>${calculatedDryClean.toFixed(2)}</span>
                     </div>
                   )}
-                  {expressSurcharge > 0 && (
+                  {financials.expressSurcharge > 0 && (
                     <div className={styles.breakdownRow}>
                       <span>Express Surcharge</span>
-                      <span>+${expressSurcharge.toFixed(2)}</span>
+                      <span>+${financials.expressSurcharge.toFixed(2)}</span>
                     </div>
                   )}
                   <div className={styles.breakdownRow}>
-                    <span>Door-to-Door Delivery</span>
+                    <span>Door-to-Door Pickup &amp; Delivery</span>
                     <span className={styles.freeBadge}>FREE</span>
                   </div>
+                  {financials.subtotal > 0 && (
+                    <>
+                      <div className={styles.breakdownRow}>
+                        <span>Environmental Fee (3%)</span>
+                        <span>+${financials.environmentalFee.toFixed(2)}</span>
+                      </div>
+                      <div className={styles.breakdownRow}>
+                        <span>Texas Sales Tax (8.25%)</span>
+                        <span>+${financials.salesTax.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className={styles.totalRow}>
                     <span>Estimated Total</span>
-                    <span className={styles.totalAmount}>${total.toFixed(2)}</span>
+                    <span className={styles.totalAmount}>${financials.finalTotal.toFixed(2)}</span>
                   </div>
                 </div>
 

@@ -17,6 +17,13 @@ ai_prop.txt
 competitive_bench.txt
 market_prop.txt
 
+# --- Internal Testing Guides & Manual QA Walkthroughs ---
+*TESTING_GUIDE*
+*testing_guide*
+*.testguide*
+TESTING_GUIDE.md
+web/TESTING_GUIDE.md
+
 # --- Security, Secrets & Sensitive Credentials ---
 # Environment variables (Never commit secret keys)
 .env*

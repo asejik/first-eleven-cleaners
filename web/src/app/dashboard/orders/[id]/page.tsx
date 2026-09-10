@@ -9,7 +9,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
-import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
+import { calculateOrderFinancials, ORDER_STATUSES, ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
 export default function OrderDetailPage() {
@@ -40,6 +40,10 @@ export default function OrderDetailPage() {
   const order = data.order;
   const currentStageIndex = ORDER_STATUSES.findIndex((s) => s.key === order.status);
   const orderClaims = claimsData?.claims || [];
+  const financials = calculateOrderFinancials({
+    subtotal: order.subtotal,
+    discountAmount: order.discount_amount || 0,
+  });
 
   const isDelayed = (() => {
     if (order.status === 'delivered') return false;
@@ -278,10 +282,26 @@ export default function OrderDetailPage() {
                   <span>-${order.discount_amount.toFixed(2)}</span>
                 </div>
               )}
+              <div className={styles.totalRow}>
+                <span>Environmental Fee (3%)</span>
+                <span>${financials.environmentalFee.toFixed(2)}</span>
+              </div>
+              <div className={styles.totalRow}>
+                <span>Texas Sales Tax (8.25%)</span>
+                <span>${financials.salesTax.toFixed(2)}</span>
+              </div>
               <div className={styles.finalRow}>
                 <span>Final Total Charged</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>${order.total ? order.total.toFixed(2) : financials.total.toFixed(2)}</span>
               </div>
+            </div>
+
+            <div className={styles.receiptActions}>
+              <Link href={ROUTES.claim(order.id)} className={styles.claimLink}>
+                <Button variant="outline" size="sm" fullWidth>
+                  🛡️ Make It Right Claim
+                </Button>
+              </Link>
             </div>
           </Card>
 

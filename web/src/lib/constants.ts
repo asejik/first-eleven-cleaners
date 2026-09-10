@@ -4,10 +4,14 @@
 
 // --- Brand ---
 export const APP_NAME = 'First Eleven Cleaners';
-export const APP_TAGLINE = 'Born on the world\'s biggest stage. Now serving yours.';
+export const APP_TAGLINE = 'Every Garment Makes the Lineup.';
 export const APP_DESCRIPTION = 'Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex.';
 export const PROMO_CODE_LAUNCH = 'KICKOFF15';
 export const PROMO_DISCOUNT_PERCENT = 15;
+
+// --- Support Contacts ---
+export const SUPPORT_PHONE = '(214) 555-0111';
+export const SUPPORT_EMAIL = 'support@firstelevencleaners.com';
 
 // --- Pricing ---
 export const WASH_FOLD_PRICE_PER_LB = 3.00;
@@ -16,6 +20,11 @@ export const WASH_FOLD_MINIMUM_PRICE = WASH_FOLD_PRICE_PER_LB * WASH_FOLD_MINIMU
 export const EXPRESS_8HR_SURCHARGE = 0.25; // +25%
 export const EXPRESS_4HR_SURCHARGE = 0.40; // +40%
 export const EXPRESS_ENABLED = false; // Toggle on when plant confirms capacity
+
+// --- Taxes & Environmental Fees ---
+export const TX_SALES_TAX_RATE = 0.0825; // 8.25% Texas State & Local Sales Tax
+export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Sustainability Fee
+export const FAILED_PICKUP_FEE = 15.00; // $15 Failed service attempt fee
 
 export const DRY_CLEAN_PRICES: Record<string, { label: string; price: number }> = {
   shirt_blouse: { label: 'Shirt / Blouse (dry clean)', price: 8.97 },
@@ -98,6 +107,7 @@ export const ROUTES = {
   staffDriver: '/staff/driver',
   privacy: '/privacy',
   terms: '/terms',
+  serviceAreas: '/service-areas',
 } as const;
 
 // --- Legal & Compliance ---
@@ -109,6 +119,56 @@ export const LEGAL_CONFIG = {
   contactEmail: 'legal@firstelevencleaners.com',
   privacyEmail: 'privacy@firstelevencleaners.com',
 } as const;
+
+/**
+ * Common order financial breakdown calculation across booking, pricing calculator, and receipts.
+ */
+export interface OrderFinancials {
+  subtotal: number;
+  expressSurcharge: number;
+  discountAmount: number;
+  netSubtotal: number;
+  environmentalFee: number;
+  taxableAmount: number;
+  salesTax: number;
+  finalTotal: number;
+  total: number;
+}
+
+export function calculateOrderFinancials({
+  subtotal,
+  expressMultiplier = 0,
+  discountPercent = 0,
+  discountAmount: directDiscountAmount,
+}: {
+  subtotal: number;
+  expressMultiplier?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+}): OrderFinancials {
+  const expressSurcharge = Number((subtotal * expressMultiplier).toFixed(2));
+  const grossBeforeDiscount = subtotal + expressSurcharge;
+  const discountAmount = directDiscountAmount !== undefined
+    ? Number(directDiscountAmount.toFixed(2))
+    : Number(((grossBeforeDiscount * discountPercent) / 100).toFixed(2));
+  const netSubtotal = Math.max(0, Number((grossBeforeDiscount - discountAmount).toFixed(2)));
+  const environmentalFee = Number((netSubtotal * ENVIRONMENTAL_FEE_RATE).toFixed(2));
+  const taxableAmount = Number((netSubtotal + environmentalFee).toFixed(2));
+  const salesTax = Number((taxableAmount * TX_SALES_TAX_RATE).toFixed(2));
+  const finalTotal = Number((netSubtotal + environmentalFee + salesTax).toFixed(2));
+
+  return {
+    subtotal,
+    expressSurcharge,
+    discountAmount,
+    netSubtotal,
+    environmentalFee,
+    taxableAmount,
+    salesTax,
+    finalTotal,
+    total: finalTotal,
+  };
+}
 
 /**
  * Resolves the application base URL dynamically across local and Vercel environments.

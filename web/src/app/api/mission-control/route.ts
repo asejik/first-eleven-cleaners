@@ -179,15 +179,16 @@ export async function POST(request: Request) {
       });
 
       // Dispatch Notification
-      const customer = order.customer as { full_name?: string; phone?: string } | null;
+      const rawCustomer = order.customer;
+      const customer = (Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer) as { full_name?: string; phone?: string; email?: string } | null;
       const origin = getAppBaseUrl();
 
       const payload: MessagePayload = {
-
         orderId: order.id,
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customer?.full_name || 'Valued Customer',
         customerPhone: customer?.phone || '+12145550199',
+        customerEmail: customer?.email,
         stage: new_stage as OrderStatusKey,
         pickupDate: order.pickup_date,
         pickupWindow: order.pickup_window,

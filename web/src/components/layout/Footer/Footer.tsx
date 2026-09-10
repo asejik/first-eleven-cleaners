@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ROUTES, APP_NAME } from '@/lib/constants';
+import { ROUTES, APP_NAME, SUPPORT_PHONE, SUPPORT_EMAIL } from '@/lib/constants';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -24,8 +24,7 @@ export function Footer() {
               />
             </Link>
             <p className={styles.tagline}>
-              Born on the world&apos;s biggest stage.<br />
-              Now serving yours.
+              Every Garment Makes the Lineup.
             </p>
             <p className={styles.location}>📍 Dallas-Fort Worth Metroplex</p>
           </div>
@@ -35,9 +34,9 @@ export function Footer() {
             <h4 className={styles.columnTitle}>Services</h4>
             <nav className={styles.columnLinks}>
               <Link href={ROUTES.pricing}>Dry Cleaning</Link>
-              <Link href={ROUTES.pricing}>Wash & Fold</Link>
-              <Link href={ROUTES.pricing}>Express Service</Link>
-              <Link href={ROUTES.pricing}>Pricing</Link>
+              <Link href={ROUTES.pricing}>Wash &amp; Fold</Link>
+              <Link href={ROUTES.serviceAreas}>DFW Service Areas</Link>
+              <Link href={ROUTES.pricing}>Published Pricing</Link>
             </nav>
           </div>
 
@@ -45,21 +44,61 @@ export function Footer() {
           <div className={styles.column}>
             <h4 className={styles.columnTitle}>Company</h4>
             <nav className={styles.columnLinks}>
-              <Link href={ROUTES.commercial}>For Business</Link>
-              <Link href={ROUTES.portal}>Commercial B2B Portal</Link>
               <Link href={ROUTES.about}>About Us</Link>
               <Link href={ROUTES.about}>FIFA World Cup Story</Link>
+              <Link href={ROUTES.commercial}>For Business &amp; B2B</Link>
+              <Link href={ROUTES.dashboard}>Customer Portal</Link>
             </nav>
           </div>
 
-          {/* Operations / Staff */}
+          {/* Support */}
           <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Operations</h4>
+            <h4 className={styles.columnTitle}>Support</h4>
             <nav className={styles.columnLinks}>
-              <Link href={ROUTES.missionControl}>Mission Control</Link>
-              <Link href={ROUTES.intake}>Central Intake</Link>
-              <Link href={ROUTES.staffDriver}>Driver App</Link>
-              <Link href={ROUTES.dashboard}>Customer Portal</Link>
+              <a
+                href={`tel:${SUPPORT_PHONE.replace(/\D/g, '')}`}
+                className={styles.contactLink}
+                style={{ color: 'var(--color-gold)', fontWeight: 600 }}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={styles.contactIcon}
+                  aria-hidden="true"
+                >
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                <span>{SUPPORT_PHONE}</span>
+              </a>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className={styles.contactLinkEmail}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={styles.contactIcon}
+                  aria-hidden="true"
+                >
+                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+                <span>{SUPPORT_EMAIL}</span>
+              </a>
+              <Link href={ROUTES.pricing}>100% Make It Right Guarantee</Link>
+              <Link href={ROUTES.book}>Schedule Pickup</Link>
             </nav>
           </div>
 

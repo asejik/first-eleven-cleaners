@@ -5,9 +5,9 @@ import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'About Us | Our Story',
+  title: 'Our FIFA World Cup IBC Story | First Eleven Cleaners',
   description:
-    'Born at the FIFA World Cup 2026 IBC in Dallas. First Eleven Cleaners is a veteran-owned, minority-certified premium dry cleaning and laundry service serving the Dallas-Fort Worth Metroplex.',
+    'Every Garment Makes the Lineup. Born at the FIFA World Cup 2026 IBC in Dallas. First Eleven Cleaners is a veteran-owned, minority-certified premium dry cleaning and laundry service serving the Dallas-Fort Worth Metroplex.',
 };
 
 const CERTIFICATIONS = [
@@ -28,12 +28,12 @@ const TIMELINE = [
   {
     year: 'Summer 2026',
     title: 'The FIFA World Cup 2026 — Dallas IBC',
-    body: 'We were selected to operate the garment-care facility at the FIFA World Cup 2026™ International Broadcast Centre in Dallas. For twelve consecutive weeks, we served 3,500 accredited international media professionals — journalists, producers, and broadcast crews from around the globe — completing 27+ transactions per day, zero documented disputes, and a signed Vendor Performance Confirmation at close.',
+    body: 'We were selected to operate the garment-care facility at the FIFA World Cup 2026™ International Broadcast Centre in Dallas. For twelve consecutive weeks, we served 3,500 accredited international media professionals — journalists, producers, and broadcast crews from around the globe — completing hundreds of transactions under live-event conditions, zero documented disputes, and a signed Vendor Performance Confirmation at close.',
   },
   {
     year: 'The Lessons',
     title: 'What the World Cup Taught Us',
-    body: 'Twelve weeks under live-event pressure taught us what no business plan could: that demand data beats assumptions, documentation is destiny, labor discipline decides profitability, and evidence defeats disputes. These aren\'t values on a wall — they\'re operational disciplines wired into every system we built.',
+    body: 'Twelve weeks under live-event pressure taught us what no business plan could: that demand data beats assumptions, documentation is destiny, rigorous operational discipline decides consistency, and evidence defeats disputes. These aren\'t values on a wall — they\'re operational disciplines wired into every system we built.',
   },
   {
     year: 'August 2026',
@@ -54,9 +54,9 @@ const PRINCIPLES = [
     body: 'Every price is published before checkout, always. We watched competitors surprise customers with fees they never saw coming. First Eleven\'s founding contract with you is simple: you see the total before we charge it. If you weigh more than estimated — you see the new ticket and photos before we touch your card.',
   },
   {
-    icon: '📊',
-    title: 'Labor Discipline Decides Profitability',
-    body: 'Our operations run with a live dashboard tracking labor as a percentage of net sales, with a hard ceiling of 32%. This isn\'t a quarterly report — it\'s a daily discipline we learned at the IBC, where that single metric was the line between a profitable operation and a loss.',
+    icon: '⏱️',
+    title: 'The 48-Hour Match-Ready Standard',
+    body: 'Our operations run with precision timing. From the moment our courier secures your bag to return delivery at your door, every stage is timed and tracked to meet our guaranteed 48-hour turnaround.',
   },
   {
     icon: '⚡',
@@ -65,13 +65,13 @@ const PRINCIPLES = [
   },
   {
     icon: '🤝',
-    title: 'Refund First, Ask Later',
-    body: 'Inspired by Chewy\'s legendary customer service. Our "Make It Right" button is on every receipt — one tap opens a claim with your garment\'s photos already attached. We don\'t make you argue. We make it right.',
+    title: 'Make It Right, Guaranteed',
+    body: 'Our "Make It Right" promise is wired into every receipt — one tap opens a claim with your garment\'s photos already attached. We don\'t make you argue. We make it right.',
   },
   {
     icon: '🗺️',
-    title: 'No ZIP Fences',
-    body: 'Uber doesn\'t ask permission by ZIP code, and neither do we. Any address in the Dallas-Fort Worth Metroplex can book on Day One. Dense zones earn daily service. Emerging zones get scheduled service days. Every accepted booking gets a committed window — never a rejection.',
+    title: 'No ZIP Walls',
+    body: 'We never reject a customer based on ZIP code. Any address in the Dallas-Fort Worth Metroplex can book on Day One. Dense zones earn daily service. Emerging zones get scheduled service days. Every accepted booking gets a committed window — never a rejection.',
   },
 ];
 
@@ -89,7 +89,7 @@ export default function AboutPage() {
           <span className={styles.accent}>Biggest Stage.</span>
         </h1>
         <p className={styles.heroSubtitle}>
-          Now serving yours.
+          Every Garment Makes the Lineup.
         </p>
         <p className={styles.heroBody}>
           We didn&apos;t start in a strip mall. We started at the center of the world&apos;s most-watched
@@ -120,8 +120,8 @@ export default function AboutPage() {
           </div>
           <div className={styles.proofDivider} />
           <div className={styles.proofStat}>
-            <span className={styles.proofNumber}>27+</span>
-            <span className={styles.proofLabel}>Orders Processed Per Day</span>
+            <span className={styles.proofNumber}>Hundreds</span>
+            <span className={styles.proofLabel}>Orders Processed Under Live-Event Conditions</span>
           </div>
           <div className={styles.proofDivider} />
           <div className={styles.proofStat}>
@@ -233,7 +233,7 @@ export default function AboutPage() {
           <p className={styles.certNote}>
             Our SDVOSB and Veteran-HUB certifications make First Eleven eligible for VA Vets First priority
             procurement and SDVOSB sole-source contracts — categories in which qualified garment-care vendors
-            are scarce across North Texas. We are the only provider in this market that can attach a{' '}
+            are scarce across North Texas. We are proud to be one of the select few certified operators in this market that can attach a{' '}
             <strong>FIFA World Cup Vendor Performance Letter</strong> to an institutional bid.
           </p>
         </div>
@@ -291,8 +291,8 @@ export default function AboutPage() {
                 <span className={styles.statDesc}>Status updates sent on every single order</span>
               </div>
               <div className={styles.statCard}>
-                <span className={styles.statNumber}>≤32%</span>
-                <span className={styles.statDesc}>Labor as % of sales — our operational ceiling</span>
+                <span className={styles.statNumber}>100%</span>
+                <span className={styles.statDesc}>Make It Right Satisfaction Guarantee</span>
               </div>
               <div className={styles.statCard}>
                 <span className={styles.statNumber}>$0</span>

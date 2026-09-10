@@ -1,5 +1,11 @@
 import Link from 'next/link';
-import { ROUTES, APP_TAGLINE, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
+import {
+  ROUTES,
+  APP_TAGLINE,
+  PROMO_CODE_LAUNCH,
+  PROMO_DISCOUNT_PERCENT,
+  EXPRESS_ENABLED,
+} from '@/lib/constants';
 import { Button } from '@/components/ui';
 import styles from './page.module.css';
 
@@ -100,24 +106,23 @@ export default function HomePage() {
               <h3>Dry Cleaning</h3>
               <p>
                 Suits, dresses, formalwear, specialty fabrics, and stain
-                remediation at published per-garment prices.
+                remediation at published per-garment rates.
               </p>
-              <span className={styles.servicePrice}>From $4.47/item</span>
+              <span className={styles.servicePrice}>From $8.97/garment (shirts from $4.47)</span>
             </div>
 
             <div className={styles.serviceCard}>
               <span className={styles.serviceIcon}>🧺</span>
-              <h3>Wash & Fold</h3>
+              <h3>Wash &amp; Fold</h3>
               <p>
-                Everyday laundry, washed, dried, and neatly folded. $3.00 per
-                pound with a 15-pound minimum.
+                Everyday laundry, washed, dried, and neatly folded. $45 minimum order — includes up to 15 lbs ($3.00/lb).
               </p>
-              <span className={styles.servicePrice}>$3.00/lb</span>
+              <span className={styles.servicePrice}>$3.00/lb ($45 min)</span>
             </div>
 
             <div className={styles.serviceCard}>
               <span className={styles.serviceIcon}>🚐</span>
-              <h3>Pickup & Delivery</h3>
+              <h3>Pickup &amp; Delivery</h3>
               <p>
                 Door-to-door across the entire DFW Metroplex. Morning and
                 evening windows. Contactless by default.
@@ -129,10 +134,11 @@ export default function HomePage() {
               <span className={styles.serviceIcon}>⚡</span>
               <h3>Same-Day Express</h3>
               <p>
-                Need it fast? Express service available with +25% (under 8
-                hours) and +40% (under 4 hours) tiers.
+                {EXPRESS_ENABLED
+                  ? 'Need it fast? Express service available with +25% (under 8 hours) and +40% (under 4 hours) tiers.'
+                  : 'Available soon — plant capacity confirming. Built for mission-critical fast turnaround.'}
               </p>
-              <span className={styles.servicePrice}>Coming Soon</span>
+              <span className={styles.servicePrice}>{EXPRESS_ENABLED ? 'From +25%' : 'Available Soon'}</span>
             </div>
           </div>
         </div>

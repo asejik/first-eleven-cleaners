@@ -252,6 +252,31 @@ export function StepPayment({
             </div>
           </div>
         )}
+
+        {/* Instant Test / Demo Token Shortcut for Testing */}
+        <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--color-gray-200)', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => onCompleteBooking('sq_sim_token_demo', 'visa', '4242')}
+            disabled={isLoading}
+            style={{
+              background: 'var(--color-cream)',
+              border: '1px dashed var(--color-gold)',
+              color: 'var(--color-navy)',
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>⚡</span>
+            <span>Use Default Test Card (Instant Token • No Card Needed)</span>
+          </button>
+        </div>
       </div>
 
       <div className={styles.buttonSplit}>

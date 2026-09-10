@@ -5,6 +5,7 @@ export interface MessagePayload {
   orderNumber: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   stage: OrderStatusKey;
   pickupDate?: string;
   pickupWindow?: 'morning' | 'evening';
