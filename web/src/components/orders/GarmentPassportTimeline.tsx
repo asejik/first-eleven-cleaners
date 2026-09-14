@@ -53,7 +53,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
       {/* Metric Pills Bar */}
       <div className={styles.metricsBar}>
         <div className={styles.metricCard}>
-          <span className={styles.metricIcon}>🛡️</span>
+          <span className={styles.metricIcon} role="img" aria-label="Security shield">🛡️</span>
           <div>
             <span className={styles.metricLabel}>Inspection Integrity</span>
             <p className={styles.metricValue}>100% Match-Ready</p>
@@ -61,7 +61,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
         </div>
 
         <div className={styles.metricCard}>
-          <span className={styles.metricIcon}>🔄</span>
+          <span className={styles.metricIcon} role="img" aria-label="Cycle count">🔄</span>
           <div>
             <span className={styles.metricLabel}>Garment Passport Cycle</span>
             <p className={styles.metricValue}>Cycle #1 at First Eleven</p>
@@ -69,7 +69,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
         </div>
 
         <div className={styles.metricCard}>
-          <span className={styles.metricIcon}>⚖️</span>
+          <span className={styles.metricIcon} role="img" aria-label="Digital scale">⚖️</span>
           <div>
             <span className={styles.metricLabel}>Digital Scale Verification</span>
             <p className={styles.metricValue}>{order.weight_lbs ? `${order.weight_lbs} lbs Verified` : 'Itemized Menu'}</p>
@@ -80,7 +80,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
       {/* Pre-Existing Flaw Protection Alert */}
       {order.notes && (
         <div className={styles.flawBanner}>
-          <strong>📋 Pre-Treatment & Condition Log:</strong> {order.notes}
+          <strong><span role="img" aria-label="Condition log">📋</span> Pre-Treatment &amp; Condition Log:</strong> {order.notes}
         </div>
       )}
 

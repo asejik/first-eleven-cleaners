@@ -1,4 +1,5 @@
 import { Card, Input, Button } from '@/components/ui';
+import { resolveZoneByZip, type ZoneConfig } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
 
 interface StepAddressProps {
@@ -12,10 +13,14 @@ interface StepAddressProps {
   setStreet: (val: string) => void;
   unit: string;
   setUnit: (val: string) => void;
+  city: string;
+  setCity: (val: string) => void;
   zip: string;
   setZip: (val: string) => void;
   deliveryNotes: string;
   setDeliveryNotes: (val: string) => void;
+  detectedZone: ZoneConfig | null;
+  onZoneChange: (zone: ZoneConfig | null) => void;
   isValid: boolean;
   onContinue: () => void;
 }
@@ -31,18 +36,36 @@ export function StepAddress({
   setStreet,
   unit,
   setUnit,
+  city,
+  setCity,
   zip,
   setZip,
   deliveryNotes,
   setDeliveryNotes,
+  detectedZone,
+  onZoneChange,
   isValid,
   onContinue,
 }: StepAddressProps) {
+  const handleZipChange = (val: string) => {
+    setZip(val);
+    const resolved = resolveZoneByZip(val);
+    onZoneChange(resolved);
+    if (resolved && (!city || city === 'Dallas')) {
+      if (resolved.id === 'zone_3') setCity('Fort Worth');
+      else if (resolved.id === 'zone_2') setCity('Plano');
+      else if (resolved.id === 'zone_4') setCity('Denton');
+      else if (resolved.id === 'zone_1') setCity('Dallas');
+    }
+  };
+
+  const cleanedZip = (zip || '').trim().replace(/[^\d]/g, '');
+
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>Where Should We Pick Up?</h1>
       <p className={styles.cardSubtitle}>
-        Door-to-door coverage across the Dallas-Fort Worth Metroplex.
+        Door-to-door coverage across the Dallas-Fort Worth Metroplex. Free delivery everywhere.
       </p>
 
       <div className={styles.formGrid}>
@@ -85,11 +108,27 @@ export function StepAddress({
             placeholder="Apt 304, Gate #1100"
           />
           <Input
+            label="City"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Dallas"
+            required
+          />
+        </div>
+        <div className={styles.rowTwo}>
+          <Input
+            label="State"
+            value="TX"
+            disabled
+            required
+          />
+          <Input
             label="ZIP Code"
             value={zip}
-            onChange={(e) => setZip(e.target.value)}
+            onChange={(e) => handleZipChange(e.target.value)}
             placeholder="75205"
             required
+            helperText="Enter 5-digit ZIP to verify area coverage & route schedule"
           />
         </div>
         <Input
@@ -100,10 +139,79 @@ export function StepAddress({
         />
       </div>
 
+      {/* Dynamic Zone Detection Card (Only shown when 5-digit ZIP matches a recognized zone) */}
+      {cleanedZip.length >= 5 && detectedZone && (
+        <div className={styles.zoneBanner}>
+          <div className={styles.zoneBannerHeader}>
+            <div className={styles.zoneBannerTitle}>
+              <span>📍 {detectedZone.name}</span>
+            </div>
+            <span className={styles.zoneBadgePill}>{detectedZone.badge}</span>
+          </div>
+          <p className={styles.zoneTagline}>{detectedZone.tagline}</p>
+
+          <div className={styles.zoneSpecsGrid}>
+            <div className={styles.zoneSpecItem}>
+              <span className={styles.zoneSpecLabel}>Order Minimum</span>
+              <span className={`${styles.zoneSpecValue} ${styles.zoneSpecHighlight}`}>
+                ${detectedZone.minimumOrder.toFixed(0)} min
+              </span>
+            </div>
+            <div className={styles.zoneSpecItem}>
+              <span className={styles.zoneSpecLabel}>Delivery Fee</span>
+              <span className={`${styles.zoneSpecValue} ${styles.zoneSpecHighlight}`}>
+                $0.00 (Always Free)
+              </span>
+            </div>
+            <div className={styles.zoneSpecItem}>
+              <span className={styles.zoneSpecLabel}>Route Schedule</span>
+              <span className={styles.zoneSpecValue}>{detectedZone.routeScheduleLabel}</span>
+            </div>
+            <div className={styles.zoneSpecItem}>
+              <span className={styles.zoneSpecLabel}>24-Hr Express</span>
+              <span
+                className={`${styles.zoneSpecValue} ${
+                  detectedZone.expressEligible ? styles.zoneSpecHighlight : styles.zoneSpecMuted
+                }`}
+              >
+                {detectedZone.expressEligible ? '⚡ Eligible' : 'Standard 48-Hr'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Out of Service Area Alert (Shown when 5-digit ZIP is entered but outside North Texas) */}
+      {cleanedZip.length >= 5 && !detectedZone && (
+        <div className={styles.zoneOutOfArea}>
+          <span style={{ fontSize: '24px', lineHeight: 1 }}>📍</span>
+          <div>
+            <div className={styles.zoneOutOfAreaTitle}>
+              Outside Service Area ({zip.trim()})
+            </div>
+            <div className={styles.zoneOutOfAreaText}>
+              First Eleven Cleaners currently operates daily plant routes throughout the Dallas–Fort Worth Metroplex and North Texas (covering ZIP codes starting with 750–754 and 760–762). The ZIP code you entered is outside our delivery area. Please verify your ZIP code or contact our concierge for corporate or commercial laundry inquiries.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Neutral Prompt (Shown when ZIP is empty or incomplete) */}
+      {cleanedZip.length < 5 && (
+        <div className={styles.zonePrompt}>
+          <span style={{ fontSize: '20px' }}>📍</span>
+          <div>
+            {cleanedZip.length === 0
+              ? 'Enter your 5-digit ZIP code above to verify area coverage, route schedule, and order minimum.'
+              : `Enter all 5 digits of your ZIP code (${cleanedZip.length}/5 digits entered).`}
+          </div>
+        </div>
+      )}
+
       <div className={styles.smartCoverageNotice}>
         <span className={styles.noticeEmoji}>🗺️</span>
         <div>
-          <strong>Smart Coverage:</strong> No restrictive ZIP fences. We serve all of DFW. Your area is matched with dedicated morning and evening routes.
+          <strong>Smart Coverage Promise:</strong> No restrictive ZIP fences. We serve all of North Texas with $0 delivery fees. Order minimums scale fairly by zone to power reliable plant routes.
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import { getAppBaseUrl } from '@/lib/constants';
+import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 
 
@@ -314,6 +315,9 @@ export async function POST(request: Request) {
         id,
         order_number,
         status,
+        express_tier,
+        subtotal,
+        express_auto_refunded,
         pickup_date,
         pickup_window,
         delivery_date,
@@ -506,7 +510,14 @@ export async function POST(request: Request) {
       basePayload.photoUrl = resolvedPhotoUrl || photo_url || undefined;
       await messagingService.dispatchStageNotification(basePayload);
 
-      return NextResponse.json({ success: true, new_status: 'delivered' });
+      // 5. Check 24-Hour Express SLA (Delivered by 10:00 AM on delivery date)
+      const expressSLAResult = await handleExpressDeliverySLA(order, new Date());
+
+      return NextResponse.json({
+        success: true,
+        new_status: 'delivered',
+        express_sla: expressSLAResult,
+      });
     }
 
     return NextResponse.json({ error: 'Unknown driver action' }, { status: 400 });

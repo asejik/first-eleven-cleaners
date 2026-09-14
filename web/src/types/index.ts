@@ -2,7 +2,7 @@
 // FIRST ELEVEN CLEANERS — Type Definitions
 // ============================================
 
-import type { OrderStatusKey, ServiceTypeKey } from '@/lib/constants';
+import type { OrderStatusKey, ServiceTypeKey, ZoneConfig } from '@/lib/constants';
 
 // --- User Roles ---
 export type UserRole = 'customer' | 'driver' | 'intake_staff' | 'admin' | 'staff';
@@ -72,13 +72,18 @@ export interface Address {
   is_default: boolean;
   delivery_notes: string | null;
   zone_id: string | null;
+  zone?: ZoneConfig;
 }
 
 // --- Zone ---
 export interface Zone {
   id: string;
   name: string;
+  minimum_order?: number;
   service_days: string[]; // e.g., ['Monday', 'Wednesday', 'Friday']
+  route_days?: string[];
+  express_eligible?: boolean;
+  zip_codes?: string[];
   is_active: boolean;
   created_at: string;
 }
@@ -97,7 +102,11 @@ export interface Order {
   delivery_window: 'morning' | 'evening' | null;
   weight_lbs: number | null;
   subtotal: number;
-  express_tier: 'standard' | 'express_8hr' | 'express_4hr';
+  express_tier: 'standard' | 'express_24hr';
+  express_surcharge?: number;
+  express_auto_refunded?: boolean;
+  express_refund_amount?: number;
+  express_refund_reason?: string;
   promo_code: string | null;
   discount_amount: number;
   total: number;
@@ -232,9 +241,10 @@ export interface BookingFormData {
   schedule: {
     pickup_date: string;
     pickup_window: 'morning' | 'evening';
-    express_tier: 'standard' | 'express_8hr' | 'express_4hr';
+    express_tier: 'standard' | 'express_24hr';
   };
   promo_code: string;
+  zone?: ZoneConfig;
 }
 
 // --- Price Calculation Result ---
@@ -248,6 +258,8 @@ export interface PriceCalculation {
   weight_lbs: number;
   meets_minimum: boolean;
   minimum_shortfall: number;
+  zone?: ZoneConfig | null;
+  zone_minimum_shortfall?: number;
   items: Array<{ label: string; quantity: number; unit_price: number; subtotal: number }>;
 }
 
@@ -277,7 +289,7 @@ export interface BookingSubmissionPayload {
   schedule: {
     pickup_date: string;
     pickup_window: 'morning' | 'evening';
-    express_tier?: 'standard' | 'express_8hr' | 'express_4hr';
+    express_tier?: 'standard' | 'express_24hr';
     frequency?: 'one_time' | 'weekly' | 'biweekly';
   };
   pricing: {

@@ -142,7 +142,13 @@ export default function OrderDetailPage() {
             }
           >
             <div className={styles.countdownLeft}>
-              <span className={styles.clockIcon}>{order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}</span>
+              <span
+                className={styles.clockIcon}
+                role="img"
+                aria-label={order.status === 'delivered' ? 'Order delivered' : isDelayed ? 'Delivery delayed' : 'Delivery schedule'}
+              >
+                {order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}
+              </span>
               <div>
                 <strong>
                   {order.status === 'delivered'
@@ -185,7 +191,11 @@ export default function OrderDetailPage() {
                   key={stage.key}
                   className={`${styles.stageCol} ${isPassed ? styles.passedStage : ''} ${isCurrent ? styles.currentStage : ''}`}
                 >
-                  <div className={styles.stageIconCircle}>
+                  <div
+                    className={styles.stageIconCircle}
+                    role="img"
+                    aria-label={`${stage.label} stage ${isCurrent ? 'active' : isPassed ? 'completed' : 'pending'}`}
+                  >
                     {isPassed ? stage.icon : '○'}
                   </div>
                   <span className={styles.stageLabel}>{stage.label}</span>

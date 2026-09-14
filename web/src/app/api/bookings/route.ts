@@ -3,9 +3,17 @@ import { z } from 'zod';
 import type { Order } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
-import { getAppBaseUrl } from '@/lib/constants';
+import {
+  getAppBaseUrl,
+  resolveZoneByZip,
+  getZoneMinimumGap,
+  EXPRESS_EXCLUDED_GARMENTS,
+  PROMO_CODE_LAUNCH,
+  PROMO_DISCOUNT_PERCENT,
+  computeBookingFinancials,
+} from '@/lib/constants';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -32,15 +40,15 @@ const BookingSchema = z.object({
   schedule: z.object({
     pickup_date: z.string(),
     pickup_window: z.enum(['morning', 'evening']),
-    express_tier: z.enum(['standard', 'express_8hr', 'express_4hr']).default('standard'),
+    express_tier: z.enum(['standard', 'express_24hr']).default('standard'),
     frequency: z.enum(['one_time', 'weekly', 'biweekly']).optional().default('one_time'),
   }),
   pricing: z.object({
-    subtotal: z.number(),
+    subtotal: z.number().default(0),
     discount_amount: z.number().default(0),
-    total: z.number(),
+    total: z.number().default(0),
     promo_code: z.string().optional().nullable(),
-  }),
+  }).default({ subtotal: 0, discount_amount: 0, total: 0 }),
   payment_method: z.object({
     card_brand: z.string().default('visa'),
     last_4: z.string().default('4242'),
@@ -51,7 +59,7 @@ const BookingSchema = z.object({
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`booking:${clientIp}`, 10, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`booking:${clientIp}`, 10, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many booking requests from this network. Please wait a minute and try again.' },
@@ -62,10 +70,127 @@ export async function POST(request: Request) {
     const rawBody = await request.json();
     const validated = BookingSchema.parse(rawBody);
 
-    // Calculate delivery date (48 hours standard or express, skip Sunday)
+    const isSupabaseConfigured =
+      Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+      !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
+
+    // Square card pre-authorization token gating for production abuse prevention (F001 Fix)
+    const isSquareConfigured =
+      Boolean(process.env.SQUARE_ACCESS_TOKEN) &&
+      !process.env.SQUARE_ACCESS_TOKEN?.includes('your-token');
+
+    if (isSquareConfigured && process.env.NODE_ENV === 'production') {
+      const token = validated.payment_method?.payment_token;
+      if (!token || token.startsWith('sim_')) {
+        return NextResponse.json(
+          { error: 'A verified payment card token is required to schedule a pickup.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 1. Resolve Zone & Validate Delivery Coverage
+    const zone = resolveZoneByZip(validated.address.zip);
+    if (!zone) {
+      return NextResponse.json(
+        {
+          error: `ZIP code ${validated.address.zip} is outside our Dallas–Fort Worth Metroplex service area. We currently serve Dallas, Collin, Tarrant, Denton, and surrounding North Texas communities.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 2. Validate 24-Hour Express Eligibility & Item Exclusions
+    const isExpress = validated.schedule.express_tier === 'express_24hr';
+    if (isExpress) {
+      if (!zone.expressEligible) {
+        return NextResponse.json(
+          {
+            error: `24-Hour Express is not available in ${zone.name}. Please select 48-Hour Standard pickup.`,
+            zone,
+          },
+          { status: 400 }
+        );
+      }
+
+      const excludedItem = validated.services.dry_clean_items.find((item) =>
+        (EXPRESS_EXCLUDED_GARMENTS as readonly string[]).includes(item.garment_type)
+      );
+      if (excludedItem) {
+        return NextResponse.json(
+          {
+            error: `24-Hour Express is not available for orders containing specialty items (${excludedItem.garment_type}). Please select 48-Hour Standard pickup.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 3. Server-Side Promo Code Validation
+    let promoDiscountPercent = 0;
+    let verifiedPromoCode: string | null = null;
+    if (validated.pricing.promo_code) {
+      const cleanPromo = validated.pricing.promo_code.toUpperCase().trim();
+      if (cleanPromo === PROMO_CODE_LAUNCH) {
+        promoDiscountPercent = PROMO_DISCOUNT_PERCENT;
+        verifiedPromoCode = PROMO_CODE_LAUNCH;
+      } else if (isSupabaseConfigured) {
+        try {
+          const adminSupabase = createAdminClient();
+          const { data: promoRow } = await adminSupabase
+            .from('promo_codes')
+            .select('code, discount_value, max_uses, current_uses, valid_from, valid_until, is_active')
+            .eq('code', cleanPromo)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (promoRow) {
+            const now = new Date();
+            const validDates = (!promoRow.valid_from || new Date(promoRow.valid_from) <= now) &&
+              (!promoRow.valid_until || new Date(promoRow.valid_until) >= now);
+            const validUses = promoRow.max_uses === null || (promoRow.current_uses || 0) < promoRow.max_uses;
+            if (validDates && validUses) {
+              promoDiscountPercent = Number(promoRow.discount_value) || 0;
+              verifiedPromoCode = cleanPromo;
+            }
+          }
+        } catch (promoErr) {
+          console.warn('Server promo verification fallback:', promoErr);
+        }
+      }
+    }
+
+    // 4. Authoritatively Recompute Financials (F006 & F005 Fix)
+    const computed = computeBookingFinancials({
+      dryCleanItems: validated.services.dry_clean_items,
+      weightLbs: validated.services.estimated_weight_lbs,
+      isExpress,
+      promoDiscountPercent,
+      frequency: validated.schedule.frequency,
+    });
+
+    // 5. Enforce Zone Minimum (F010 Fix)
+    const zoneMinimumGap = getZoneMinimumGap(computed.subtotal, zone);
+    if (zoneMinimumGap > 0) {
+      return NextResponse.json(
+        {
+          error: `Order subtotal ($${computed.subtotal.toFixed(2)}) is below the $${zone.minimumOrder.toFixed(2)} minimum for ${zone.name}. Please add $${zoneMinimumGap.toFixed(2)} more to place your order.`,
+          zone,
+          subtotal: computed.subtotal,
+          gap: zoneMinimumGap,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 6. Calculate Delivery Date (24 hours next-day for Express, 48 hours standard, skip Sunday)
     const pickup = new Date(validated.schedule.pickup_date + 'T12:00:00');
     const delivery = new Date(pickup);
-    delivery.setDate(delivery.getDate() + 2); // 48 hours
+    if (isExpress) {
+      delivery.setDate(delivery.getDate() + 1); // 24 hours: next morning
+    } else {
+      delivery.setDate(delivery.getDate() + 2); // 48 hours standard
+    }
 
     if (delivery.getDay() === 0) {
       delivery.setDate(delivery.getDate() + 1); // If Sunday, deliver Monday
@@ -74,10 +199,7 @@ export async function POST(request: Request) {
     const deliveryDateStr = delivery.toISOString().split('T')[0];
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `F11-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-
-    const isSupabaseConfigured =
-      Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
-      !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
+    let isGuest = true;
 
     if (isSupabaseConfigured) {
       try {
@@ -85,6 +207,10 @@ export async function POST(request: Request) {
         const {
           data: { user },
         } = await authClient.auth.getUser();
+
+        if (user) {
+          isGuest = false;
+        }
 
         const supabase = createAdminClient();
 
@@ -175,13 +301,13 @@ export async function POST(request: Request) {
               pickup_date: validated.schedule.pickup_date,
               pickup_window: validated.schedule.pickup_window,
               delivery_date: deliveryDateStr,
-              delivery_window: validated.schedule.pickup_window,
+              delivery_window: isExpress ? 'morning' : validated.schedule.pickup_window,
               weight_lbs: validated.services.estimated_weight_lbs || null,
-              subtotal: validated.pricing.subtotal,
+              subtotal: computed.subtotal,
               express_tier: validated.schedule.express_tier,
-              promo_code: validated.pricing.promo_code || null,
-              discount_amount: validated.pricing.discount_amount,
-              total: validated.pricing.total,
+              promo_code: verifiedPromoCode,
+              discount_amount: computed.financials.discountAmount,
+              total: computed.financials.finalTotal,
               payment_id: validated.payment_method?.payment_token || `sq_sim_${randomSuffix}`,
               payment_status: validated.services.type === 'wash_fold' ? 'authorized' : 'charged',
               notes: [
@@ -195,32 +321,16 @@ export async function POST(request: Request) {
             .single();
 
           if (!orderErr && insertedOrder) {
-            // 4. Insert Order Items
-            const itemsToInsert = [];
-
-            if (validated.services.estimated_weight_lbs && validated.services.estimated_weight_lbs > 0) {
-              itemsToInsert.push({
-                order_id: insertedOrder.id,
-                garment_type: 'wash_fold',
-                service_type: 'wash_fold',
-                quantity: 1,
-                unit_price: 3.0,
-                subtotal: Math.max(45.0, validated.services.estimated_weight_lbs * 3.0),
-                notes: `${validated.services.estimated_weight_lbs} lbs wash & fold laundry`,
-              });
-            }
-
-            for (const item of validated.services.dry_clean_items) {
-              itemsToInsert.push({
-                order_id: insertedOrder.id,
-                garment_type: item.garment_type,
-                service_type: 'dry_clean',
-                quantity: item.quantity,
-                unit_price: 8.97, // default per item
-                subtotal: item.quantity * 8.97,
-                notes: null,
-              });
-            }
+            // 4. Insert Order Items from Authoritative Computed List
+            const itemsToInsert = computed.itemizedList.map((item) => ({
+              order_id: insertedOrder.id,
+              garment_type: item.garment_type,
+              service_type: item.service_type,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              subtotal: item.subtotal,
+              notes: item.notes || null,
+            }));
 
             if (itemsToInsert.length > 0) {
               await supabase.from('order_items').insert(itemsToInsert);
@@ -234,14 +344,13 @@ export async function POST(request: Request) {
               triggered_by: 'Customer (Web Booking)',
             });
 
-            // 6. Increment promo code usage count in database if promo was used
-            if (validated.pricing.promo_code) {
+            // 6. Increment promo code usage count in database if verified promo was used
+            if (verifiedPromoCode) {
               try {
-                const cleanPromo = validated.pricing.promo_code.toUpperCase().trim();
                 const { data: promoRow } = await supabase
                   .from('promo_codes')
                   .select('id, current_uses')
-                  .eq('code', cleanPromo)
+                  .eq('code', verifiedPromoCode)
                   .maybeSingle();
 
                 if (promoRow) {
@@ -268,9 +377,9 @@ export async function POST(request: Request) {
                 pickupDate: validated.schedule.pickup_date,
                 pickupWindow: validated.schedule.pickup_window,
                 deliveryDate: deliveryDateStr,
-                deliveryWindow: validated.schedule.pickup_window,
+                deliveryWindow: isExpress ? 'morning' : validated.schedule.pickup_window,
                 weightLbs: validated.services.estimated_weight_lbs,
-                total: validated.pricing.total,
+                total: computed.financials.finalTotal,
                 trackingUrl: `${origin}/track/${insertedOrder.id}`,
               }).catch((notifyErr) => console.warn('Booking stage notification notice:', notifyErr));
             } catch (notifyErr) {
@@ -279,7 +388,14 @@ export async function POST(request: Request) {
 
             return NextResponse.json({
               success: true,
-              order: insertedOrder,
+              order: {
+                ...insertedOrder,
+                subtotal: computed.subtotal,
+                total: computed.financials.finalTotal,
+                express_surcharge: computed.financials.expressSurcharge,
+                sales_tax: computed.financials.salesTax,
+                environmental_fee: computed.financials.environmentalFee,
+              },
               order_number: orderNumber,
               message: 'Your pickup has been confirmed and scheduled!',
             });
@@ -302,13 +418,13 @@ export async function POST(request: Request) {
       pickup_date: validated.schedule.pickup_date,
       pickup_window: validated.schedule.pickup_window,
       delivery_date: deliveryDateStr,
-      delivery_window: validated.schedule.pickup_window,
+      delivery_window: isExpress ? 'morning' : validated.schedule.pickup_window,
       weight_lbs: validated.services.estimated_weight_lbs || null,
-      subtotal: validated.pricing.subtotal,
+      subtotal: computed.subtotal,
       express_tier: validated.schedule.express_tier,
-      promo_code: validated.pricing.promo_code || null,
-      discount_amount: validated.pricing.discount_amount,
-      total: validated.pricing.total,
+      promo_code: verifiedPromoCode,
+      discount_amount: computed.financials.discountAmount,
+      total: computed.financials.finalTotal,
       payment_id: validated.payment_method?.payment_token || `sq_tok_${crypto.randomUUID().slice(0, 8)}`,
       payment_status: validated.services.type === 'wash_fold' ? 'authorized' : 'charged',
       notes: validated.address.delivery_notes || null,
@@ -329,9 +445,9 @@ export async function POST(request: Request) {
         pickupDate: validated.schedule.pickup_date,
         pickupWindow: validated.schedule.pickup_window,
         deliveryDate: deliveryDateStr,
-        deliveryWindow: validated.schedule.pickup_window,
+        deliveryWindow: isExpress ? 'morning' : validated.schedule.pickup_window,
         weightLbs: validated.services.estimated_weight_lbs,
-        total: validated.pricing.total,
+        total: computed.financials.finalTotal,
         trackingUrl: `${origin}/track/${createdOrder.id}`,
       }).catch((notifyErr) => console.warn('Booking fallback stage notification notice:', notifyErr));
     } catch (notifyErr) {
@@ -340,7 +456,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      order: createdOrder,
+      order: {
+        ...createdOrder,
+        subtotal: computed.subtotal,
+        total: computed.financials.finalTotal,
+        express_surcharge: computed.financials.expressSurcharge,
+        sales_tax: computed.financials.salesTax,
+        environmental_fee: computed.financials.environmentalFee,
+        is_guest: isGuest,
+      },
       order_number: orderNumber,
       message: 'Your pickup has been confirmed and scheduled!',
     });

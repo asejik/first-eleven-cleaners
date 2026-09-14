@@ -26,6 +26,7 @@ export async function GET(
   if (isSupabaseConfigured) {
     try {
       const supabase = createAdminClient();
+      const { customer } = await getAuthenticatedCustomer(request);
 
       // Check if query is UUID or order_number format (e.g. F11-2026-XXXX)
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -45,6 +46,26 @@ export async function GET(
         : await query.or(`order_number.eq.${id},id.eq.${id}`).maybeSingle();
 
       if (!error && dbOrder) {
+        // F003 IDOR Enforcement:
+        // If an authenticated customer accesses an order, ensure it belongs to them (unless staff or admin)
+        if (customer && customer.role !== 'admin' && customer.role !== 'staff') {
+          if (dbOrder.customer_id && dbOrder.customer_id !== customer.id) {
+            return NextResponse.json(
+              { error: 'Forbidden. You do not have permission to view this order.' },
+              { status: 403 }
+            );
+          }
+        }
+
+        // For public order tracking (unauthenticated SMS links), redact internal payment IDs
+        if (!customer) {
+          const sanitizedOrder = {
+            ...dbOrder,
+            payment_id: undefined,
+          };
+          return NextResponse.json({ order: sanitizedOrder });
+        }
+
         return NextResponse.json({ order: dbOrder });
       }
     } catch (err) {

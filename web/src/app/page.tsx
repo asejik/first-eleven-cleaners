@@ -132,13 +132,13 @@ export default function HomePage() {
 
             <div className={styles.serviceCard}>
               <span className={styles.serviceIcon}>⚡</span>
-              <h3>Same-Day Express</h3>
+              <h3>24-Hour Express</h3>
               <p>
                 {EXPRESS_ENABLED
-                  ? 'Need it fast? Express service available with +25% (under 8 hours) and +40% (under 4 hours) tiers.'
+                  ? 'Need it fast? 24-Hour Express turnaround available with +50% surcharge ($15 min). Picked up morning, delivered next morning.'
                   : 'Available soon — plant capacity confirming. Built for mission-critical fast turnaround.'}
               </p>
-              <span className={styles.servicePrice}>{EXPRESS_ENABLED ? 'From +25%' : 'Available Soon'}</span>
+              <span className={styles.servicePrice}>{EXPRESS_ENABLED ? 'From +50%' : 'Available Soon'}</span>
             </div>
           </div>
         </div>

@@ -138,32 +138,60 @@ export default function CommercialPage() {
         </div>
       </section>
 
-      {/* Certification Advantage */}
-      <section className={`${styles.section} ${styles.sectionAlt}`}>
+      {/* Certification Advantage (Procurement Ready Differentiator) */}
+      <section className={styles.procurementSection}>
         <div className={styles.container}>
           <div className={styles.certContent}>
-            <span className={styles.badgeGold}>Procurement Ready</span>
-            <h2 className={styles.certTitle}>Rare Federal & State Certification Stack</h2>
+            <div className={styles.badgeGoldGlowing}>
+              <span className={styles.badgeDot}></span>
+              Procurement Ready
+            </div>
+            <h2 className={styles.certTitle}>
+              Rare Federal &amp; State <span className={styles.certAccent}>Certification Stack</span>
+            </h2>
             <p className={styles.certText}>
-              Lydia Painting, LLC (d/b/a First Eleven Cleaners) holds active certified status across federal, state, and corporate supplier-diversity portals:
+              First Eleven Cleaners holds active certified status across federal, state, and corporate supplier-diversity portals:
             </p>
             <div className={styles.certGrid}>
               <div className={styles.certBox}>
+                <div className={styles.certHeader}>
+                  <span className={styles.certIcon}>🎖️</span>
+                  <span className={styles.certTag}>Federal</span>
+                </div>
                 <strong>SDVOSB</strong>
-                <span>Service-Disabled Veteran-Owned</span>
+                <span>Service-Disabled Veteran-Owned Small Business</span>
               </div>
               <div className={styles.certBox}>
+                <div className={styles.certHeader}>
+                  <span className={styles.certIcon}>⭐</span>
+                  <span className={styles.certTag}>State</span>
+                </div>
                 <strong>Texas Veteran-HUB</strong>
                 <span>Historically Underutilized Business</span>
               </div>
               <div className={styles.certBox}>
+                <div className={styles.certHeader}>
+                  <span className={styles.certIcon}>🏅</span>
+                  <span className={styles.certTag}>Corporate</span>
+                </div>
                 <strong>MBE / NMSDC</strong>
                 <span>Minority Business Enterprise</span>
               </div>
               <div className={styles.certBox}>
+                <div className={styles.certHeader}>
+                  <span className={styles.certIcon}>🌟</span>
+                  <span className={styles.certTag}>Regional</span>
+                </div>
                 <strong>DBE / NCTRCA</strong>
                 <span>Disadvantaged Business Enterprise</span>
               </div>
+            </div>
+
+            <div className={styles.procurementPill}>
+              <span className={styles.procurementPillIcon}>⚡</span>
+              <span>
+                <strong>Institutional Advantage:</strong> Eligible for VA Vets First priority procurement, SDVOSB sole-source contracts, Texas state HUB set-asides, and corporate Tier-1 diversity supplier spend credits.
+              </span>
             </div>
           </div>
         </div>

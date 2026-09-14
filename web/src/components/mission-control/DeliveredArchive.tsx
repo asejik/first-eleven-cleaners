@@ -248,9 +248,21 @@ export function DeliveredArchive({ orders, onBackToPipeline }: DeliveredArchiveP
                   <tr key={o.id}>
                     <td>
                       <div className={styles.orderNumber}>#{orderNum}</div>
-                      <Badge variant="delivered" style={{ marginTop: '4px' }}>
-                        {o.order_type.toUpperCase()}
-                      </Badge>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                        <Badge variant="delivered">
+                          {o.order_type.toUpperCase()}
+                        </Badge>
+                        {o.express_tier === 'express_24hr' && (
+                          <Badge variant="gold">
+                            ⚡ 24-HR EXPRESS
+                          </Badge>
+                        )}
+                        {o.express_auto_refunded && (
+                          <span style={{ fontSize: '10px', background: '#fee2e2', color: '#991b1b', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                            REFUNDED (${(Number(o.express_refund_amount) || 15).toFixed(2)})
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div className={styles.customerName}>{o.customer?.full_name || 'Customer'}</div>

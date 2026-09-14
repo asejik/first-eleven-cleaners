@@ -7,11 +7,11 @@ import {
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_LBS,
   WASH_FOLD_MINIMUM_PRICE,
-  EXPRESS_8HR_SURCHARGE,
-  EXPRESS_4HR_SURCHARGE,
   ROUTES,
   FAILED_PICKUP_FEE,
   calculateOrderFinancials,
+  resolveZoneByZip,
+  getZoneMinimumGap,
 } from '@/lib/constants';
 import { Button, Card } from '@/components/ui';
 import styles from './page.module.css';
@@ -20,7 +20,8 @@ export default function PricingPage() {
   // Live Calculator State
   const [washFoldWeight, setWashFoldWeight] = useState<number>(15);
   const [dryCleanQuantities, setDryCleanQuantities] = useState<Record<string, number>>({});
-  const [selectedExpress, setSelectedExpress] = useState<'standard' | 'express_8hr' | 'express_4hr'>('standard');
+  const [selectedExpress, setSelectedExpress] = useState<'standard' | 'express_24hr'>('standard');
+  const [calcZip, setCalcZip] = useState<string>('75205');
 
   const updateQuantity = (key: string, delta: number) => {
     setDryCleanQuantities((prev) => {
@@ -47,17 +48,12 @@ export default function PricingPage() {
   }, 0);
 
   const subtotal = calculatedWashFold + calculatedDryClean;
-
-  const expressMultiplier =
-    selectedExpress === 'express_8hr'
-      ? EXPRESS_8HR_SURCHARGE
-      : selectedExpress === 'express_4hr'
-      ? EXPRESS_4HR_SURCHARGE
-      : 0;
+  const calcZone = resolveZoneByZip(calcZip);
+  const zoneGap = getZoneMinimumGap(subtotal, calcZone);
 
   const financials = calculateOrderFinancials({
     subtotal,
-    expressMultiplier,
+    isExpress: selectedExpress === 'express_24hr' && Boolean(calcZone?.expressEligible),
     discountPercent: 0,
   });
 
@@ -163,29 +159,37 @@ export default function PricingPage() {
               </div>
             </Card>
 
-            {/* Express Tiers Card */}
+            {/* 24-Hour Express Card */}
             <Card variant="surface" padding="lg" className={styles.expressCard}>
               <div className={styles.cardHeader}>
                 <div>
                   <span className={styles.cardIcon}>⚡</span>
-                  <h2 className={styles.cardTitle}>Express & Rush Tiers</h2>
+                  <h2 className={styles.cardTitle}>24-Hour Express — Match-Ready Tomorrow</h2>
                 </div>
                 <span className={styles.statusBadge}>Capacity Governed</span>
               </div>
-              <p className={styles.cardDescription}>
-                Proven at the FIFA World Cup IBC for mission-critical turnaround needs.
+              <p className={styles.expressPromise}>
+                Picked up this morning, delivered tomorrow morning. Order by 9 PM tonight to make tomorrow&apos;s Express pickup.
               </p>
-              <div className={styles.expressGrid}>
-                <div className={styles.expressBox}>
-                  <strong>Under 8 Hours</strong>
-                  <p>+25% Surcharge</p>
-                  <span>Capacity Permitting</span>
+              <div className={styles.expressDetailsBox}>
+                <div className={styles.expressPricingHighlight}>
+                  <strong className={styles.expressSurchargeText}>+50% Surcharge</strong>
+                  <span className={styles.expressMinText}>(minimum $15) — shown in your total before checkout.</span>
                 </div>
-                <div className={styles.expressBox}>
-                  <strong>Under 4 Hours</strong>
-                  <p>+40% Rush</p>
-                  <span>Capacity Permitting</span>
-                </div>
+                <ul className={styles.expressSpecList}>
+                  <li>
+                    <span>📅</span>
+                    <div>
+                      <strong>Monday–Friday pickups</strong> · Limited daily slots · Excludes specialty &amp; leather care.
+                    </div>
+                  </li>
+                  <li>
+                    <span>🛡️</span>
+                    <div>
+                      <strong>On-Time Guarantee</strong> · Miss the 10:00 AM delivery window and the Express fee refunds automatically.
+                    </div>
+                  </li>
+                </ul>
               </div>
             </Card>
 
@@ -231,6 +235,53 @@ export default function PricingPage() {
               <p className={styles.calcSubtitle}>Adjust items and weight to estimate your total</p>
 
               <div className={styles.calcBody}>
+                {/* Area Coverage Minimum Widget */}
+                <div className={styles.zoneCalcBox}>
+                  <div className={styles.calcRowHeader}>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', color: 'var(--color-navy)' }}>
+                      🗺️ Check Area Minimum:
+                    </span>
+                    <div className={styles.zoneZipInputRow}>
+                      <span style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>ZIP:</span>
+                      <input
+                        type="text"
+                        maxLength={5}
+                        value={calcZip}
+                        onChange={(e) => setCalcZip(e.target.value)}
+                        className={styles.zoneZipInput}
+                        aria-label="ZIP Code for zone minimum calculation"
+                      />
+                    </div>
+                  </div>
+
+                  {calcZone ? (
+                    <div className={styles.zoneInfoCard}>
+                      <div className={styles.zoneNameBadge}>
+                        <span>📍 {calcZone.name}</span>
+                        <span style={{ color: 'var(--color-green-dark)' }}>${calcZone.minimumOrder.toFixed(0)} min</span>
+                      </div>
+                      <div className={styles.zoneSpecsSummary}>
+                        {calcZone.routeScheduleLabel} · {calcZone.expressEligible ? '⚡ 24-Hr Express Eligible' : 'Standard 48-Hr Only'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.zoneInfoCard} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                      <div className={styles.zoneNameBadge} style={{ color: '#dc2626' }}>
+                        <span>📍 Outside Service Area</span>
+                      </div>
+                      <div className={styles.zoneSpecsSummary} style={{ color: 'var(--color-text-secondary)' }}>
+                        We currently operate throughout the DFW Metroplex &amp; North Texas (ZIPs 750–754, 760–762).
+                      </div>
+                    </div>
+                  )}
+
+                  {subtotal > 0 && calcZone && zoneGap > 0 && (
+                    <div className={styles.zoneGapAlert}>
+                      ⚠️ Current subtotal is ${zoneGap.toFixed(2)} below your area&apos;s ${calcZone.minimumOrder.toFixed(0)} minimum. Delivery is always free once minimum is met.
+                    </div>
+                  )}
+                </div>
+
                 {/* Wash & Fold Slider */}
                 <div className={styles.calcSection}>
                   <div className={styles.calcRowHeader}>
@@ -293,17 +344,17 @@ export default function PricingPage() {
                     </button>
                     <button
                       type="button"
-                      className={`${styles.expressOptionBtn} ${selectedExpress === 'express_8hr' ? styles.activeOption : ''}`}
-                      onClick={() => setSelectedExpress('express_8hr')}
+                      className={`${styles.expressOptionBtn} ${selectedExpress === 'express_24hr' ? styles.activeOption : ''}`}
+                      onClick={() => {
+                        if (calcZone?.expressEligible) {
+                          setSelectedExpress('express_24hr');
+                        }
+                      }}
+                      disabled={!calcZone?.expressEligible}
+                      style={!calcZone?.expressEligible ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                      title={!calcZone?.expressEligible ? `24-Hour Express unavailable in ${calcZone?.name || 'this area'}` : undefined}
                     >
-                      Under 8 Hr (+25%)
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.expressOptionBtn} ${selectedExpress === 'express_4hr' ? styles.activeOption : ''}`}
-                      onClick={() => setSelectedExpress('express_4hr')}
-                    >
-                      Under 4 Hr (+40%)
+                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%, min $15)' : '(Not in Zone)'}
                     </button>
                   </div>
                 </div>
@@ -324,13 +375,19 @@ export default function PricingPage() {
                   )}
                   {financials.expressSurcharge > 0 && (
                     <div className={styles.breakdownRow}>
-                      <span>Express Surcharge</span>
+                      <span>Express Surcharge (+50%, min $15)</span>
                       <span>+${financials.expressSurcharge.toFixed(2)}</span>
                     </div>
                   )}
                   <div className={styles.breakdownRow}>
                     <span>Door-to-Door Pickup &amp; Delivery</span>
                     <span className={styles.freeBadge}>FREE</span>
+                  </div>
+                  <div className={styles.breakdownRow}>
+                    <span>Area Minimum {calcZone ? `(${calcZone.badge})` : ''}</span>
+                    <span style={{ fontWeight: '600', color: 'var(--color-navy)' }}>
+                      {calcZone ? `$${calcZone.minimumOrder.toFixed(0)}.00` : 'DFW Delivery'}
+                    </span>
                   </div>
                   {financials.subtotal > 0 && (
                     <>

@@ -1,9 +1,24 @@
 import { Card, Input, Badge, Button } from '@/components/ui';
+import type { ZoneConfig } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
 
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+
+function getNextValidRouteDate(baseDate: Date, routeDays: string[]): Date {
+  const d = new Date(baseDate);
+  for (let i = 0; i < 14; i++) {
+    const dayName = DAY_NAMES[d.getDay()];
+    if (routeDays.includes(dayName)) {
+      return d;
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
 interface StepScheduleProps {
-  expressTier: 'standard' | 'express_8hr' | 'express_4hr';
-  handleSelectTier: (tier: 'standard' | 'express_8hr' | 'express_4hr') => void;
+  expressTier: 'standard' | 'express_24hr';
+  handleSelectTier: (tier: 'standard' | 'express_24hr') => void;
   pickupDate: string;
   setPickupDate: (val: string) => void;
   pickupWindow: 'morning' | 'evening';
@@ -11,11 +26,15 @@ interface StepScheduleProps {
   frequency: 'one_time' | 'weekly' | 'biweekly';
   setFrequency: (val: 'one_time' | 'weekly' | 'biweekly') => void;
   slotData: { is_available?: boolean; reason?: string } | undefined;
-  getMinPickupDate: (tier?: 'standard' | 'express_8hr' | 'express_4hr') => string;
+  getMinPickupDate: (tier?: 'standard' | 'express_24hr') => string;
   formatDisplayDate: (dateStr: string) => string;
   formatLocalDate: (d: Date) => string;
-  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_8hr' | 'express_4hr') => string;
+  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr') => string;
   onToast: (toast: { type: 'warning' | 'info' | 'error' | 'success'; title: string; message: string }) => void;
+  hasExcludedGarments?: boolean;
+  isExpressCapacityFull?: boolean;
+  nextAvailableExpressDate?: string;
+  detectedZone?: ZoneConfig | null;
   isValid: boolean;
   onBack: () => void;
   onContinue: () => void;
@@ -36,15 +55,22 @@ export function StepSchedule({
   formatLocalDate,
   getEstimatedDeliveryDate,
   onToast,
+  hasExcludedGarments = false,
+  isExpressCapacityFull = false,
+  nextAvailableExpressDate = '',
+  detectedZone,
   isValid,
   onBack,
   onContinue,
 }: StepScheduleProps) {
+  const [py, pm, pd] = pickupDate ? pickupDate.split('-').map(Number) : [0, 0, 0];
+  const selectedDay = new Date(py, pm - 1, pd).getDay();
+  const isPickupMonFri = selectedDay >= 1 && selectedDay <= 5;
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>When Should We Pick Up?</h1>
       <p className={styles.cardSubtitle}>
-        48-Hour Match-Ready Turnaround. Operating Monday through Saturday.
+        {detectedZone?.name || 'Dallas-Fort Worth'} · {detectedZone?.routeScheduleLabel || 'Daily Plant Routes'}
       </p>
 
       <div className={styles.scheduleBox}>
@@ -61,21 +87,24 @@ export function StepSchedule({
               setPickupDate(minVal);
               onToast({
                 type: 'warning',
-                title: '48-Hour Turnaround Rule',
+                title: 'Advance Schedule Rule',
                 message: `${expressTier === 'standard' ? '48-Hour Standard' : 'Express'} service requires advance booking. Earliest available pickup is ${formatDisplayDate(minVal)}.`,
               });
               return;
             }
             const [y, m, d] = val.split('-').map(Number);
-            const selectedDay = new Date(y, m - 1, d).getDay();
-            if (selectedDay === 0) {
-              const monday = new Date(y, m - 1, d + 1);
-              const mondayStr = formatLocalDate(monday);
-              setPickupDate(mondayStr);
+            const chosenDate = new Date(y, m - 1, d);
+            const chosenDayName = DAY_NAMES[chosenDate.getDay()];
+
+            // Check if day matches zone's scheduled route days
+            if (detectedZone && !detectedZone.routeDays.includes(chosenDayName as any)) {
+              const nextValid = getNextValidRouteDate(chosenDate, detectedZone.routeDays);
+              const nextValidStr = formatLocalDate(nextValid);
+              setPickupDate(nextValidStr);
               onToast({
                 type: 'warning',
-                title: 'Plant Closed Sundays',
-                message: 'We operate Monday through Saturday. Your pickup date has been moved to Monday.',
+                title: `${detectedZone.name} Route Schedule`,
+                message: `${detectedZone.name} routes run on ${detectedZone.routeScheduleLabel}. We've moved your pickup to the next available route day: ${formatDisplayDate(nextValidStr)}.`,
               });
               return;
             }
@@ -83,8 +112,8 @@ export function StepSchedule({
           }}
           helperText={
             expressTier === 'standard'
-              ? `📅 48-Hr Standard turnaround: Earliest pickup is ${formatDisplayDate(getMinPickupDate('standard'))}.`
-              : `⚡ Express Turnaround: Rush pickup unlocked for ${formatDisplayDate(getMinPickupDate(expressTier))}.`
+              ? `📅 ${detectedZone?.name || 'DFW'}: ${detectedZone?.routeScheduleLabel || 'Daily Routes'}. Earliest pickup is ${formatDisplayDate(getMinPickupDate('standard'))}.`
+              : `⚡ 24-Hour Express: Tomorrow morning pickup unlocked (${formatDisplayDate(getMinPickupDate('express_24hr'))}).`
           }
           required
         />
@@ -92,8 +121,8 @@ export function StepSchedule({
         {/* Real-time Turnaround & Delivery Timeline Card */}
         {pickupDate && (
           <div style={{
-            background: 'rgba(201, 161, 74, 0.08)',
-            border: '1px solid rgba(201, 161, 74, 0.3)',
+            background: expressTier === 'express_24hr' ? 'rgba(201, 161, 74, 0.14)' : 'rgba(201, 161, 74, 0.08)',
+            border: expressTier === 'express_24hr' ? '2px solid var(--color-gold)' : '1px solid rgba(201, 161, 74, 0.3)',
             borderRadius: 'var(--radius-lg)',
             padding: '14px 18px',
             display: 'flex',
@@ -105,13 +134,15 @@ export function StepSchedule({
           }}>
             <div>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-gold-dark)', fontWeight: 'bold', display: 'block' }}>
-                ✨ Match-Ready Guarantee Timeline
+                {expressTier === 'express_24hr' ? '⚡ 24-Hour Express Guarantee Timeline' : '✨ Match-Ready Guarantee Timeline'}
               </span>
               <strong style={{ fontSize: '14px', color: 'var(--color-navy)', display: 'block', marginTop: '2px' }}>
-                Pickup: {formatDisplayDate(pickupDate)} → Delivery: {getEstimatedDeliveryDate(pickupDate, expressTier)}
+                Pickup: {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? 'Morning 7:30–10 AM' : 'Evening 5–8 PM'}) → Delivery: {getEstimatedDeliveryDate(pickupDate, expressTier)} ({expressTier === 'express_24hr' ? 'Morning 7:30–10 AM' : (pickupWindow === 'morning' ? 'Morning' : 'Evening')})
               </strong>
             </div>
-            <Badge variant="success">🛡️ 48-Hr Match-Ready</Badge>
+            <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'success'}>
+              {expressTier === 'express_24hr' ? '⚡ Match-Ready Tomorrow' : '🛡️ 48-Hr Match-Ready'}
+            </Badge>
           </div>
         )}
 
@@ -189,56 +220,87 @@ export function StepSchedule({
           </div>
         </div>
 
-        {/* Express Tier Turnaround Speed Selector */}
-        <div className={styles.expressOptionBox}>
-          <div className={styles.expressHeader}>
-            <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-              ⚡ Turnaround Speed &amp; Processing:
-            </label>
-            <Badge variant="info">
-              {expressTier === 'standard'
-                ? 'Standard: 48 Hours'
-                : expressTier === 'express_8hr'
-                ? 'Express < 8 Hours (+25%)'
-                : 'Express < 4 Hours (+40%)'}
-            </Badge>
+        {/* Express Tier Turnaround Speed Selector:
+            Offered ONLY in Express-eligible zones (Zone 1 & 2), on Monday–Friday morning windows. */}
+        {!detectedZone?.expressEligible ? (
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderLeft: '4px solid #64748b',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-lg)',
+            marginTop: 'var(--space-2)',
+            fontSize: 'var(--text-xs)',
+            color: '#334155',
+          }}>
+            <strong>⏱️ Standard 48-Hour Care for {detectedZone?.name || 'Your Area'}:</strong> 24-Hour Express is not offered in this zone to protect route consistency and logistics. All pickups in your area receive our signature 48-hour match-ready turnaround.
           </div>
-          <div className={styles.expressTierOptions}>
-            <button
-              type="button"
-              className={`${styles.tierCard} ${expressTier === 'standard' ? styles.selectedTier : ''}`}
-              onClick={() => handleSelectTier('standard')}
-              aria-pressed={expressTier === 'standard'}
-            >
-              <span className={styles.tierTitle}>48-Hr Standard</span>
-              <span className={styles.tierBadge}>Included</span>
-              <span className={styles.tierDesc}>Match-ready in 48 hours</span>
-            </button>
-            <button
-              type="button"
-              className={`${styles.tierCard} ${expressTier === 'express_8hr' ? styles.selectedTier : ''}`}
-              onClick={() => handleSelectTier('express_8hr')}
-              aria-pressed={expressTier === 'express_8hr'}
-            >
-              <span className={styles.tierTitle}>Under 8 Hr Rush</span>
-              <span className={styles.tierBadge}>+25% Surcharge</span>
-              <span className={styles.tierDesc}>Same-day rush return</span>
-            </button>
-            <button
-              type="button"
-              className={`${styles.tierCard} ${expressTier === 'express_4hr' ? styles.selectedTier : ''}`}
-              onClick={() => handleSelectTier('express_4hr')}
-              aria-pressed={expressTier === 'express_4hr'}
-            >
-              <span className={styles.tierTitle}>Under 4 Hr VIP</span>
-              <span className={styles.tierBadge}>+40% Surcharge</span>
-              <span className={styles.tierDesc}>Immediate priority plant run</span>
-            </button>
+        ) : pickupWindow === 'morning' && isPickupMonFri ? (
+          <div className={styles.expressOptionBox}>
+            <div className={styles.expressHeader}>
+              <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                ⚡ Turnaround Speed &amp; Processing:
+              </label>
+              <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'info'}>
+                {expressTier === 'express_24hr'
+                  ? '⚡ 24-Hour Express (+50%, min $15)'
+                  : 'Standard: 48 Hours (Included)'}
+              </Badge>
+            </div>
+            <div className={styles.expressTierOptions}>
+              <button
+                type="button"
+                className={`${styles.tierCard} ${expressTier === 'standard' ? styles.selectedTier : ''}`}
+                onClick={() => handleSelectTier('standard')}
+                aria-pressed={expressTier === 'standard'}
+              >
+                <span className={styles.tierTitle}>48-Hr Standard</span>
+                <span className={styles.tierBadge}>Included</span>
+                <span className={styles.tierDesc}>Match-ready in 48 hours</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.tierCard} ${expressTier === 'express_24hr' ? styles.selectedTier : ''}`}
+                onClick={() => {
+                  if (!hasExcludedGarments && !isExpressCapacityFull) {
+                    handleSelectTier('express_24hr');
+                  }
+                }}
+                disabled={hasExcludedGarments || isExpressCapacityFull}
+                aria-pressed={expressTier === 'express_24hr'}
+                style={hasExcludedGarments || isExpressCapacityFull ? { opacity: 0.55, cursor: 'not-allowed' } : {}}
+              >
+                <span className={styles.tierTitle}>⚡ 24-Hr Express</span>
+                <span className={styles.tierBadge}>+50% (min $15)</span>
+                <span className={styles.tierDesc}>Match-Ready Tomorrow Morning</span>
+              </button>
+            </div>
+
+            {hasExcludedGarments && (
+              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: '#92400E', background: '#FEF3C7', borderLeft: '3px solid #D97706', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+                Specialty items need our full care timeline — Express isn&apos;t available for this order.
+              </div>
+            )}
+
+            {isExpressCapacityFull && !hasExcludedGarments && (
+              <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-navy)', background: 'rgba(201, 161, 74, 0.15)', borderLeft: '3px solid var(--color-gold)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+                Express is full for tomorrow — next available: {nextAvailableExpressDate}.
+              </div>
+            )}
+
+            {!hasExcludedGarments && !isExpressCapacityFull && (
+              <p className={styles.expressNote} style={{ marginTop: 'var(--space-2)' }}>
+                {expressTier === 'express_24hr'
+                  ? '🛡️ On-Time Guarantee: Miss the 10:00 AM delivery window, and the Express fee refunds itself automatically.'
+                  : 'All orders include contactless porch pickup/delivery with photo-verified chain of custody.'}
+              </p>
+            )}
           </div>
-          <p className={styles.expressNote} style={{ marginTop: 'var(--space-2)' }}>
-            All orders include contactless porch pickup/delivery with photo-verified chain of custody.
-          </p>
-        </div>
+        ) : (
+          <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)' }}>
+            ℹ️ Standard 48-hour care applies. 24-Hour Express is offered on Monday–Friday morning pickup windows.
+          </div>
+        )}
       </div>
 
       <div className={styles.buttonSplit}>

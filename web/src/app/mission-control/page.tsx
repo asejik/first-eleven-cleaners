@@ -19,6 +19,8 @@ import {
   NotificationSimulator,
   StaffRoster,
   FinancialsLedger,
+  ExpressGovernance,
+  ZoneGovernance,
 } from '@/components/mission-control';
 import styles from './page.module.css';
 
@@ -32,7 +34,7 @@ const STAGES: OrderStatusKey[] = [
 ];
 
 export default function MissionControlPage() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'growth' | 'dispatch'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'growth' | 'dispatch' | 'express' | 'zones'>('pipeline');
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
@@ -194,6 +196,8 @@ export default function MissionControlPage() {
                 {[
                   { id: 'pipeline', label: '📋 Order Pipeline', count: orders.length },
                   { id: 'financials', label: '💳 Financials & Transactions' },
+                  { id: 'express', label: '⚡ 24-Hr Express Governance', count: orders.filter((o) => o.express_tier === 'express_24hr').length },
+                  { id: 'zones', label: '🗺️ Zone Minimums' },
                   { id: 'roster', label: '🚐 Fleet & Staff Roster' },
                   { id: 'claims', label: '🛡️ Claims Queue', count: claims.length },
                   { id: 'growth', label: '🏢 B2B Accounts' },
@@ -370,6 +374,21 @@ export default function MissionControlPage() {
                   onSendTestEmail={handleSendTestEmail}
                   onManualTestNotification={handleManualTestNotification}
                   isDispatchingNotif={dispatchNotif.isPending}
+                />
+              )}
+
+              {activeTab === 'express' && (
+                <ExpressGovernance
+                  orders={orders}
+                  onRefresh={refetch}
+                  onToast={addToast}
+                />
+              )}
+
+              {activeTab === 'zones' && (
+                <ZoneGovernance
+                  orders={orders}
+                  onToast={addToast}
                 />
               )}
             </>

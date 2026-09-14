@@ -242,7 +242,7 @@ export default function CommercialPortalPage() {
             </div>
 
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)', margin: 0 }}>
-              Custom enterprise pricing locked under Master Service Agreement with Lydia Painting, LLC.
+              Custom enterprise pricing locked under Master Service Agreement with First Eleven Cleaners.
             </p>
 
             <div className={styles.rateCardGrid}>
@@ -381,7 +381,6 @@ export default function CommercialPortalPage() {
                 <div className={styles.statementBrand}>
                   <h3>⚽ FIRST ELEVEN CLEANERS</h3>
                   <p style={{ margin: '2px 0 0', color: 'var(--color-gray-600)' }}>
-                    Lydia Painting, LLC (d/b/a First Eleven Cleaners)<br />
                     1530 Main St, Dallas, TX 75201 • SDVOSB / Veteran-HUB Certified
                   </p>
                 </div>

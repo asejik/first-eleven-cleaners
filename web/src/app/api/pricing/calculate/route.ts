@@ -4,15 +4,22 @@ import {
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_LBS,
   WASH_FOLD_MINIMUM_PRICE,
-  EXPRESS_8HR_SURCHARGE,
-  EXPRESS_4HR_SURCHARGE,
+  calculateExpressSurcharge,
+  resolveZoneByZip,
+  getZoneMinimumGap,
 } from '@/lib/constants';
 import type { PriceCalculation } from '@/types';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { dry_clean_items = [], weight_lbs = 0, express_tier = 'standard', promo_discount = 0 } = body;
+    const {
+      dry_clean_items = [],
+      weight_lbs = 0,
+      express_tier = 'standard',
+      promo_discount = 0,
+      zip = '',
+    } = body;
 
     // Wash & Fold calculation with minimum enforcement
     let wash_fold_subtotal = 0;
@@ -49,12 +56,14 @@ export async function POST(request: Request) {
 
     const subtotal = wash_fold_subtotal + dry_clean_subtotal;
 
-    // Express Surcharge
+    // Zone Resolution & Zone Minimum Check
+    const zone = resolveZoneByZip(zip);
+    const zone_minimum_shortfall = getZoneMinimumGap(subtotal, zone);
+
+    // Express Surcharge (governed by zone eligibility)
     let express_surcharge = 0;
-    if (express_tier === 'express_8hr') {
-      express_surcharge = subtotal * EXPRESS_8HR_SURCHARGE;
-    } else if (express_tier === 'express_4hr') {
-      express_surcharge = subtotal * EXPRESS_4HR_SURCHARGE;
+    if (express_tier === 'express_24hr' && zone?.expressEligible) {
+      express_surcharge = calculateExpressSurcharge(subtotal, true);
     }
 
     const rawTotal = subtotal + express_surcharge;
@@ -71,6 +80,8 @@ export async function POST(request: Request) {
       weight_lbs,
       meets_minimum,
       minimum_shortfall,
+      zone,
+      zone_minimum_shortfall,
       items: calculatedItems,
     };
 

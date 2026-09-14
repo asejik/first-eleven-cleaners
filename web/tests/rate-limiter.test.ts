@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimit, checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 
 describe('Rate Limiter & Client IP Extraction', () => {
   describe('checkRateLimit()', () => {
@@ -41,6 +41,30 @@ describe('Rate Limiter & Client IP Extraction', () => {
       // idB should still be allowed
       const allowedB = checkRateLimit(idB, 1, 60000);
       expect(allowedB.allowed).toBe(true);
+    });
+  });
+
+  describe('checkRateLimitAsync()', () => {
+    it('allows requests within limit and tracks remaining quota asynchronously', async () => {
+      const id = `async_user_${Date.now()}_1`;
+      const res1 = await checkRateLimitAsync(id, 2, 60000);
+      expect(res1.allowed).toBe(true);
+      expect(res1.remaining).toBe(1);
+
+      const res2 = await checkRateLimitAsync(id, 2, 60000);
+      expect(res2.allowed).toBe(true);
+      expect(res2.remaining).toBe(0);
+
+      const res3 = await checkRateLimitAsync(id, 2, 60000);
+      expect(res3.allowed).toBe(false);
+      expect(res3.remaining).toBe(0);
+    });
+
+    it('gracefully falls back to in-memory limiter when Redis is unconfigured', async () => {
+      const id = `async_user_fallback_${Date.now()}`;
+      const res = await checkRateLimitAsync(id, 5, 60000);
+      expect(res.allowed).toBe(true);
+      expect(res.remaining).toBe(4);
     });
   });
 

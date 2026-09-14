@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, Input, Button } from '@/components/ui';
-import { DRY_CLEAN_PRICES, ROUTES } from '@/lib/constants';
+import { DRY_CLEAN_PRICES, ROUTES, type ZoneConfig } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
 
 interface StepReviewProps {
@@ -10,7 +10,7 @@ interface StepReviewProps {
   zip: string;
   pickupDate: string;
   pickupWindow: 'morning' | 'evening';
-  expressTier: 'standard' | 'express_8hr' | 'express_4hr';
+  expressTier: 'standard' | 'express_24hr';
   frequency?: 'one_time' | 'weekly' | 'biweekly';
   fullName: string;
   phone: string;
@@ -18,7 +18,7 @@ interface StepReviewProps {
   washFoldWeight: number;
   calculatedWashFold: number;
   dryCleanQuantities: Record<string, number>;
-  expressMultiplier: number;
+  expressMultiplier?: number;
   expressSurcharge: number;
   promoCodeInput: string;
   setPromoCodeInput: (val: string) => void;
@@ -27,12 +27,16 @@ interface StepReviewProps {
   subtotal: number;
   discountAmount: number;
   discountPercent: number;
+  frequencyDiscount?: number;
+  promoDiscount?: number;
   total: number;
   environmentalFee?: number;
   salesTax?: number;
   finalTotal?: number;
   formatDisplayDate: (dateStr: string) => string;
-  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_8hr' | 'express_4hr') => string;
+  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr') => string;
+  detectedZone?: ZoneConfig | null;
+  zoneMinimumGap?: number;
   onBack: () => void;
   onContinue: () => void;
 }
@@ -52,7 +56,7 @@ export function StepReview({
   washFoldWeight,
   calculatedWashFold,
   dryCleanQuantities,
-  expressMultiplier,
+  expressMultiplier: _expressMultiplier = 0,
   expressSurcharge,
   promoCodeInput,
   setPromoCodeInput,
@@ -61,15 +65,20 @@ export function StepReview({
   subtotal,
   discountAmount,
   discountPercent,
+  frequencyDiscount = 0,
+  promoDiscount = 0,
   total,
   environmentalFee,
   salesTax,
   finalTotal,
   formatDisplayDate,
   getEstimatedDeliveryDate,
+  detectedZone,
+  zoneMinimumGap = 0,
   onBack,
   onContinue,
 }: StepReviewProps) {
+  const isExpress24 = expressTier === 'express_24hr';
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>Review Your Order</h1>
@@ -86,8 +95,13 @@ export function StepReview({
             <strong>Pickup Date:</strong> {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'})
           </p>
           <p>
-            <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier)} ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'})
+            <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier)} ({isExpress24 ? 'Morning 7:30 - 10:00 AM' : (pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM')})
           </p>
+          {isExpress24 && (
+            <p style={{ color: 'var(--color-gold-dark)', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
+              ⚡ 24-Hour Guarantee: Delivered by 10:00 AM or your Express surcharge is refunded automatically.
+            </p>
+          )}
           {frequency && frequency !== 'one_time' && (
             <p style={{ color: 'var(--color-green)' }}>
               <strong>Recurring Plan:</strong> {frequency === 'weekly' ? '⚡ Weekly Recurring (10% Off Applied)' : '📅 Bi-Weekly Recurring (5% Off Applied)'}
@@ -117,17 +131,15 @@ export function StepReview({
           ))}
           <div className={styles.summaryLine}>
             <span>Turnaround Speed</span>
-            <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--color-navy)' }}>
-              {expressTier === 'standard'
-                ? '48-Hour Match-Ready (Included)'
-                : expressTier === 'express_8hr'
-                ? 'Under 8 Hr Rush (+25%)'
-                : 'Under 4 Hr VIP (+40%)'}
+            <span style={{ fontWeight: 'var(--font-semibold)', color: isExpress24 ? 'var(--color-gold-dark)' : 'var(--color-navy)' }}>
+              {isExpress24
+                ? '⚡ 24-Hour Express (Match-Ready Tomorrow)'
+                : '48-Hour Match-Ready (Included)'}
             </span>
           </div>
-          {expressMultiplier > 0 && (
+          {expressSurcharge > 0 && (
             <div className={styles.summaryLine}>
-              <span>Express Rush Surcharge</span>
+              <span>Express Surcharge (+50%, min $15)</span>
               <span style={{ color: 'var(--color-gold-dark)', fontWeight: 'var(--font-bold)' }}>
                 +${expressSurcharge.toFixed(2)}
               </span>
@@ -137,6 +149,14 @@ export function StepReview({
             <span>Door-to-Door Delivery</span>
             <span className={styles.freeText}>FREE</span>
           </div>
+          {detectedZone && (
+            <div className={styles.summaryLine}>
+              <span>Area Coverage Minimum</span>
+              <span style={{ fontWeight: '600', color: 'var(--color-navy)' }}>
+                ${detectedZone.minimumOrder.toFixed(0)}.00 ({detectedZone.name})
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Promo Code Input */}
@@ -164,19 +184,50 @@ export function StepReview({
           )}
         </div>
 
+        {/* Zone Minimum Gap Notice */}
+        {zoneMinimumGap > 0 && detectedZone && (
+          <div className={styles.gapNotice}>
+            <span style={{ fontSize: '20px' }}>⚠️</span>
+            <div>
+              <div className={styles.gapNoticeTitle}>
+                Add ${zoneMinimumGap.toFixed(2)} to reach your area&apos;s ${detectedZone.minimumOrder.toFixed(0)} minimum
+              </div>
+              <div className={styles.gapNoticeText}>
+                {detectedZone.name} has a ${detectedZone.minimumOrder.toFixed(0)} order minimum for complimentary door-to-door courier service. Your garment subtotal is currently ${subtotal.toFixed(2)}. Please add more dry clean garments or increase wash &amp; fold weight to proceed.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Total Box */}
         <div className={styles.totalBox}>
           <div className={styles.totalRow}>
             <span>Garment Subtotal</span>
             <span>${subtotal.toFixed(2)}</span>
           </div>
-          {expressMultiplier > 0 && (
+          {expressSurcharge > 0 && (
             <div className={styles.totalRow}>
-              <span>Express Surcharge</span>
-              <span>+${expressSurcharge.toFixed(2)}</span>
+              <span>24-Hour Express Surcharge (+50%, min $15)</span>
+              <span style={{ color: 'var(--color-gold-dark)', fontWeight: 'bold' }}>
+                +${expressSurcharge.toFixed(2)}
+              </span>
             </div>
           )}
-          {discountAmount > 0 && (
+          {frequencyDiscount > 0 && (
+            <div className={styles.totalRowDiscount}>
+              <span>
+                {frequency === 'weekly' ? '⚡ Weekly Recurring Plan (10% Off)' : '📅 Bi-Weekly Recurring Plan (5% Off)'}
+              </span>
+              <span>-${frequencyDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          {promoDiscount > 0 && (
+            <div className={styles.totalRowDiscount}>
+              <span>Promo Code ({appliedPromo?.code || 'Code'} - {discountPercent}%)</span>
+              <span>-${promoDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          {frequencyDiscount <= 0 && promoDiscount <= 0 && discountAmount > 0 && (
             <div className={styles.totalRowDiscount}>
               <span>Discount ({discountPercent}%)</span>
               <span>-${discountAmount.toFixed(2)}</span>
@@ -221,8 +272,15 @@ export function StepReview({
         <Button variant="outline" onClick={onBack}>
           ← Back
         </Button>
-        <Button variant="primary" size="lg" onClick={onContinue}>
-          Proceed to Payment Vault →
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={onContinue}
+          disabled={zoneMinimumGap > 0}
+        >
+          {zoneMinimumGap > 0
+            ? `Add $${zoneMinimumGap.toFixed(2)} to Reach Minimum`
+            : 'Proceed to Payment Vault →'}
         </Button>
       </div>
     </Card>

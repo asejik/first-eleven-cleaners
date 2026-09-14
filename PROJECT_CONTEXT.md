@@ -9,7 +9,7 @@
 - **Type:** PWA (Progressive Web App) — no native app at launch
 - **Business:** AI-augmented dry cleaning & laundry pickup-and-delivery service
 - **Location:** Dallas-Fort Worth Metroplex, Texas, USA
-- **Operator:** Lydia Painting, LLC (d/b/a First Eleven Cleaners)
+- **Operator:** First Eleven Cleaners
 - **Founder:** Idowu Itiola, Ph.D., PMP, LEED AP BD+C
 - **Heritage:** Served FIFA World Cup 2026 International Broadcast Centre in Dallas
 - **Certifications:** MBE, SDVOSB, Texas Veteran-HUB, DBE, NCTRCA, NMSDC

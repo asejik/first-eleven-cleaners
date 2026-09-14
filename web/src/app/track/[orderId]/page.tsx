@@ -88,7 +88,13 @@ export default function PublicTrackingPage() {
               }
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: 1 }}>
-                <span className={styles.clockIcon}>{order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}</span>
+                <span
+                  className={styles.clockIcon}
+                  role="img"
+                  aria-label={order.status === 'delivered' ? 'Order delivered' : isDelayed ? 'Delivery delayed' : 'Delivery schedule'}
+                >
+                  {order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}
+                </span>
                 <div>
                   <strong>
                     {order.status === 'delivered'
@@ -130,7 +136,11 @@ export default function PublicTrackingPage() {
                       key={stage.key}
                       className={`${styles.stageCol} ${isPassed ? styles.passed : ''} ${isCurrent ? styles.current : ''}`}
                     >
-                      <div className={styles.stageCircle}>
+                      <div
+                        className={styles.stageCircle}
+                        role="img"
+                        aria-label={`${stage.label} stage ${isCurrent ? 'active' : isPassed ? 'completed' : 'pending'}`}
+                      >
                         {isPassed ? stage.icon : '○'}
                       </div>
                       <span className={styles.stageTitle}>{stage.label}</span>

@@ -3,7 +3,7 @@
 
 > **Single Source of Progress Tracking for First Eleven Cleaners**  
 > *Last Updated: August 23, 2026*  
-> **Brand & Operator:** Lydia Painting, LLC (d/b/a First Eleven Cleaners) • Dallas, Texas  
+> **Brand & Operator:** First Eleven Cleaners • Dallas, Texas  
 > **Status:** Phase 1 Core Foundation Complete / Phase 2 Next in Queue
 
 ---

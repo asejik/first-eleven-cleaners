@@ -45,6 +45,59 @@ export function checkRateLimit(
 }
 
 /**
+ * Asynchronous distributed rate limiter designed for serverless environments (Vercel).
+ * When UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL / KV_REST_API_TOKEN)
+ * are configured, coordinates atomic rate limits across distributed serverless instances via HTTPS REST.
+ * Gracefully falls back to the in-memory sliding window limiter in local development, tests,
+ * or if Redis is unconfigured/unreachable (F002).
+ */
+export async function checkRateLimitAsync(
+  identifier: string,
+  maxRequests: number = 20,
+  windowMs: number = 60 * 1000
+): Promise<{ allowed: boolean; remaining: number }> {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+  if (redisUrl && redisToken && !redisUrl.includes('placeholder')) {
+    try {
+      const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+      const key = `f11:ratelimit:${identifier}`;
+
+      // Upstash REST Pipeline executes atomic INCR and EXPIRE in a single HTTPS roundtrip
+      const response = await fetch(`${redisUrl}/pipeline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${redisToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([
+          ['INCR', key],
+          ['EXPIRE', key, windowSeconds],
+        ]),
+        cache: 'no-store',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Upstash pipeline response format: [{ result: number }, { result: number }]
+        const currentCount = Array.isArray(data) ? Number(data[0]?.result) : NaN;
+        if (!isNaN(currentCount)) {
+          const allowed = currentCount <= maxRequests;
+          const remaining = Math.max(0, maxRequests - currentCount);
+          return { allowed, remaining };
+        }
+      }
+    } catch (err) {
+      console.warn('Distributed rate limiter network fallback to in-memory:', err);
+    }
+  }
+
+  // Local in-memory sliding window fallback
+  return checkRateLimit(identifier, maxRequests, windowMs);
+}
+
+/**
  * Extracts client IP safely from request headers.
  */
 export function getClientIp(req: Request): string {

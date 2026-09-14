@@ -9,7 +9,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS zones (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(100) NOT NULL,
+  minimum_order NUMERIC(10, 2) NOT NULL DEFAULT 45.00,
   service_days TEXT[] NOT NULL DEFAULT '{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}',
+  express_eligible BOOLEAN NOT NULL DEFAULT true,
+  zip_codes TEXT[] NOT NULL DEFAULT '{}',
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -74,7 +77,7 @@ CREATE TABLE IF NOT EXISTS orders (
   weight_lbs NUMERIC(6, 2),
   subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   express_tier VARCHAR(50) NOT NULL DEFAULT 'standard' CHECK (
-    express_tier IN ('standard', 'express_8hr', 'express_4hr')
+    express_tier IN ('standard', 'express_24hr')
   ),
   promo_code VARCHAR(50),
   discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
@@ -84,6 +87,10 @@ CREATE TABLE IF NOT EXISTS orders (
     payment_status IN ('pending', 'authorized', 'charged', 'failed', 'refunded')
   ),
   notes TEXT,
+  express_surcharge NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+  express_auto_refunded BOOLEAN NOT NULL DEFAULT false,
+  express_refund_amount NUMERIC(10, 2),
+  express_refund_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
