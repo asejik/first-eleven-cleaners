@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, Badge, Button } from '@/components/ui';
 import { EXPRESS_DAILY_SLOT_CAP } from '@/lib/constants';
 import type { Order } from '@/types';
@@ -13,24 +13,19 @@ interface ExpressGovernanceProps {
 
 export function ExpressGovernance({ orders, onRefresh, onToast }: ExpressGovernanceProps) {
   // 1. Capacity Cap State (Persisted in localStorage, default = 8)
-  const [slotCap, setSlotCap] = useState<number>(EXPRESS_DAILY_SLOT_CAP);
-  const [capInput, setCapInput] = useState<string>(String(EXPRESS_DAILY_SLOT_CAP));
-  const [isSaved, setIsSaved] = useState(false);
-
-  useEffect(() => {
+  const [slotCap, setSlotCap] = useState<number>(() => {
+    if (typeof window === 'undefined') return EXPRESS_DAILY_SLOT_CAP;
     try {
       const savedCap = localStorage.getItem('f11_express_daily_cap');
       if (savedCap) {
         const parsed = parseInt(savedCap, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-          setSlotCap(parsed);
-          setCapInput(String(parsed));
-        }
+        if (!isNaN(parsed) && parsed > 0) return parsed;
       }
-    } catch {
-      // ignore
-    }
-  }, []);
+    } catch {}
+    return EXPRESS_DAILY_SLOT_CAP;
+  });
+  const [capInput, setCapInput] = useState<string>(() => String(slotCap));
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleSaveCap = () => {
     const parsed = parseInt(capInput, 10);

@@ -56,7 +56,6 @@ export function StepReview({
   washFoldWeight,
   calculatedWashFold,
   dryCleanQuantities,
-  expressMultiplier: _expressMultiplier = 0,
   expressSurcharge,
   promoCodeInput,
   setPromoCodeInput,
