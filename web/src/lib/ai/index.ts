@@ -39,7 +39,7 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
     ) {
       if (isSpanish) {
         return {
-          content: `Entiendo perfectamente tu inquietud y lamento el inconveniente, ${name}. He notificado a nuestra Directora de Planta (Lydia Painting) y he abierto un reporte prioritario bajo nuestra Garantía 100% "Make It Right". Puedes ingresar los detalles de tu prenda aquí mismo.`,
+          content: `Entiendo perfectamente tu inquietud y lamento el inconveniente, ${name}. He notificado a nuestra Directora de Planta y he abierto un reporte prioritario bajo nuestra Garantía 100% "Make It Right". Puedes ingresar los detalles de tu prenda aquí mismo.`,
           intent: 'human_escalation',
           escalateToHuman: true,
           detectedLanguage: 'es',
@@ -52,7 +52,7 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
       }
 
       return {
-        content: `I completely understand and sincerely apologize for the friction, ${name}. I have flagged this directly for our Plant Director (Lydia Painting) and logged a priority ticket under our 100% Make It Right Guarantee. You can submit photos or details directly through our resolution portal.`,
+        content: `I completely understand and sincerely apologize for the friction, ${name}. I have flagged this directly for our Plant Director and logged a priority ticket under our 100% Make It Right Guarantee. You can submit photos or details directly through our resolution portal.`,
         intent: 'human_escalation',
         escalateToHuman: true,
         detectedLanguage: 'en',

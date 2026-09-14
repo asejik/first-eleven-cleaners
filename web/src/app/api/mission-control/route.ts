@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
 import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
+import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 
 
@@ -119,12 +120,12 @@ export async function GET(request: Request) {
       stats: {
         active_count: activeOrders.length,
         total_count: totalOrdersCount ?? orders.length,
-        today_revenue: todayRevenue > 0 ? todayRevenue : 180.71, // fallback display if brand new day
+        today_revenue: todayRevenue,
         all_time_revenue: allTimeRevenue,
-        total_lbs: totalLbs > 0 ? totalLbs : 65,
-        total_pieces: totalDryCleanPieces > 0 ? totalDryCleanPieces : 18,
+        total_lbs: totalLbs,
+        total_pieces: totalDryCleanPieces,
         labor: {
-          estimated_cost: estimatedLaborCost > 0 ? estimatedLaborCost : 50.60,
+          estimated_cost: estimatedLaborCost,
           target_max_pct: 32.0,
           current_pct: laborPercentage,
           status: laborPercentage <= 32.0 ? 'optimal' : 'alert',
@@ -201,7 +202,12 @@ export async function POST(request: Request) {
 
       await messagingService.dispatchStageNotification(payload);
 
-      return NextResponse.json({ success: true, order_id: order.id, new_status: new_stage });
+      let expressSLAResult = null;
+      if (new_stage === 'delivered') {
+        expressSLAResult = await handleExpressDeliverySLA(order, new Date());
+      }
+
+      return NextResponse.json({ success: true, order_id: order.id, new_status: new_stage, express_sla: expressSLAResult });
     }
 
     // 2. Resolve Claim Action

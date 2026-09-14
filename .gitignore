@@ -81,6 +81,10 @@ web/tsconfig.tsbuildinfo
 coverage/
 web/coverage/
 .nyc_output/
+test-results/
+web/test-results/
+playwright-report/
+web/playwright-report/
 
 # --- Local Databases & Backups ---
 *.sqlite

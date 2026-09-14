@@ -194,7 +194,6 @@ export default function TermsOfServicePage() {
             <h3 className={styles.contactTitle}>14. Contact Our Legal Department</h3>
             <p className={styles.contactText}>
               <strong>{APP_NAME}</strong><br />
-              Operated by Lydia Painting, LLC<br />
               Dallas-Fort Worth Metroplex, Texas<br />
               Direct Legal Inquiries: <a href="mailto:legal@firstelevencleaners.com" className={styles.contactLink}>legal@firstelevencleaners.com</a>
             </p>

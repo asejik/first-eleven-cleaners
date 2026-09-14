@@ -2,7 +2,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import styles from './Badge.module.css';
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'booked' | 'picked_up' | 'weighed' | 'cleaning' | 'out_for_delivery' | 'delivered';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'booked' | 'picked_up' | 'weighed' | 'cleaning' | 'out_for_delivery' | 'delivered' | 'gold';
   size?: 'sm' | 'md';
   dot?: boolean;
   children: ReactNode;

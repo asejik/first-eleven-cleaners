@@ -2,7 +2,7 @@
 
 > **"You Look Match-Ready. Every Single Day."**  
 > First Eleven Cleaners is an enterprise-grade, on-demand dry cleaning, wash & fold, and commercial textile logistics platform operating across the Dallas–Fort Worth Metroplex.  
-> **Brand & Operator:** Lydia Painting, LLC (d/b/a First Eleven Cleaners) • Dallas, Texas  
+> **Brand & Operator:** First Eleven Cleaners • Dallas, Texas  
 > **Certifications:** SDVOSB (Service-Disabled Veteran-Owned) • Veteran-HUB • MBE • DBE
 
 ---
@@ -299,5 +299,5 @@ In the **Environment Variables** section in Vercel, add the following production
 ---
 
 ## 📄 License & Ownership
-Copyright © 2026 **First Eleven Cleaners**. Operated by **Lydia Painting, LLC** (Dallas, Texas). All rights reserved.
+Copyright © 2026 **First Eleven Cleaners** (Dallas, Texas). All rights reserved.
 

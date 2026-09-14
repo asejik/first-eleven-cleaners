@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback, createContext, useContext, type React
 import type { Customer, UserRole } from '@/types';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
+import {
+  determineRole,
+  getStoredCustomer,
+  saveStoredCustomer,
+  clearStoredCustomer,
+  hasFreshCachedSession,
+  createMockCustomer,
+} from '@/lib/mock-auth';
 
 interface AuthState {
   user: Customer | null;
@@ -15,58 +23,10 @@ interface AuthState {
   resetPassword: (email: string) => Promise<{ error?: string }>;
 }
 
-const MOCK_STORAGE_KEY = 'f11_mock_user';
-const AUTH_CACHE_KEY = 'f11_auth_customer';
-const AUTH_CACHE_TIME_KEY = 'f11_auth_timestamp';
-const AUTH_TTL_MS = 4 * 60 * 1000; // 4-minute TTL cache
-
-function determineRole(email: string, metaRole?: string, dbRole?: string): UserRole {
-  const clean = email.toLowerCase().trim();
-  // Exact administrative and staff accounts take precedence
-  if (clean === 'admin@firstelevencleaners.com' || clean === 'admin@firsteleven.com') return 'admin';
-  if (clean === 'driver@firstelevencleaners.com' || clean === 'driver@firsteleven.com') return 'driver';
-  if (clean === 'intake@firstelevencleaners.com' || clean === 'intake@firsteleven.com') return 'intake_staff';
-
-  if (dbRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(dbRole)) {
-    return dbRole as UserRole;
-  }
-  if (metaRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(metaRole)) {
-    return metaRole as UserRole;
-  }
-  return 'customer';
-}
-
-function getInitialCustomer(): Customer | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const cached = localStorage.getItem(AUTH_CACHE_KEY) || localStorage.getItem(MOCK_STORAGE_KEY);
-    if (cached) {
-      const parsed: Customer = JSON.parse(cached);
-      if (!parsed.role) {
-        parsed.role = determineRole(parsed.email);
-      }
-      return parsed;
-    }
-  } catch {}
-  return null;
-}
-
-function hasFreshCachedSession(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const cached = localStorage.getItem(AUTH_CACHE_KEY) || localStorage.getItem(MOCK_STORAGE_KEY);
-    const cachedTime = localStorage.getItem(AUTH_CACHE_TIME_KEY);
-    if (cached && cachedTime && Date.now() - Number(cachedTime) < AUTH_TTL_MS) {
-      return true;
-    }
-  } catch {}
-  return false;
-}
-
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Customer | null>(getInitialCustomer);
+  const [user, setUser] = useState<Customer | null>(getStoredCustomer);
   const [isLoading, setIsLoading] = useState<boolean>(() => !hasFreshCachedSession());
 
   const updateCustomerState = useCallback((newCustomer: Customer | null) => {
@@ -74,16 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       newCustomer.role = determineRole(newCustomer.email);
     }
     setUser(newCustomer);
-    if (typeof window !== 'undefined') {
-      if (newCustomer) {
-        localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(newCustomer));
-        localStorage.setItem(AUTH_CACHE_TIME_KEY, String(Date.now()));
-      } else {
-        localStorage.removeItem(AUTH_CACHE_KEY);
-        localStorage.removeItem(AUTH_CACHE_TIME_KEY);
-        localStorage.removeItem(MOCK_STORAGE_KEY);
-        localStorage.removeItem('f11_customer_preferences');
-      }
+    if (newCustomer) {
+      saveStoredCustomer(newCustomer);
+    } else {
+      clearStoredCustomer();
     }
   }, []);
 
@@ -165,17 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     function loadLocalUser() {
-      try {
-        const stored = localStorage.getItem(AUTH_CACHE_KEY) || localStorage.getItem(MOCK_STORAGE_KEY);
-        if (stored) {
-          const parsed: Customer = JSON.parse(stored);
-          if (!parsed.role) {
-            parsed.role = determineRole(parsed.email);
-          }
-          updateCustomerState(parsed);
-        }
-      } catch {
-        // Ignore local storage error
+      const stored = getStoredCustomer();
+      if (stored) {
+        updateCustomerState(stored);
       }
     }
 
@@ -216,7 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const supabase = createClient();
           const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-          if (error) return { error: error.message };
+          if (error) {
+            return { error: error.message };
+          }
 
           if (data.user) {
             const { data: customerData } = await supabase
@@ -258,19 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Mock login for local testing
-      const mockRole = determineRole(email);
-      const mockCustomer: Customer = {
-        id: 'c0000000-0000-0000-0000-000000000001',
-        email,
-        phone: '(214) 555-0199',
-        full_name: email.split('@')[0].replace('.', ' ').toUpperCase() || 'Valued Customer',
-        role: mockRole,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      // Mock login for local dev environment
+      const mockCustomer = createMockCustomer(email);
       updateCustomerState(mockCustomer);
-      return { role: mockRole };
+      return { role: mockCustomer.role };
     },
     [isSupabaseConfigured, updateCustomerState]
   );
@@ -343,15 +282,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Mock signup for local testing
-      const mockCustomer: Customer = {
-        id: crypto.randomUUID(),
-        email: data.email,
-        phone: data.phone,
+      // Mock signup for local dev environment
+      const mockCustomer = createMockCustomer(data.email, {
         full_name: data.full_name,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+        phone: data.phone,
+      });
       updateCustomerState(mockCustomer);
       return {};
     },
@@ -361,14 +296,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     // 1. Immediately clear local auth state and storage in 0ms
     updateCustomerState(null);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(AUTH_CACHE_KEY);
-        localStorage.removeItem(AUTH_CACHE_TIME_KEY);
-        localStorage.removeItem(MOCK_STORAGE_KEY);
-        localStorage.removeItem('f11_customer_preferences');
-      } catch {}
-    }
 
     // 2. Perform remote Supabase signOut asynchronously without blocking UI navigation
     if (isSupabaseConfigured) {

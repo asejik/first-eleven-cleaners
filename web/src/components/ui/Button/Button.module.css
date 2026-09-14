@@ -90,6 +90,23 @@
   transform: translateY(0);
 }
 
+.outlineGold {
+  background-color: transparent;
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+}
+
+.outlineGold:hover:not(:disabled) {
+  background-color: var(--color-gold);
+  color: var(--color-navy);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-gold);
+}
+
+.outlineGold:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .ghost {
   background-color: transparent;
   color: var(--color-navy);

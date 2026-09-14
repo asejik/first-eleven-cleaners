@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import styles from './Button.module.css';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'outlineLight' | 'ghost' | 'ghostLight' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'outlineLight' | 'outlineGold' | 'ghost' | 'ghostLight' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: ReactNode;

@@ -193,7 +193,6 @@ export default function PrivacyPolicyPage() {
             <h3 className={styles.contactTitle}>11. Contact Our Privacy Office</h3>
             <p className={styles.contactText}>
               <strong>{APP_NAME}</strong><br />
-              Operated by Lydia Painting, LLC<br />
               Dallas-Fort Worth Metroplex, Texas<br />
               Direct Privacy Inquiries: <a href="mailto:privacy@firstelevencleaners.com" className={styles.contactLink}>privacy@firstelevencleaners.com</a>
             </p>

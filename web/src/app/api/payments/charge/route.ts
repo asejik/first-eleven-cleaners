@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`payment_charge:${clientIp}`, 10, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`payment_charge:${clientIp}`, 10, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded for card charges. Please wait a minute.' },

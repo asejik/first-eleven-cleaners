@@ -166,14 +166,15 @@ export default function AboutPage() {
             <div className={styles.founderBadge}>⚽</div>
             <div className={styles.founderContent}>
               <span className={styles.founderEyebrow}>Leadership</span>
-              <h2 className={styles.founderName}>Idowu Itiola, Ph.D., PMP, LEED AP BD+C</h2>
-              <p className={styles.founderTitle}>Founder, President &amp; CEO — Lydia Painting, LLC d/b/a First Eleven Cleaners</p>
+              <h2 className={styles.founderName}>Idowu Itiola, Ph.D., PMP&reg;, LEED AP BD+C</h2>
+              <p className={styles.founderTitle}>Founder, President &amp; CEO — First Eleven Cleaners, LLC</p>
               <p className={styles.founderBio}>
                 Dr. Itiola brings a rare combination of academic rigor and operational discipline to the
                 garment-care industry. A Project Management Professional, LEED-Accredited sustainability
-                specialist, and combat-experienced veteran, he designed the systems that powered the FIFA
-                World Cup IBC operation — and rebuilt them from the ground up as the foundation of
-                First Eleven Cleaners.
+                specialist, and service-disabled veteran of the U.S. Armed Forces, he designed and ran
+                the garment-care operation that served the FIFA World Cup International Broadcast Centre —
+                3,500 media professionals, twelve weeks, completed with a signed performance letter —
+                and rebuilt those systems from the ground up as the foundation of First Eleven Cleaners.
               </p>
               <p className={styles.founderBio}>
                 His operating philosophy: <em>&ldquo;If it is not written, it does not exist.&rdquo;</em>{' '}
@@ -182,7 +183,7 @@ export default function AboutPage() {
                 that our customers now receive.
               </p>
               <div className={styles.founderLocation}>
-                📍 Farmers Branch, Texas &nbsp;·&nbsp; Dallas-Fort Worth Metroplex
+                📍 Farmers Branch, Texas &nbsp;·&nbsp; Dallas–Fort Worth Metroplex
               </div>
             </div>
           </div>
@@ -319,7 +320,7 @@ export default function AboutPage() {
               <Button variant="primary" size="lg">Schedule Your First Pickup</Button>
             </Link>
             <Link href={ROUTES.commercial}>
-              <Button variant="outline" size="lg">Enquire for Business</Button>
+              <Button variant="outlineGold" size="lg">Enquire for Business</Button>
             </Link>
           </div>
           <p className={styles.ctaPromo}>

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PICKUP_WINDOWS } from '@/lib/constants';
+import { PICKUP_WINDOWS, EXPRESS_DAILY_SLOT_CAP } from '@/lib/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get('date');
+  const capParam = searchParams.get('express_cap');
+  const expressCapacity = capParam ? parseInt(capParam, 10) : EXPRESS_DAILY_SLOT_CAP;
 
   if (!dateParam) {
     return NextResponse.json({ error: 'date query parameter is required (YYYY-MM-DD)' }, { status: 400 });
@@ -20,11 +22,14 @@ export async function GET(request: Request) {
       is_available: false,
       reason: 'Our processing hub is closed on Sundays for weekly maintenance.',
       slots: [],
+      express_booked_count: 0,
+      express_capacity: expressCapacity,
+      express_available: false,
     });
   }
 
   // Query actual booked counts from orders table for this date
-  const bookedMap: Record<string, number> = { morning: 0, evening: 0 };
+  const bookedMap: Record<string, number> = { morning: 0, evening: 0, express: 0 };
   const isSupabaseConfigured =
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
@@ -32,7 +37,7 @@ export async function GET(request: Request) {
   if (isSupabaseConfigured) {
     try {
       const supabase = createAdminClient();
-      const [{ count: morningCount }, { count: eveningCount }] = await Promise.all([
+      const [{ count: morningCount }, { count: eveningCount }, { count: expressCount }] = await Promise.all([
         supabase
           .from('orders')
           .select('id', { count: 'exact', head: true })
@@ -45,10 +50,17 @@ export async function GET(request: Request) {
           .eq('pickup_date', dateParam)
           .eq('pickup_window', 'evening')
           .neq('status', 'cancelled'),
+        supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('pickup_date', dateParam)
+          .eq('express_tier', 'express_24hr')
+          .neq('status', 'cancelled'),
       ]);
 
       bookedMap.morning = morningCount ?? 0;
       bookedMap.evening = eveningCount ?? 0;
+      bookedMap.express = expressCount ?? 0;
     } catch {
       // Fallback cleanly to 0 if database read fails
     }
@@ -75,5 +87,8 @@ export async function GET(request: Request) {
     date: dateParam,
     is_available: slots.some((s) => s.is_available),
     slots,
+    express_booked_count: bookedMap.express,
+    express_capacity: expressCapacity,
+    express_available: bookedMap.express < expressCapacity,
   });
 }

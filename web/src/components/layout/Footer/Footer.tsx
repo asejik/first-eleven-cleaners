@@ -120,7 +120,7 @@ export function Footer() {
         <div className={styles.bottom}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <p className={styles.copyright}>
-              © {currentYear} {APP_NAME}. Operated by Lydia Painting, LLC. All rights reserved.
+              © {currentYear} {APP_NAME}. All rights reserved.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
               <Link href={ROUTES.terms} style={{ color: 'var(--color-gray-400)', textDecoration: 'underline' }}>

@@ -44,6 +44,12 @@
   color: #1D4ED8;
 }
 
+.gold {
+  background-color: rgba(201, 161, 74, 0.18);
+  color: #B45309;
+  border: 1px solid rgba(201, 161, 74, 0.4);
+}
+
 /* Order Status Variants */
 .booked {
   background-color: #DBEAFE;

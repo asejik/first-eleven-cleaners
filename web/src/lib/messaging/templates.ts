@@ -16,6 +16,7 @@ export interface MessagePayload {
   total?: number;
   photoUrl?: string;
   trackingUrl: string;
+  customMessage?: string;
 }
 
 export interface FormattedMessage {
@@ -27,6 +28,16 @@ export interface FormattedMessage {
 }
 
 export function formatStageMessage(data: MessagePayload): FormattedMessage {
+  if (data.customMessage) {
+    return {
+      stage: data.stage,
+      title: '⚡ 24-Hour Express SLA Guarantee',
+      smsBody: data.customMessage,
+      whatsappBody: data.customMessage,
+      mediaUrl: data.photoUrl,
+    };
+  }
+
   const firstName = data.customerName.split(' ')[0] || 'Valued Customer';
   const orderNum = data.orderNumber || data.orderId.slice(0, 8);
   const pDate = data.pickupDate || 'Scheduled date';
