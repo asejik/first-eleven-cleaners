@@ -283,16 +283,7 @@ export function useBookingState() {
     isPickupMonFri &&
     !isExpressCapacityFull;
   const isExpressActive = expressTier === 'express_24hr' && isExpressEligible;
-
-  // Auto-reset express tier to standard if cart becomes ineligible, window changes, or zone does not support express
-  useEffect(() => {
-    if (
-      expressTier === 'express_24hr' &&
-      (!isExpressEligible || pickupWindow !== 'morning' || !isPickupMonFri || !detectedZone?.expressEligible)
-    ) {
-      setExpressTier('standard');
-    }
-  }, [expressTier, isExpressEligible, pickupWindow, isPickupMonFri, detectedZone?.expressEligible]);
+  const effectiveExpressTier: 'standard' | 'express_24hr' = isExpressActive ? 'express_24hr' : 'standard';
 
   const discountPercent = appliedPromo?.discount_value || 0;
 
@@ -349,7 +340,7 @@ export function useBookingState() {
         schedule: {
           pickup_date: pickupDate,
           pickup_window: pickupWindow,
-          express_tier: expressTier,
+          express_tier: effectiveExpressTier,
           frequency,
         },
         pricing: {
@@ -416,7 +407,7 @@ export function useBookingState() {
     setWashFoldWeight,
     dryCleanQuantities,
     updateDryCleanQty,
-    expressTier,
+    expressTier: effectiveExpressTier,
     handleSelectTier,
     pickupDate,
     setPickupDate,

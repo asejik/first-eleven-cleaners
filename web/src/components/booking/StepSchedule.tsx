@@ -57,7 +57,7 @@ export function StepSchedule({
   onToast,
   hasExcludedGarments = false,
   isExpressCapacityFull = false,
-  nextAvailableExpressDate = '',
+  nextAvailableExpressDate = 'the next business day',
   detectedZone,
   isValid,
   onBack,
@@ -97,7 +97,7 @@ export function StepSchedule({
             const chosenDayName = DAY_NAMES[chosenDate.getDay()];
 
             // Check if day matches zone's scheduled route days
-            if (detectedZone && !detectedZone.routeDays.includes(chosenDayName as any)) {
+            if (detectedZone && !(detectedZone.routeDays as readonly string[]).includes(chosenDayName)) {
               const nextValid = getNextValidRouteDate(chosenDate, detectedZone.routeDays);
               const nextValidStr = formatLocalDate(nextValid);
               setPickupDate(nextValidStr);

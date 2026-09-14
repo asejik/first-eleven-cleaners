@@ -119,7 +119,6 @@ export default function BookingPage() {
             onToast={b.addToast}
             hasExcludedGarments={b.hasExcludedGarments}
             isExpressCapacityFull={b.isExpressCapacityFull}
-            nextAvailableExpressDate={formatDisplayDate(formatLocalDate(new Date(Date.now() + 86400000 * 2)))}
             detectedZone={b.detectedZone}
             isValid={b.isStep3Valid}
             onBack={() => b.setStep(2)}

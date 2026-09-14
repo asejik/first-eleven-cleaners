@@ -18,7 +18,7 @@ interface DynamicZoneMetrics {
   originalMinimum: number;
 }
 
-export function ZoneGovernance({ orders: _orders = [], onToast }: ZoneGovernanceProps) {
+export function ZoneGovernance({ onToast }: ZoneGovernanceProps) {
   // Working state for the 4 zones
   const [zones, setZones] = useState<Record<string, ZoneConfig>>(() => ({ ...ZONE_CONFIG }));
   const [expandedZipZone, setExpandedZipZone] = useState<string | null>(null);
