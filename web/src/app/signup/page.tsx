@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card } from '@/components/ui';
+import { SmsConsentBlock } from '@/components/compliance';
 import { ROUTES, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -14,6 +15,8 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [smsPromotionsConsent, setSmsPromotionsConsent] = useState(false);
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +40,8 @@ export default function SignupPage() {
       email,
       phone,
       password,
+      sms_consent: smsConsent,
+      sms_promotions_consent: smsPromotionsConsent,
     });
     if (res.error) {
       setIsSubmitting(false);
@@ -121,7 +126,15 @@ export default function SignupPage() {
             placeholder="(214) 555-0123"
             required
             autoComplete="tel"
-            helperText="Used for automated pickup & delivery SMS alerts"
+            helperText="Used for driver coordination, dispatch alerts, and contactless delivery receipts"
+          />
+
+          <SmsConsentBlock
+            smsConsent={smsConsent}
+            onSmsConsentChange={setSmsConsent}
+            smsPromotionsConsent={smsPromotionsConsent}
+            onSmsPromotionsConsentChange={setSmsPromotionsConsent}
+            idPrefix="signup"
           />
 
           <Input

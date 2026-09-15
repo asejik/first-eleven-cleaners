@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS customers (
   phone VARCHAR(50),
   full_name VARCHAR(255) NOT NULL,
   role VARCHAR(50) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'staff', 'admin')),
+  sms_consent BOOLEAN NOT NULL DEFAULT false,
+  sms_promotions_consent BOOLEAN NOT NULL DEFAULT false,
+  sms_consent_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

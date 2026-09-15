@@ -106,6 +106,8 @@ export function useBookingState() {
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
+  const [smsConsent, setSmsConsent] = useState<boolean>(Boolean(user?.sms_consent) || false);
+  const [smsPromotionsConsent, setSmsPromotionsConsent] = useState<boolean>(Boolean(user?.sms_promotions_consent) || false);
   const [street, setStreet] = useState('');
   const [unit, setUnit] = useState('');
   const [city, setCity] = useState('Dallas');
@@ -162,6 +164,8 @@ export function useBookingState() {
           if (d.fullName && !user?.full_name) setFullName(d.fullName);
           if (d.email && !user?.email) setEmail(d.email);
           if (d.phone && !user?.phone) setPhone(d.phone);
+          if (d.smsConsent !== undefined) setSmsConsent(Boolean(d.smsConsent));
+          if (d.smsPromotionsConsent !== undefined) setSmsPromotionsConsent(Boolean(d.smsPromotionsConsent));
           if (d.street) setStreet(d.street);
           if (d.unit) setUnit(d.unit);
           if (d.city) setCity(d.city);
@@ -196,6 +200,8 @@ export function useBookingState() {
           fullName,
           email,
           phone,
+          smsConsent,
+          smsPromotionsConsent,
           street,
           unit,
           city,
@@ -218,6 +224,8 @@ export function useBookingState() {
     fullName,
     email,
     phone,
+    smsConsent,
+    smsPromotionsConsent,
     street,
     unit,
     city,
@@ -354,6 +362,10 @@ export function useBookingState() {
           last_4: last4,
           payment_token: paymentToken || null,
         },
+        consents: {
+          sms_order_updates: smsConsent,
+          sms_promotions: smsPromotionsConsent,
+        },
       };
 
       const result = await submitBookingMutation.mutateAsync(payload);
@@ -389,6 +401,10 @@ export function useBookingState() {
     setEmail,
     phone,
     setPhone,
+    smsConsent,
+    setSmsConsent,
+    smsPromotionsConsent,
+    setSmsPromotionsConsent,
     street,
     setStreet,
     unit,

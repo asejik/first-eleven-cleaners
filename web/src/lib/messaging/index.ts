@@ -160,23 +160,68 @@ export class TwilioMessageProvider implements IMessagingProvider {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+    const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
     const twilioWhatsApp = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
 
     const hasValidTwilio =
       Boolean(accountSid) &&
       Boolean(authToken) &&
-      Boolean(twilioPhone) &&
+      (Boolean(messagingServiceSid) || Boolean(twilioPhone)) &&
       !accountSid?.includes('your-account') &&
       !authToken?.includes('your-token');
 
-    // If credentials are not present, seamlessly use simulation
+    // 1. Carrier Compliance & Opt-in Gating:
+    // Check if customer consented to SMS order notifications
+    let hasSmsConsent = payload.smsConsent;
+    let customerEmail = payload.customerEmail;
+
+    if (channel === 'sms' && hasSmsConsent === undefined && payload.orderId) {
+      try {
+        const supabase = createAdminClient();
+        const { data: order } = await supabase
+          .from('orders')
+          .select('customer:customers(email, sms_consent)')
+          .eq('id', payload.orderId)
+          .maybeSingle();
+
+        const fetchedCustomer = order?.customer as
+          | { email?: string; sms_consent?: boolean }
+          | Array<{ email?: string; sms_consent?: boolean }>
+          | null;
+        if (fetchedCustomer) {
+          const cust = Array.isArray(fetchedCustomer) ? fetchedCustomer[0] : fetchedCustomer;
+          if (cust) {
+            hasSmsConsent = cust.sms_consent;
+            if (!customerEmail && cust.email) customerEmail = cust.email;
+          }
+        }
+      } catch (err) {
+        console.warn('SMS consent check notice:', err);
+      }
+    }
+
+    // 2. Carrier Fallback Logic:
+    // Customers who didn't opt into SMS receive all 6 order-status updates by email instead of SMS
+    if (channel === 'sms' && hasSmsConsent === false) {
+      console.log(
+        `[Carrier Compliance] Customer has not opted into SMS for order #${payload.orderNumber || payload.orderId}. Dispatched ${payload.stage} status update via Resend Email fallback.`
+      );
+      return this.fallbackSim.dispatchStageNotification(
+        { ...payload, customerEmail: customerEmail || payload.customerEmail },
+        channel
+      );
+    }
+
+    // If live credentials are not present, seamlessly use simulation
     if (!hasValidTwilio) {
-      return this.fallbackSim.dispatchStageNotification(payload, channel);
+      return this.fallbackSim.dispatchStageNotification(
+        { ...payload, customerEmail: customerEmail || payload.customerEmail },
+        channel
+      );
     }
 
     const formatted = formatStageMessage(payload);
     const body = channel === 'whatsapp' ? formatted.whatsappBody : formatted.smsBody;
-    const fromNumber = channel === 'whatsapp' ? twilioWhatsApp : twilioPhone;
     const toNumber = channel === 'whatsapp' ? `whatsapp:${payload.customerPhone}` : payload.customerPhone;
 
     try {
@@ -184,9 +229,17 @@ export class TwilioMessageProvider implements IMessagingProvider {
       const authHeader = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64');
       const params = new URLSearchParams({
         To: toNumber,
-        From: fromNumber!,
         Body: body,
       });
+
+      if (channel === 'whatsapp') {
+        params.append('From', twilioWhatsApp);
+      } else if (messagingServiceSid) {
+        // Outbound SMS routes strictly through Twilio A2P 10DLC Messaging Service SID
+        params.append('MessagingServiceSid', messagingServiceSid);
+      } else if (twilioPhone) {
+        params.append('From', twilioPhone);
+      }
 
       if (formatted.mediaUrl) {
         params.append('MediaUrl', formatted.mediaUrl);
@@ -207,8 +260,11 @@ export class TwilioMessageProvider implements IMessagingProvider {
         throw new Error(data.message || 'Twilio API dispatch failure');
       }
 
-      // Record to DB
-      const simResult = await this.fallbackSim.dispatchStageNotification(payload, channel);
+      // Record to DB and dispatch email notification
+      const simResult = await this.fallbackSim.dispatchStageNotification(
+        { ...payload, customerEmail: customerEmail || payload.customerEmail },
+        channel
+      );
 
       return {
         ...simResult,
@@ -217,7 +273,10 @@ export class TwilioMessageProvider implements IMessagingProvider {
       };
     } catch (err: unknown) {
       console.error('Twilio dispatch error, falling back to simulated log:', err);
-      return this.fallbackSim.dispatchStageNotification(payload, channel);
+      return this.fallbackSim.dispatchStageNotification(
+        { ...payload, customerEmail: customerEmail || payload.customerEmail },
+        channel
+      );
     }
   }
 }
