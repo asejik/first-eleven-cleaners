@@ -54,6 +54,10 @@ const BookingSchema = z.object({
     last_4: z.string().default('4242'),
     payment_token: z.string().optional().nullable(),
   }).optional(),
+  consents: z.object({
+    sms_order_updates: z.boolean().default(false),
+    sms_promotions: z.boolean().default(false),
+  }).default({ sms_order_updates: false, sms_promotions: false }),
 });
 
 export async function POST(request: Request) {
@@ -238,6 +242,16 @@ export async function POST(request: Request) {
 
           if (custByEmail) {
             customerId = custByEmail.id;
+            if (validated.consents.sms_order_updates || validated.consents.sms_promotions) {
+              await supabase
+                .from('customers')
+                .update({
+                  sms_consent: validated.consents.sms_order_updates,
+                  sms_promotions_consent: validated.consents.sms_promotions,
+                  sms_consent_at: validated.consents.sms_order_updates ? new Date().toISOString() : null,
+                })
+                .eq('id', customerId);
+            }
           } else {
             const { data: newCust, error: custErr } = await supabase
               .from('customers')
@@ -246,6 +260,9 @@ export async function POST(request: Request) {
                 email: validated.customer.email,
                 full_name: validated.customer.full_name,
                 phone: validated.customer.phone,
+                sms_consent: validated.consents.sms_order_updates,
+                sms_promotions_consent: validated.consents.sms_promotions,
+                sms_consent_at: validated.consents.sms_order_updates ? new Date().toISOString() : null,
               })
               .select('id')
               .single();
@@ -373,6 +390,7 @@ export async function POST(request: Request) {
                 customerName: validated.customer.full_name,
                 customerPhone: validated.customer.phone,
                 customerEmail: validated.customer.email,
+                smsConsent: validated.consents.sms_order_updates,
                 stage: 'booked',
                 pickupDate: validated.schedule.pickup_date,
                 pickupWindow: validated.schedule.pickup_window,
@@ -441,6 +459,7 @@ export async function POST(request: Request) {
         customerName: validated.customer.full_name,
         customerPhone: validated.customer.phone,
         customerEmail: validated.customer.email,
+        smsConsent: validated.consents.sms_order_updates,
         stage: 'booked',
         pickupDate: validated.schedule.pickup_date,
         pickupWindow: validated.schedule.pickup_window,

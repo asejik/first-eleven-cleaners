@@ -15,6 +15,9 @@ export interface Customer {
   phone: string;
   full_name: string;
   role?: UserRole;
+  sms_consent?: boolean;
+  sms_promotions_consent?: boolean;
+  sms_consent_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -302,6 +305,10 @@ export interface BookingSubmissionPayload {
     card_brand?: string;
     last_4?: string;
     payment_token?: string | null;
+  };
+  consents?: {
+    sms_order_updates?: boolean;
+    sms_promotions?: boolean;
   };
 }
 

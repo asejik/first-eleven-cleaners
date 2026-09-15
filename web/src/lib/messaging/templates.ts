@@ -17,6 +17,7 @@ export interface MessagePayload {
   photoUrl?: string;
   trackingUrl: string;
   customMessage?: string;
+  smsConsent?: boolean;
 }
 
 export interface FormattedMessage {

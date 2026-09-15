@@ -18,7 +18,14 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, pass: string) => Promise<{ error?: string; role?: UserRole }>;
-  signup: (data: { full_name: string; email: string; phone: string; password?: string }) => Promise<{ error?: string }>;
+  signup: (data: {
+    full_name: string;
+    email: string;
+    phone: string;
+    password?: string;
+    sms_consent?: boolean;
+    sms_promotions_consent?: boolean;
+  }) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
 }
@@ -215,7 +222,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(
-    async (data: { full_name: string; email: string; phone: string; password?: string }): Promise<{ error?: string }> => {
+    async (data: {
+      full_name: string;
+      email: string;
+      phone: string;
+      password?: string;
+      sms_consent?: boolean;
+      sms_promotions_consent?: boolean;
+    }): Promise<{ error?: string }> => {
       if (isSupabaseConfigured) {
         try {
           const supabase = createClient();
@@ -226,6 +240,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               data: {
                 full_name: data.full_name,
                 phone: data.phone,
+                sms_consent: Boolean(data.sms_consent),
+                sms_promotions_consent: Boolean(data.sms_promotions_consent),
               },
             },
           });
@@ -240,7 +256,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .maybeSingle();
 
             if (existingCustomer) {
-              updateCustomerState(existingCustomer as Customer);
+              await supabase
+                .from('customers')
+                .update({
+                  sms_consent: Boolean(data.sms_consent),
+                  sms_promotions_consent: Boolean(data.sms_promotions_consent),
+                  sms_consent_at: data.sms_consent ? new Date().toISOString() : null,
+                })
+                .eq('id', existingCustomer.id);
+              updateCustomerState({
+                ...(existingCustomer as Customer),
+                sms_consent: Boolean(data.sms_consent),
+                sms_promotions_consent: Boolean(data.sms_promotions_consent),
+              });
               return {};
             }
 
@@ -253,6 +281,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   email: data.email,
                   phone: data.phone,
                   full_name: data.full_name,
+                  sms_consent: Boolean(data.sms_consent),
+                  sms_promotions_consent: Boolean(data.sms_promotions_consent),
+                  sms_consent_at: data.sms_consent ? new Date().toISOString() : null,
                 },
                 { onConflict: 'email' }
               )
@@ -271,6 +302,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: data.email,
               phone: data.phone,
               full_name: data.full_name,
+              sms_consent: Boolean(data.sms_consent),
+              sms_promotions_consent: Boolean(data.sms_promotions_consent),
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
@@ -287,6 +320,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: data.full_name,
         phone: data.phone,
       });
+      mockCustomer.sms_consent = Boolean(data.sms_consent);
+      mockCustomer.sms_promotions_consent = Boolean(data.sms_promotions_consent);
       updateCustomerState(mockCustomer);
       return {};
     },

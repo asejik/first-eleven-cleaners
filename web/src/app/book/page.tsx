@@ -70,6 +70,10 @@ export default function BookingPage() {
             setEmail={b.setEmail}
             phone={b.phone}
             setPhone={b.setPhone}
+            smsConsent={b.smsConsent}
+            setSmsConsent={b.setSmsConsent}
+            smsPromotionsConsent={b.smsPromotionsConsent}
+            setSmsPromotionsConsent={b.setSmsPromotionsConsent}
             street={b.street}
             setStreet={b.setStreet}
             unit={b.unit}

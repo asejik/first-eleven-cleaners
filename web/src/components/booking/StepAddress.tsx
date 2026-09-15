@@ -1,4 +1,5 @@
 import { Card, Input, Button } from '@/components/ui';
+import { SmsConsentBlock } from '@/components/compliance';
 import { resolveZoneByZip, type ZoneConfig } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
 
@@ -9,6 +10,10 @@ interface StepAddressProps {
   setEmail: (val: string) => void;
   phone: string;
   setPhone: (val: string) => void;
+  smsConsent: boolean;
+  setSmsConsent: (val: boolean) => void;
+  smsPromotionsConsent: boolean;
+  setSmsPromotionsConsent: (val: boolean) => void;
   street: string;
   setStreet: (val: string) => void;
   unit: string;
@@ -32,6 +37,10 @@ export function StepAddress({
   setEmail,
   phone,
   setPhone,
+  smsConsent,
+  setSmsConsent,
+  smsPromotionsConsent,
+  setSmsPromotionsConsent,
   street,
   setStreet,
   unit,
@@ -84,15 +93,24 @@ export function StepAddress({
           placeholder="alex@example.com"
           required
         />
-        <Input
-          label="Mobile Phone (for SMS updates)"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="(214) 555-0199"
-          required
-          helperText="We will send your driver ETA & photo receipt to this number"
-        />
+        <div>
+          <Input
+            label="Mobile Phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="(214) 555-0199"
+            required
+            helperText="Used for driver coordination, dispatch alerts, and contactless delivery receipts"
+          />
+          <SmsConsentBlock
+            smsConsent={smsConsent}
+            onSmsConsentChange={setSmsConsent}
+            smsPromotionsConsent={smsPromotionsConsent}
+            onSmsPromotionsConsentChange={setSmsPromotionsConsent}
+            idPrefix="booking_step1"
+          />
+        </div>
         <Input
           label="Street Address"
           value={street}
