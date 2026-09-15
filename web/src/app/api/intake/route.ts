@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         const qty = Number(item.quantity) || 0;
         if (qty > 0) {
           const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
-          const unitPrice = priceMeta ? priceMeta.price : 8.97;
+          const unitPrice = priceMeta ? priceMeta.price : 8.99;
           const itemSubtotal = qty * unitPrice;
           dryCleanSubtotal += itemSubtotal;
 

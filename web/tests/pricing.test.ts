@@ -101,21 +101,21 @@ describe('Pricing Engine & Business Rules', () => {
     it('calculates exact item totals according to menu constants', () => {
       const res = calculatePrice({
         dry_clean_items: [
-          { garment_type: 'shirt_blouse', quantity: 2 }, // 2 * 8.97 = 17.94
-          { garment_type: 'pants_skirt', quantity: 1 },  // 1 * 8.97 = 8.97
+          { garment_type: 'shirt_blouse', quantity: 2 }, // 2 * 8.99 = 17.98
+          { garment_type: 'pants_skirt', quantity: 1 },  // 1 * 8.99 = 8.99
         ],
       });
-      expect(res.dry_clean_subtotal).toBeCloseTo(26.91, 2);
-      expect(res.total).toBeCloseTo(26.91, 2);
+      expect(res.dry_clean_subtotal).toBeCloseTo(26.97, 2);
+      expect(res.total).toBeCloseTo(26.97, 2);
     });
 
     it('combines wash & fold and dry clean in mixed orders', () => {
       const res = calculatePrice({
         weight_lbs: 20, // $60.00
-        dry_clean_items: [{ garment_type: 'jacket', quantity: 1 }], // $14.97
+        dry_clean_items: [{ garment_type: 'jacket', quantity: 1 }], // $14.99
       });
-      expect(res.subtotal).toBeCloseTo(74.97, 2);
-      expect(res.total).toBeCloseTo(74.97, 2);
+      expect(res.subtotal).toBeCloseTo(74.99, 2);
+      expect(res.total).toBeCloseTo(74.99, 2);
     });
   });
 
@@ -123,16 +123,16 @@ describe('Pricing Engine & Business Rules', () => {
     it('applies $15.00 minimum surcharge when 50% is under $15', () => {
       const res = calculatePrice({
         dry_clean_items: [
-          { garment_type: 'jacket', quantity: 1 }, // 14.97
-          { garment_type: 'pants_skirt', quantity: 1 }, // 8.97 -> subtotal = 23.94
+          { garment_type: 'jacket', quantity: 1 }, // 14.99
+          { garment_type: 'pants_skirt', quantity: 1 }, // 8.99 -> subtotal = 23.98
         ],
         express_tier: 'express_24hr',
         zip: '75205',
       });
-      expect(res.subtotal).toBeCloseTo(23.94, 2);
-      // 50% of 23.94 is 11.97, which is below $15 -> floor of $15.00 applies
+      expect(res.subtotal).toBeCloseTo(23.98, 2);
+      // 50% of 23.98 is 11.99, which is below $15 -> floor of $15.00 applies
       expect(res.express_surcharge).toBe(15.0);
-      expect(res.total).toBeCloseTo(38.94, 2);
+      expect(res.total).toBeCloseTo(38.98, 2);
     });
 
     it('applies full +50% surcharge when greater than $15', () => {
@@ -222,9 +222,9 @@ describe('Pricing Engine & Business Rules', () => {
   describe('Server-Side Booking Financials Recalculation (F006 / F010)', () => {
     it('accurately computes subtotal from wash & fold and dry clean catalog items', () => {
       // 20 lbs wash & fold = $60.00 ($3.00/lb)
-      // 2 jackets ($14.97 ea) = $29.94
-      // 3 shirts ($8.97 ea) = $26.91
-      // Total subtotal = $116.85
+      // 2 jackets ($14.99 ea) = $29.98
+      // 3 shirts ($8.99 ea) = $26.97
+      // Total subtotal = $116.95
       const result = computeBookingFinancials({
         weightLbs: 20,
         dryCleanItems: [
@@ -234,13 +234,13 @@ describe('Pricing Engine & Business Rules', () => {
       });
 
       expect(result.washFoldSubtotal).toBe(60.00);
-      expect(result.dryCleanSubtotal).toBe(56.85);
-      expect(result.subtotal).toBe(116.85);
-      expect(result.financials.subtotal).toBe(116.85);
+      expect(result.dryCleanSubtotal).toBe(56.95);
+      expect(result.subtotal).toBe(116.95);
+      expect(result.financials.subtotal).toBe(116.95);
       expect(result.itemizedList).toHaveLength(3);
       expect(result.itemizedList[0].unit_price).toBe(3.00);
-      expect(result.itemizedList[1].unit_price).toBe(14.97);
-      expect(result.itemizedList[2].unit_price).toBe(8.97);
+      expect(result.itemizedList[1].unit_price).toBe(14.99);
+      expect(result.itemizedList[2].unit_price).toBe(8.99);
     });
 
     it('enforces Wash & Fold $45.00 minimum price for weight below 15 lbs', () => {
@@ -253,22 +253,22 @@ describe('Pricing Engine & Business Rules', () => {
     });
 
     it('correctly applies 24-Hour Express surcharge (+50% with $15 floor) server-side', () => {
-      // Subtotal $14.97 -> 50% is $7.49, so $15 minimum floor applies
+      // Subtotal $14.99 -> 50% is $7.495, so $15 minimum floor applies
       const smallOrder = computeBookingFinancials({
-        dryCleanItems: [{ garment_type: 'dress', quantity: 1 }], // $14.97
+        dryCleanItems: [{ garment_type: 'dress', quantity: 1 }], // $14.99
         isExpress: true,
       });
-      expect(smallOrder.subtotal).toBe(14.97);
+      expect(smallOrder.subtotal).toBe(14.99);
       expect(smallOrder.financials.expressSurcharge).toBe(15.00);
 
-      // Subtotal $140.97 -> 50% is $70.485, rounds to $70.48
+      // Subtotal $140.99 -> 50% is $70.495, rounds to $70.50
       const largeOrder = computeBookingFinancials({
         weightLbs: 40, // 40 * $3.00 = $120.00
-        dryCleanItems: [{ garment_type: 'overcoat', quantity: 1 }], // $20.97
+        dryCleanItems: [{ garment_type: 'overcoat', quantity: 1 }], // $20.99
         isExpress: true,
       });
-      expect(largeOrder.subtotal).toBe(140.97);
-      expect(largeOrder.financials.expressSurcharge).toBe(70.48);
+      expect(largeOrder.subtotal).toBe(140.99);
+      expect(largeOrder.financials.expressSurcharge).toBe(70.50);
     });
 
     it('correctly applies promo discount to subtotal and express surcharge', () => {

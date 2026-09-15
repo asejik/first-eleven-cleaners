@@ -75,16 +75,16 @@ Every status change triggers a customer message (SMS/WhatsApp + in-app).
 ### Dry Cleaning (per garment)
 | Garment                         | Price   |
 |---------------------------------|---------|
-| Shirt / Blouse (dry clean)      | $8.97   |
-| Laundered shirt                 | $4.47   |
-| Pants / Skirt / Shorts / Vest   | $8.97   |
-| Dress                           | $14.97  |
-| Tie / Scarf                     | $7.77   |
-| Sweater                         | $11.97  |
-| Jacket                          | $14.97  |
-| Overcoat                        | $20.97  |
-| Jumpsuit                        | $17.97  |
-| Formal dress                    | $23.97  |
+| Shirt / Blouse (dry clean)      | $8.99   |
+| Laundered shirt                 | $4.99   |
+| Pants / Skirt / Shorts / Vest   | $8.99   |
+| Dress                           | $14.99  |
+| Tie / Scarf                     | $7.99   |
+| Sweater                         | $11.99  |
+| Jacket                          | $14.99  |
+| Overcoat                        | $20.99  |
+| Jumpsuit                        | $17.99  |
+| Formal dress                    | $23.99  |
 
 ### Wash-and-Fold
 - $3.00 per pound
