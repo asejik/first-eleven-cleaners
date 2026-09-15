@@ -116,8 +116,8 @@ export async function GET(
         garment_type: 'suit_jacket',
         service_type: 'dry_clean',
         quantity: 2,
-        unit_price: 14.97,
-        subtotal: 29.94,
+        unit_price: 14.99,
+        subtotal: 29.98,
         notes: 'Navy wool suits',
       },
       {
@@ -126,8 +126,8 @@ export async function GET(
         garment_type: 'pants_skirt',
         service_type: 'dry_clean',
         quantity: 2,
-        unit_price: 8.97,
-        subtotal: 17.94,
+        unit_price: 8.99,
+        subtotal: 17.98,
         notes: 'Matching suit trousers',
       },
       {

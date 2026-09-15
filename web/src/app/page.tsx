@@ -108,7 +108,7 @@ export default function HomePage() {
                 Suits, dresses, formalwear, specialty fabrics, and stain
                 remediation at published per-garment rates.
               </p>
-              <span className={styles.servicePrice}>From $8.97/garment (shirts from $4.47)</span>
+              <span className={styles.servicePrice}>From $8.99/garment (shirts from $4.99)</span>
             </div>
 
             <div className={styles.serviceCard}>

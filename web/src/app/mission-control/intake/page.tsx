@@ -135,7 +135,7 @@ function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }: Intake
 
   const dryCleanSubtotal = Object.keys(dryCleanCounts).reduce((acc, key) => {
     const qty = dryCleanCounts[key] || 0;
-    const price = DRY_CLEAN_PRICES[key]?.price || 8.97;
+    const price = DRY_CLEAN_PRICES[key]?.price || 8.99;
     return acc + qty * price;
   }, 0);
 

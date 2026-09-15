@@ -205,16 +205,16 @@ export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Sustainability F
 export const FAILED_PICKUP_FEE = 15.00; // $15 Failed service attempt fee
 
 export const DRY_CLEAN_PRICES: Record<string, { label: string; price: number }> = {
-  shirt_blouse: { label: 'Shirt / Blouse (dry clean)', price: 8.97 },
-  laundered_shirt: { label: 'Laundered Shirt', price: 4.47 },
-  pants_skirt: { label: 'Pants / Skirt / Shorts / Vest', price: 8.97 },
-  dress: { label: 'Dress', price: 14.97 },
-  tie_scarf: { label: 'Tie / Scarf', price: 7.77 },
-  sweater: { label: 'Sweater', price: 11.97 },
-  jacket: { label: 'Jacket', price: 14.97 },
-  overcoat: { label: 'Overcoat', price: 20.97 },
-  jumpsuit: { label: 'Jumpsuit', price: 17.97 },
-  formal_dress: { label: 'Formal Dress', price: 23.97 },
+  shirt_blouse: { label: 'Shirt / Blouse (dry clean)', price: 8.99 },
+  laundered_shirt: { label: 'Laundered Shirt', price: 4.99 },
+  pants_skirt: { label: 'Pants / Skirt / Shorts / Vest', price: 8.99 },
+  dress: { label: 'Dress', price: 14.99 },
+  tie_scarf: { label: 'Tie / Scarf', price: 7.99 },
+  sweater: { label: 'Sweater', price: 11.99 },
+  jacket: { label: 'Jacket', price: 14.99 },
+  overcoat: { label: 'Overcoat', price: 20.99 },
+  jumpsuit: { label: 'Jumpsuit', price: 17.99 },
+  formal_dress: { label: 'Formal Dress', price: 23.99 },
 };
 
 // --- Scheduling ---
