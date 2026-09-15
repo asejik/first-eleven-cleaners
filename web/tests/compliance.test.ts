@@ -23,13 +23,13 @@ describe('Legal & Compliance Policies Configuration', () => {
   describe('Carrier A2P 10DLC SMS Compliance', () => {
     it('matches exact mandated carrier disclosure text for transactional order updates', () => {
       const expectedTransactional =
-        "I'd like to receive order status updates, service notifications, and delivery alerts from First Eleven Cleaners by SMS. Message frequency varies. Msg & data rates may apply. Reply STOP to cancel, HELP for help. Consent is not a condition of purchase.";
+        'I agree to receive order status updates, service notifications, and delivery alerts from First Eleven Cleaners by SMS. Message frequency varies. Msg & data rates may apply. Reply STOP to cancel, HELP for help. Consent is not a condition of purchase.';
       expect(SMS_CONSENT_TRANSACTIONAL_TEXT).toBe(expectedTransactional);
     });
 
     it('matches exact mandated carrier disclosure text for promotional messages', () => {
       const expectedPromotional =
-        'Also send me occasional offers and promotions by SMS. Msg & data rates may apply. Reply STOP to cancel.';
+        'Also send me occasional offers and promotions from First Eleven Cleaners by SMS. Msg & data rates may apply. Reply STOP to cancel.';
       expect(SMS_CONSENT_PROMOTIONAL_TEXT).toBe(expectedPromotional);
     });
 
