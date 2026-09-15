@@ -14,10 +14,10 @@ export interface SmsConsentBlockProps {
 }
 
 export const SMS_CONSENT_TRANSACTIONAL_TEXT =
-  "I'd like to receive order status updates, service notifications, and delivery alerts from First Eleven Cleaners by SMS. Message frequency varies. Msg & data rates may apply. Reply STOP to cancel, HELP for help. Consent is not a condition of purchase.";
+  'I agree to receive order status updates, service notifications, and delivery alerts from First Eleven Cleaners by SMS. Message frequency varies. Msg & data rates may apply. Reply STOP to cancel, HELP for help. Consent is not a condition of purchase.';
 
 export const SMS_CONSENT_PROMOTIONAL_TEXT =
-  'Also send me occasional offers and promotions by SMS. Msg & data rates may apply. Reply STOP to cancel.';
+  'Also send me occasional offers and promotions from First Eleven Cleaners by SMS. Msg & data rates may apply. Reply STOP to cancel.';
 
 export function SmsConsentBlock({
   smsConsent,
