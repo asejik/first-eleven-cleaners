@@ -126,6 +126,9 @@ export default function PrivacyPolicyPage() {
               <strong>We do not sell your personal information.</strong> Period.
             </div>
             <p className={styles.paragraph}>
+              We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes.
+            </p>
+            <p className={styles.paragraph}>
               We may share information solely as necessary with trusted service providers who assist our operations:
             </p>
             <ul className={styles.list}>

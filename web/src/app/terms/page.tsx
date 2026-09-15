@@ -169,9 +169,24 @@ export default function TermsOfServicePage() {
 
           {/* Section 12: Electronic & SMS Communications */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>12. Electronic Communications &amp; TCPA Consent</h2>
+            <h2 className={styles.sectionTitle}>12. Electronic Communications &amp; SMS Terms</h2>
             <p className={styles.paragraph}>
-              By creating an account or booking a pickup, you consent to receive electronic receipts, legal notices, and operational notifications. Order progress alerts and driver tracking updates are delivered via SMS or WhatsApp. Promotional communications require separate opt-in consent and can be revoked at any time by texting STOP.
+              By creating an account or booking a pickup, you consent to receive electronic receipts, legal notices, and operational notifications by email. Order progress alerts and driver tracking updates may also be delivered via email.
+            </p>
+            <h3 className={styles.subheading}>SMS / Text Message Terms</h3>
+            <p className={styles.paragraph}>
+              You may separately opt in to receive SMS text messages from First Eleven Cleaners, including order status updates, service notifications, and delivery alerts. Opting in to SMS is voluntary and is <strong>not</strong> a condition of purchase or account creation.
+            </p>
+            <ul className={styles.list}>
+              <li className={styles.listItem}><strong>Message Frequency:</strong> Message frequency varies based on your order activity and service requests.</li>
+              <li className={styles.listItem}><strong>Message &amp; Data Rates:</strong> Standard message and data rates may apply depending on your mobile carrier and plan.</li>
+              <li className={styles.listItem}><strong>To Opt Out:</strong> Reply <strong>STOP</strong> to any SMS at any time to cancel. You will receive a single confirmation message and no further texts will be sent.</li>
+              <li className={styles.listItem}><strong>For Help:</strong> Reply <strong>HELP</strong> for assistance, or contact us at <a href="mailto:support@firstelevencleaners.com" className={styles.contactLink}>support@firstelevencleaners.com</a> or call <a href="tel:+16822000039" className={styles.contactLink}>(682) 200-0039</a>.</li>
+              <li className={styles.listItem}><strong>Carrier Liability:</strong> Mobile carriers are not liable for delayed or undelivered messages.</li>
+              <li className={styles.listItem}><strong>Privacy:</strong> We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes. See our <Link href={ROUTES.privacy} className={styles.contactLink}>Privacy Policy</Link> for full details.</li>
+            </ul>
+            <p className={styles.paragraph}>
+              Promotional SMS communications (offers and promotions) require a separate opt-in and can be revoked independently at any time by replying STOP.
             </p>
           </section>
 
