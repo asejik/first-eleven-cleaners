@@ -237,7 +237,7 @@ export async function POST(request: Request) {
           await supabase.from('order_events').insert({
             order_id: order.id,
             status: 'payment_failed',
-            note: `Automatic payment of $${finalTotal.toFixed(2)} failed on card on file. Order marked payment_failed for customer outreach.`,
+            note: `Automatic payment of $${finalTotal.toFixed(2)} failed on card on file. Order placed on Payment Hold.`,
             triggered_by: 'Square Web Payments (Intake Auto-Charge)',
           });
         }
@@ -254,8 +254,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // 6. Update Order Record strictly to weighed_itemized (Admin advances to cleaning line)
+    const isPaymentFailed = paymentStatus === 'failed';
+
+    // 6. Update Order Record with weighed & itemized data + payment status
     const intakeAuthor = auth.customer?.full_name ? `Central Intake (${auth.customer.full_name})` : 'Central Intake Station';
+    const effectiveNotes = isPaymentFailed
+      ? `[PAYMENT HOLD: Card authorization declined for $${finalTotal.toFixed(2)}] ${intake_notes || order.notes || ''}`.trim()
+      : (intake_notes || order.notes);
+
     await supabase
       .from('orders')
       .update({
@@ -265,7 +271,7 @@ export async function POST(request: Request) {
         status: 'weighed_itemized',
         payment_status: paymentStatus,
         payment_id: paymentId,
-        notes: intake_notes || order.notes,
+        notes: effectiveNotes,
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id);
@@ -274,11 +280,13 @@ export async function POST(request: Request) {
     await supabase.from('order_events').insert({
       order_id: order.id,
       status: 'weighed_itemized',
-      note: `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
+      note: isPaymentFailed
+        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized ($${subtotal.toFixed(2)}). ORDER ON PAYMENT HOLD: Card declined.`
+        : `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
       triggered_by: intakeAuthor,
     });
 
-    // 7. Dispatch "Weighed & Itemized" Notification only if first time advancing
+    // 8. Dispatch Notification
     const wasAlreadyAdvanced = order.status === 'in_cleaning' || order.status === 'out_for_delivery' || order.status === 'delivered';
 
     if (!wasAlreadyAdvanced) {
@@ -287,6 +295,9 @@ export async function POST(request: Request) {
       const origin = getAppBaseUrl();
       const primaryPhotoUrl = photos?.[0]?.photo_url;
 
+      const customAlertText = isPaymentFailed
+        ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but card authorization failed. Please update your payment method here to start cleaning: ${origin}/dashboard/billing`
+        : undefined;
 
       const payload: MessagePayload = {
         orderId: order.id,
@@ -303,7 +314,8 @@ export async function POST(request: Request) {
         itemCount: orderItemsToInsert.reduce((acc, i) => acc + i.quantity, 0),
         total: finalTotal,
         photoUrl: primaryPhotoUrl,
-        trackingUrl: `${origin}/track/${order.id}`,
+        trackingUrl: isPaymentFailed ? `${origin}/dashboard/billing` : `${origin}/track/${order.id}`,
+        customMessage: customAlertText,
       };
 
       await messagingService.dispatchStageNotification(payload);
@@ -314,9 +326,13 @@ export async function POST(request: Request) {
       order_id: order.id,
       status: 'weighed_itemized',
       payment_status: paymentStatus,
+      payment_failed: isPaymentFailed,
       payment_id: paymentId,
       subtotal,
       total: finalTotal,
+      warning: isPaymentFailed
+        ? `Automatic card authorization failed ($${finalTotal.toFixed(2)}). Order is on Payment Hold.`
+        : undefined,
     });
   } catch (err: unknown) {
     console.error('Intake POST error:', err);

@@ -320,23 +320,68 @@ export default function BillingPage() {
                               </span>
                             </td>
                             <td>
-                              <Badge variant={inv.payment_status === 'charged' ? 'delivered' : 'warning'}>
-                                {inv.payment_status === 'charged' ? 'Paid / Settled' : 'Pre-Authorized'}
+                              <Badge
+                                variant={
+                                  inv.payment_status === 'charged'
+                                    ? 'delivered'
+                                    : inv.payment_status === 'failed'
+                                    ? 'error'
+                                    : inv.payment_status === 'authorized'
+                                    ? 'warning'
+                                    : 'booked'
+                                }
+                              >
+                                {inv.payment_status === 'charged'
+                                  ? 'Paid / Settled'
+                                  : inv.payment_status === 'failed'
+                                  ? 'Payment Failed'
+                                  : inv.payment_status === 'authorized'
+                                  ? 'Pre-Authorized'
+                                  : 'Pending Intake'}
                               </Badge>
                             </td>
                             <td>
-                              <strong style={{ color: inv.payment_status === 'charged' ? '#34d399' : '#ffffff' }}>
+                              <strong
+                                style={{
+                                  color:
+                                    inv.payment_status === 'charged'
+                                      ? '#34d399'
+                                      : inv.payment_status === 'failed'
+                                      ? '#f87171'
+                                      : '#ffffff',
+                                }}
+                              >
                                 ${inv.total.toFixed(2)}
                               </strong>
                             </td>
                             <td>
-                              <button
-                                type="button"
-                                className={styles.receiptBtn}
-                                onClick={() => setSelectedReceipt(inv)}
-                              >
-                                🧾 View Receipt
-                              </button>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  className={styles.receiptBtn}
+                                  onClick={() => setSelectedReceipt(inv)}
+                                >
+                                  🧾 View Receipt
+                                </button>
+                                {inv.payment_status === 'failed' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsAddModalOpen(true)}
+                                    style={{
+                                      background: 'rgba(239, 68, 68, 0.15)',
+                                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                                      color: '#f87171',
+                                      padding: '4px 8px',
+                                      borderRadius: 'var(--radius-sm)',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    Update Card
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -503,8 +548,19 @@ export default function BillingPage() {
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', borderTop: '2px solid #0f172a', paddingTop: '6px', marginTop: '4px' }}>
-                    <span className={styles.receiptGrandTotal}>Total Paid:</span>
-                    <span className={styles.receiptGrandTotal}>${selectedReceipt.total.toFixed(2)}</span>
+                    <span className={styles.receiptGrandTotal}>
+                      {selectedReceipt.payment_status === 'charged'
+                        ? 'Total Paid:'
+                        : selectedReceipt.payment_status === 'failed'
+                        ? 'Total Due (Payment Declined):'
+                        : 'Total:'}
+                    </span>
+                    <span
+                      className={styles.receiptGrandTotal}
+                      style={{ color: selectedReceipt.payment_status === 'failed' ? '#dc2626' : undefined }}
+                    >
+                      ${selectedReceipt.total.toFixed(2)}
+                    </span>
                   </div>
                 </div>
 
@@ -512,7 +568,14 @@ export default function BillingPage() {
                 <div className={styles.receiptMeta}>
                   <span><strong>Gateway:</strong> Square Payments (PCI-DSS Level 1)</span>
                   <span><strong>Transaction Ref:</strong> {selectedReceipt.payment_id}</span>
-                  <span><strong>Payment Status:</strong> {selectedReceipt.payment_status.toUpperCase()}</span>
+                  <span>
+                    <strong>Payment Status:</strong>{' '}
+                    <span style={{ color: selectedReceipt.payment_status === 'failed' ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                      {selectedReceipt.payment_status === 'failed'
+                        ? 'DECLINED / PAYMENT REQUIRED'
+                        : selectedReceipt.payment_status.toUpperCase()}
+                    </span>
+                  </span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>

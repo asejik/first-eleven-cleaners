@@ -200,10 +200,30 @@ export function KanbanBoard({
                           <span className={styles.orderDate} title={`${dateText} ${timeText || ''}`}>
                             📅 {dateText} {timeText ? `(${timeText})` : ''}
                           </span>
-                          <span style={{ fontWeight: 600, color: 'var(--color-gold)' }}>
+                          <span style={{ fontWeight: 600, color: o.payment_status === 'failed' ? '#f87171' : 'var(--color-gold)' }}>
                             {o.total ? `$${Number(o.total).toFixed(2)}` : 'Estimating'}
                           </span>
                         </div>
+
+                        {o.payment_status === 'failed' && (
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              color: '#f87171',
+                              border: '1px solid rgba(239, 68, 68, 0.35)',
+                              borderRadius: '4px',
+                              padding: '3px 7px',
+                              margin: '6px 0',
+                            }}
+                          >
+                            ⚠️ PAYMENT FAILED (HOLD)
+                          </div>
+                        )}
 
                         <button
                           type="button"

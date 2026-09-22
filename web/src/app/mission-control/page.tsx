@@ -62,6 +62,50 @@ export default function MissionControlPage() {
     const currentIndex = STAGES.indexOf(currentStage);
     if (currentIndex < STAGES.length - 1) {
       const nextStage = STAGES[currentIndex + 1];
+      const targetOrder = orders.find((o) => o.id === orderId);
+
+      // Payment Guard: Check if payment failed and advancing to cleaning/delivery
+      if (
+        targetOrder &&
+        targetOrder.payment_status === 'failed' &&
+        ['in_cleaning', 'out_for_delivery', 'delivered'].includes(nextStage)
+      ) {
+        const orderNum = targetOrder.order_number || targetOrder.id.slice(0, 8);
+        const confirmOverride = window.confirm(
+          `⚠️ PAYMENT ALERT: Order #${orderNum} has a FAILED payment status ($${Number(targetOrder.total || 0).toFixed(2)}).\n\nAdvancing to ${ORDER_STATUS_MAP[nextStage]?.label || nextStage} without customer payment requires Manager Override.\n\nDo you want to authorize Manager Override to advance this order anyway?`
+        );
+
+        if (!confirmOverride) {
+          addToast({
+            type: 'info',
+            title: 'Advancement Cancelled',
+            message: `Order #${orderNum} held in ${ORDER_STATUS_MAP[currentStage]?.label || currentStage} pending customer payment.`,
+          });
+          return;
+        }
+
+        try {
+          await advanceStage.mutateAsync({
+            order_id: orderId,
+            new_stage: nextStage,
+            manager_override: true,
+            override_reason: 'Manager override authorized on Ops Board',
+          });
+          addToast({
+            type: 'warning',
+            title: 'Manager Override Authorized',
+            message: `Order #${orderNum} advanced to ${ORDER_STATUS_MAP[nextStage]?.label || nextStage} with unpaid status override.`,
+          });
+        } catch (err: unknown) {
+          addToast({
+            type: 'error',
+            title: 'Advance Blocked',
+            message: (err as Error).message,
+          });
+        }
+        return;
+      }
+
       try {
         await advanceStage.mutateAsync({ order_id: orderId, new_stage: nextStage });
         addToast({

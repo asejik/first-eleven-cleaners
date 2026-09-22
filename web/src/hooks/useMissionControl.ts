@@ -64,7 +64,12 @@ export function useAdvanceOrderStage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: { order_id: string; new_stage: OrderStatusKey }) => {
+    mutationFn: async (payload: {
+      order_id: string;
+      new_stage: OrderStatusKey;
+      manager_override?: boolean;
+      override_reason?: string;
+    }) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       try {
         const supabase = createClient();

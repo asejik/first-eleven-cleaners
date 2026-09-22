@@ -150,7 +150,17 @@ export async function POST(request: Request) {
     if (auth.errorResponse) return auth.errorResponse;
 
     const body = await request.json();
-    const { action = 'advance_stage', order_id, new_stage, claim_id, resolution_notes, refund_amount, claim_status } = body;
+    const {
+      action = 'advance_stage',
+      order_id,
+      new_stage,
+      claim_id,
+      resolution_notes,
+      refund_amount,
+      claim_status,
+      manager_override = false,
+      override_reason = '',
+    } = body;
 
     const supabase = createAdminClient();
 
@@ -169,6 +179,29 @@ export async function POST(request: Request) {
 
       if (orderErr || !order) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+
+      // Enforce Payment Guard: Block advancing orders into cleaning or delivery if payment failed
+      const restrictedStages = ['in_cleaning', 'out_for_delivery', 'delivered'];
+      if (restrictedStages.includes(new_stage) && order.payment_status === 'failed') {
+        if (!manager_override) {
+          return NextResponse.json(
+            {
+              error: `Cannot advance Order #${order.order_number || order.id.slice(0, 8)} to ${new_stage.replace('_', ' ')}: Payment authorization failed ($${Number(order.total || 0).toFixed(2)}). Settle payment or authorize Manager Override to proceed.`,
+              payment_failed: true,
+              requires_override: true,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Log manager override event
+        await supabase.from('order_events').insert({
+          order_id: order.id,
+          status: new_stage,
+          note: `[MANAGER OVERRIDE] Operator authorized advancement of unpaid order to ${new_stage}. Reason: ${override_reason || 'Managerial discretion / corporate invoice'}.`,
+          triggered_by: auth.customer?.full_name ? `Admin (${auth.customer.full_name})` : 'Mission Control Admin',
+        });
       }
 
       // Update status

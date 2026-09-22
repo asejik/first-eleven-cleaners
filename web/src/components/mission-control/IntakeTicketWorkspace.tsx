@@ -166,11 +166,19 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
 
       onIntakeCompleted(res.status);
 
-      addToast({
-        type: 'success',
-        title: 'Intake & Payment Completed',
-        message: `Order #${order.order_number || order.id.slice(0, 8)} weighed & itemized ($${total.toFixed(2)}). Card on file successfully charged.`,
-      });
+      if (res.payment_status === 'failed' || res.payment_failed) {
+        addToast({
+          type: 'warning',
+          title: '⚠️ Payment Declined — On Hold',
+          message: `Order #${order.order_number || order.id.slice(0, 8)} weighed & itemized ($${total.toFixed(2)}), but card authorization failed. Order placed on Payment Hold.`,
+        });
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Intake & Payment Completed',
+          message: `Order #${order.order_number || order.id.slice(0, 8)} weighed & itemized ($${total.toFixed(2)}). Card on file successfully charged.`,
+        });
+      }
     } catch (err: unknown) {
       addToast({
         type: 'error',
@@ -182,6 +190,27 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
 
   return (
     <div className={styles.formCol}>
+      {/* Payment Hold Alert Banner */}
+      {order.payment_status === 'failed' && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px 16px',
+          color: '#fca5a5',
+          fontSize: 'var(--text-sm)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          marginBottom: '12px'
+        }}>
+          <span style={{ fontSize: '18px' }}>⚠️</span>
+          <div>
+            <strong>PAYMENT HOLD:</strong> Automatic card authorization failed for ${(order.total || total).toFixed(2)}. Garments cannot enter eco-cleaning until card is updated or Manager Override is authorized.
+          </div>
+        </div>
+      )}
+
       {/* Active Bag Summary */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '16px 20px', borderRadius: 'var(--radius-xl)', border: '1px solid #334155' }}>
         <div>
