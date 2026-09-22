@@ -61,6 +61,29 @@ export async function POST(request: Request) {
               })
               .eq('id', matchedOrder.id);
           }
+        } else if (paymentId && paymentStatus === 'FAILED') {
+          const { data: matchedOrder } = await supabase
+            .from('orders')
+            .select('id, payment_status, status')
+            .eq('payment_id', paymentId)
+            .maybeSingle();
+
+          if (matchedOrder && matchedOrder.payment_status !== 'failed') {
+            await supabase
+              .from('orders')
+              .update({
+                payment_status: 'failed',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', matchedOrder.id);
+
+            await supabase.from('order_events').insert({
+              order_id: matchedOrder.id,
+              status: matchedOrder.status,
+              note: `Square Payment authorization failed (${paymentId}).`,
+              triggered_by: 'Square Webhook Gateway',
+            });
+          }
         }
         break;
       }
@@ -70,6 +93,7 @@ export async function POST(request: Request) {
         const refundObj = payload.data?.object?.refund;
         const paymentId = refundObj?.payment_id;
         const refundStatus = refundObj?.status;
+        const refundId = refundObj?.id || '';
         const refundAmount = refundObj?.amount_money?.amount
           ? Number(refundObj.amount_money.amount) / 100
           : null;
@@ -93,13 +117,61 @@ export async function POST(request: Request) {
                 .eq('id', matchedOrder.id);
             }
 
-            // Insert audit record in order_events
-            await supabase.from('order_events').insert({
-              order_id: matchedOrder.id,
-              status: matchedOrder.status,
-              note: `Square Refund ${refundObj?.id || ''} (${refundStatus || 'COMPLETED'})${refundAmount ? `: $${refundAmount.toFixed(2)} refunded` : ''}.`,
-              triggered_by: 'Square Webhook Gateway',
-            });
+            // Deduplication: Check if this specific refund ID has already been logged (F007 Fix)
+            const { data: existingEvent } = await supabase
+              .from('order_events')
+              .select('id')
+              .eq('order_id', matchedOrder.id)
+              .ilike('note', `%Square Refund ${refundId}%`)
+              .maybeSingle();
+
+            if (!existingEvent) {
+              await supabase.from('order_events').insert({
+                order_id: matchedOrder.id,
+                status: matchedOrder.status,
+                note: `Square Refund ${refundId} (${refundStatus || 'COMPLETED'})${refundAmount ? `: $${refundAmount.toFixed(2)} refunded` : ''}.`,
+                triggered_by: 'Square Webhook Gateway',
+              });
+            }
+          }
+        }
+        break;
+      }
+
+      case 'dispute.created':
+      case 'dispute.updated':
+      case 'dispute.closed': {
+        const disputeObj = payload.data?.object?.dispute;
+        const paymentId = disputeObj?.payment_id;
+        const disputeState = disputeObj?.state || 'OPEN';
+        const disputeId = disputeObj?.id || '';
+        const disputeAmount = disputeObj?.amount_money?.amount
+          ? Number(disputeObj.amount_money.amount) / 100
+          : null;
+
+        if (paymentId) {
+          const { data: matchedOrder } = await supabase
+            .from('orders')
+            .select('id, order_number, status')
+            .eq('payment_id', paymentId)
+            .maybeSingle();
+
+          if (matchedOrder) {
+            const { data: existingDisputeEvent } = await supabase
+              .from('order_events')
+              .select('id')
+              .eq('order_id', matchedOrder.id)
+              .ilike('note', `%Square Dispute ${disputeId}%${disputeState}%`)
+              .maybeSingle();
+
+            if (!existingDisputeEvent) {
+              await supabase.from('order_events').insert({
+                order_id: matchedOrder.id,
+                status: matchedOrder.status,
+                note: `Square Dispute ${disputeId} (${disputeState})${disputeAmount ? `: $${disputeAmount.toFixed(2)} under review` : ''}.`,
+                triggered_by: 'Square Dispute Gateway',
+              });
+            }
           }
         }
         break;

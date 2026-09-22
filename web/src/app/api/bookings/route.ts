@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 
     if (isSquareConfigured && process.env.NODE_ENV === 'production') {
       const token = validated.payment_method?.payment_token;
-      if (!token || token.startsWith('sim_')) {
+      if (!token || token.startsWith('sim_') || token.startsWith('sq_sim_')) {
         return NextResponse.json(
           { error: 'A verified payment card token is required to schedule a pickup.' },
           { status: 400 }
@@ -187,8 +187,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Calculate Delivery Date (24 hours next-day for Express, 48 hours standard, skip Sunday)
+    // 5b. Server-Side Pickup Date Validation (F005 Fix)
+    const todayTexasStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+
+    if (validated.schedule.pickup_date < todayTexasStr) {
+      return NextResponse.json(
+        { error: 'Pickup date cannot be in the past. Please select an upcoming service date.' },
+        { status: 400 }
+      );
+    }
+
     const pickup = new Date(validated.schedule.pickup_date + 'T12:00:00');
+    const dayOfWeek = pickup.getDay();
+    if (dayOfWeek === 0) {
+      return NextResponse.json(
+        { error: 'Our processing hub is closed on Sundays for maintenance. Please choose Monday through Saturday.' },
+        { status: 400 }
+      );
+    }
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+    const selectedDayName = dayNames[dayOfWeek];
+    if (!(zone.routeDays as readonly string[]).includes(selectedDayName)) {
+      return NextResponse.json(
+        { error: `${zone.name} is serviced on ${zone.routeDays.join(', ')}. Please select an active route day.` },
+        { status: 400 }
+      );
+    }
+
+    // 6. Calculate Delivery Date (24 hours next-day for Express, 48 hours standard, skip Sunday)
     const delivery = new Date(pickup);
     if (isExpress) {
       delivery.setDate(delivery.getDate() + 1); // 24 hours: next morning
@@ -207,6 +239,40 @@ export async function POST(request: Request) {
 
     if (isSupabaseConfigured) {
       try {
+        const supabase = createAdminClient();
+
+        // 0. Enforce Route & Express Capacity (F005 Fix)
+        const [{ count: bookedInWindow }, { count: bookedInExpress }] = await Promise.all([
+          supabase
+            .from('orders')
+            .select('id', { count: 'exact', head: true })
+            .eq('pickup_date', validated.schedule.pickup_date)
+            .eq('pickup_window', validated.schedule.pickup_window)
+            .neq('status', 'cancelled'),
+          isExpress
+            ? supabase
+                .from('orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('pickup_date', validated.schedule.pickup_date)
+                .eq('express_tier', 'express_24hr')
+                .neq('status', 'cancelled')
+            : Promise.resolve({ count: 0 }),
+        ]);
+
+        if ((bookedInWindow ?? 0) >= 25) {
+          return NextResponse.json(
+            { error: `The ${validated.schedule.pickup_window} pickup window for ${validated.schedule.pickup_date} has reached full capacity. Please select another window or date.` },
+            { status: 400 }
+          );
+        }
+
+        if (isExpress && (bookedInExpress ?? 0) >= 8) {
+          return NextResponse.json(
+            { error: `24-Hour Express capacity for ${validated.schedule.pickup_date} has reached its daily limit of 8 orders. Please select 48-Hour Standard pickup.` },
+            { status: 400 }
+          );
+        }
+
         const authClient = await createClient();
         const {
           data: { user },
@@ -215,8 +281,6 @@ export async function POST(request: Request) {
         if (user) {
           isGuest = false;
         }
-
-        const supabase = createAdminClient();
 
         // 1. Resolve Customer ID
         let customerId: string | null = null;

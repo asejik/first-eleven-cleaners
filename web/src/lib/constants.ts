@@ -10,7 +10,7 @@ export const PROMO_CODE_LAUNCH = 'KICKOFF15';
 export const PROMO_DISCOUNT_PERCENT = 15;
 
 // --- Support Contacts ---
-export const SUPPORT_PHONE = '(214) 555-0111';
+export const SUPPORT_PHONE = '(682) 200-0039';
 export const SUPPORT_EMAIL = 'support@firstelevencleaners.com';
 
 // --- Pricing ---

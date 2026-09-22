@@ -131,6 +131,23 @@ export async function PATCH(
       created_at: updatedCust.created_at,
     };
 
+    // Record immutable admin audit log (F008 Fix)
+    try {
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: auth.customer?.id || null,
+        admin_email: auth.customer?.email || auth.user?.email || 'admin@firstelevencleaners.com',
+        action: 'staff_updated',
+        target_type: 'staff',
+        target_id: id,
+        details: {
+          updates,
+          target_email: customer.email,
+        },
+      });
+    } catch (auditErr) {
+      console.warn('Failed to record admin audit log:', auditErr);
+    }
+
     return NextResponse.json({
       success: true,
       staff: resultStaff,
@@ -194,6 +211,22 @@ export async function DELETE(
       .from('customers')
       .update({ role: 'customer' })
       .eq('id', id);
+
+    // Record immutable admin audit log (F008 Fix)
+    try {
+      await supabase.from('admin_audit_logs').insert({
+        admin_id: auth.customer?.id || null,
+        admin_email: auth.customer?.email || auth.user?.email || 'admin@firstelevencleaners.com',
+        action: 'staff_deleted',
+        target_type: 'staff',
+        target_id: id,
+        details: {
+          target_email: customer.email,
+        },
+      });
+    } catch (auditErr) {
+      console.warn('Failed to record admin audit log:', auditErr);
+    }
 
     return NextResponse.json({
       success: true,

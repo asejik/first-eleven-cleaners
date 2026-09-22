@@ -68,8 +68,20 @@ export async function GET(
 
         return NextResponse.json({ order: dbOrder });
       }
+
+      if (error) {
+        console.error('Supabase get order detail database error:', error);
+        return NextResponse.json({ error: 'Failed to retrieve order details.' }, { status: 500 });
+      }
+
+      // Order does not exist in database
+      return NextResponse.json(
+        { error: 'Order not found. Please verify the order number or tracking link.' },
+        { status: 404 }
+      );
     } catch (err) {
       console.error('Supabase get order detail error:', err);
+      return NextResponse.json({ error: 'Internal server error retrieving order.' }, { status: 500 });
     }
   }
 
