@@ -15,6 +15,14 @@ export const metadata: Metadata = {
     title: 'DFW Service Areas | Dry Cleaning & Laundry Pickup Dallas–Fort Worth',
     description:
       'Full-coverage dry cleaning and wash-and-fold laundry pickup & delivery across Dallas, Plano, Frisco, Fort Worth, Highland Park, Southlake, and the entire DFW Metroplex.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'First Eleven Cleaners - Dallas–Fort Worth Service Areas',
+      },
+    ],
   },
 };
 
