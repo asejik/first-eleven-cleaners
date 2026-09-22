@@ -24,7 +24,14 @@ export function Modal({
   size = 'md',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  // Always keep latest onClose callback in ref without re-triggering effects
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -36,24 +43,58 @@ export function Modal({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    // Auto-focus first focusable element inside modal
+    // Auto-focus appropriate element inside modal ONCE upon opening
     const focusTimer = setTimeout(() => {
-      if (modalRef.current) {
-        const focusables = Array.from(
-          modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      if (!modalRef.current) return;
+
+      // If user or browser already focused inside modal, do not steal focus
+      if (modalRef.current.contains(document.activeElement)) {
+        return;
+      }
+
+      // 1. Explicit autofocus element inside modal
+      const autoFocusEl = modalRef.current.querySelector<HTMLElement>('[autofocus]');
+      if (autoFocusEl && typeof autoFocusEl.focus === 'function') {
+        autoFocusEl.focus();
+        return;
+      }
+
+      // 2. First form input or interactive field in content
+      if (contentRef.current) {
+        const firstInput = contentRef.current.querySelector<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+        );
+        if (firstInput && typeof firstInput.focus === 'function') {
+          firstInput.focus();
+          return;
+        }
+
+        // 3. First focusable element in content
+        const contentFocusables = Array.from(
+          contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
         ).filter((el) => el.getClientRects().length > 0);
 
-        if (focusables.length > 0) {
-          focusables[0].focus();
-        } else {
-          modalRef.current.focus();
+        if (contentFocusables.length > 0) {
+          contentFocusables[0].focus();
+          return;
         }
+      }
+
+      // 4. Fallback to any focusable in modal (e.g. close button) or modal container
+      const focusables = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((el) => el.getClientRects().length > 0);
+
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        modalRef.current.focus();
       }
     }, 50);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -104,7 +145,7 @@ export function Modal({
         previousActiveElement.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -136,7 +177,7 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div className={styles.content}>{children}</div>
+        <div ref={contentRef} className={styles.content}>{children}</div>
 
         {/* Footer */}
         {footer && <div className={styles.footer}>{footer}</div>}
