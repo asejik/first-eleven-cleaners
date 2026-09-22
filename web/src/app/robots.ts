@@ -17,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
         '/claim/',
         '/portal/',
         '/driver/',
+        '/track/',
         '/api/',
       ],
     },
