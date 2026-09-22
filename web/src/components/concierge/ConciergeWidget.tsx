@@ -125,7 +125,22 @@ export function ConciergeWidget() {
                     <div className={styles.msgText}>{msg.content}</div>
                   ) : (
                     <div className={styles.markdownBody}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          table: ({ className, children, ...props }) => {
+                            const tableProps = { ...props };
+                            delete (tableProps as { node?: unknown }).node;
+                            return (
+                              <div className={styles.tableWrapper}>
+                                <table className={`${styles.markdownTable} ${className || ''}`.trim()} {...tableProps}>
+                                  {children}
+                                </table>
+                              </div>
+                            );
+                          },
+                        }}
+                      >
                         {msg.content}
                       </ReactMarkdown>
                     </div>
