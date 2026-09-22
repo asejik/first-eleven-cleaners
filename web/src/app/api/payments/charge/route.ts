@@ -69,8 +69,18 @@ export async function POST(request: Request) {
         });
       } catch (squareErr) {
         console.error('Square API charge call failed:', squareErr);
-        // Fall through to simulation if network error occurs in dev
+        return NextResponse.json(
+          { error: 'Payment gateway communication failed while charging card on file.' },
+          { status: 502 }
+        );
       }
+    }
+
+    if (process.env.NODE_ENV === 'production' || isLiveSquare) {
+      return NextResponse.json(
+        { error: 'Live payment capture failed. Simulated charges are forbidden in production.' },
+        { status: 400 }
+      );
     }
 
     // Default simulation fallback for testing / development
@@ -81,7 +91,7 @@ export async function POST(request: Request) {
       transaction_id: txnId,
       amount_charged: amount,
       payment_status: 'charged',
-      message: `Card on file charged $${Number(amount).toFixed(2)} after photo intake verification.`,
+      message: `[DEV SIMULATION] Card charged $${Number(amount).toFixed(2)} in local environment.`,
     });
   } catch (err: unknown) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

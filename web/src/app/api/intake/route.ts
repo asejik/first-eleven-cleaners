@@ -211,25 +211,47 @@ export async function POST(request: Request) {
           if (squareRes.ok && squareData.payment) {
             paymentStatus = 'charged';
             paymentId = squareData.payment.id;
+          } else {
+            const errorDetail = squareData.errors?.[0]?.detail || 'Square payment charge authorization failed.';
+            console.error('Square live capture declined in intake:', errorDetail);
+            paymentStatus = 'failed';
           }
         } catch (sqErr) {
           console.error('Square live capture error in intake:', sqErr);
+          paymentStatus = 'failed';
         }
       }
 
-      // Default fallback for test / development environments
-      if (paymentStatus !== 'charged') {
+      // In live production or when Square is configured, never simulate a charge
+      if (isLiveSquare) {
+        if (paymentStatus === 'charged') {
+          // Log payment charge audit event
+          await supabase.from('order_events').insert({
+            order_id: order.id,
+            status: 'charged',
+            note: `Payment of $${finalTotal.toFixed(2)} captured on card on file via Square. (Transaction ID: ${paymentId})`,
+            triggered_by: 'Square Web Payments (Intake Auto-Charge)',
+          });
+        } else {
+          paymentStatus = 'failed';
+          await supabase.from('order_events').insert({
+            order_id: order.id,
+            status: 'payment_failed',
+            note: `Automatic payment of $${finalTotal.toFixed(2)} failed on card on file. Order marked payment_failed for customer outreach.`,
+            triggered_by: 'Square Web Payments (Intake Auto-Charge)',
+          });
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        // Fallback for local development environments only
         paymentStatus = 'charged';
         paymentId = paymentId && paymentId.startsWith('sq_txn_') ? paymentId : `sq_txn_${crypto.randomUUID().slice(0, 10)}`;
+        await supabase.from('order_events').insert({
+          order_id: order.id,
+          status: 'charged',
+          note: `[DEV SIMULATION] Payment of $${finalTotal.toFixed(2)} simulated. (Transaction ID: ${paymentId})`,
+          triggered_by: 'Square Web Payments (Intake Dev Simulator)',
+        });
       }
-
-      // Log payment charge audit event
-      await supabase.from('order_events').insert({
-        order_id: order.id,
-        status: 'charged',
-        note: `Payment of $${finalTotal.toFixed(2)} captured on card on file via Square. (Transaction ID: ${paymentId})`,
-        triggered_by: 'Square Web Payments (Intake Auto-Charge)',
-      });
     }
 
     // 6. Update Order Record strictly to weighed_itemized (Admin advances to cleaning line)
