@@ -10,7 +10,7 @@ import { useCustomerPreferences } from '@/hooks/usePreferences';
 import { useCustomerClaims } from '@/hooks/useClaims';
 import { useCustomerProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Card, Badge, Input } from '@/components/ui';
+import { Button, Card, Badge, Input, Modal } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -216,6 +216,239 @@ function ProfilePersonalDetailsEditor({
   );
 }
 
+function SecurityAndPrivacySection() {
+  const { updatePassword, logout } = useAuth();
+  const addToast = useUIStore((s) => s.addToast);
+  const router = useRouter();
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingData, setIsDeletingData] = useState(false);
+  const [isExportingData, setIsExportingData] = useState(false);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      addToast({
+        type: 'warning',
+        title: 'Password Too Short',
+        message: 'Password must be at least 8 characters long.',
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      addToast({
+        type: 'error',
+        title: 'Passwords Do Not Match',
+        message: 'Please ensure both password fields match.',
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const res = await updatePassword(newPassword);
+      if (res.error) {
+        addToast({ type: 'error', title: 'Update Failed', message: res.error });
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Password Updated',
+          message: 'Your account password has been updated securely.',
+        });
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: (err as Error).message || 'Could not update password.',
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExportingData(true);
+    try {
+      const res = await fetch('/api/customer/data-deletion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_type: 'export',
+          notes: 'Customer self-service export request from profile settings',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit export request');
+      addToast({
+        type: 'success',
+        title: 'Data Export Initiated',
+        message: 'Your TDPSA data report request has been logged. An archive will be delivered to your registered email.',
+      });
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Export Request Failed',
+        message: (err as Error).message,
+      });
+    } finally {
+      setIsExportingData(false);
+    }
+  };
+
+  const handleConfirmDeletion = async () => {
+    setIsDeletingData(true);
+    try {
+      const res = await fetch('/api/customer/data-deletion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_type: 'deletion',
+          notes: 'Customer self-service permanent account & data erasure request',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit deletion request');
+
+      addToast({
+        type: 'success',
+        title: 'Deletion Request Submitted',
+        message: 'Your request under TDPSA has been received and logged for processing. Logging you out.',
+      });
+      setIsDeleteModalOpen(false);
+      setTimeout(() => {
+        logout();
+        router.push('/');
+      }, 1500);
+    } catch (err: unknown) {
+      addToast({
+        type: 'error',
+        title: 'Deletion Request Failed',
+        message: (err as Error).message,
+      });
+    } finally {
+      setIsDeletingData(false);
+    }
+  };
+
+  return (
+    <>
+      <Card variant="bordered" padding="lg" className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>🔒 Security &amp; Data Privacy</h2>
+          <Badge variant="info">TDPSA Protected</Badge>
+        </div>
+        <div className={styles.cardBody}>
+          <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', color: 'var(--color-navy)' }}>
+              Update Password
+            </span>
+            <Input
+              id="profile-new-password"
+              label="New Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
+            />
+            <Input
+              id="profile-confirm-password"
+              label="Confirm New Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              autoComplete="new-password"
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              isLoading={isUpdatingPassword}
+              disabled={!newPassword || !confirmPassword}
+            >
+              Update Password
+            </Button>
+          </form>
+
+          <hr style={{ borderColor: 'var(--color-gray-200)', margin: 'var(--space-4) 0' }} />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', color: 'var(--color-navy)' }}>
+              TDPSA Privacy Rights
+            </span>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)', lineHeight: '1.4' }}>
+              Under the Texas Data Privacy and Security Act, you can request an export of your personal data or request permanent deletion of your profile.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleExportData}
+                isLoading={isExportingData}
+              >
+                📥 Export My Data
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                style={{ color: '#dc2626' }}
+                onClick={() => setIsDeleteModalOpen(true)}
+              >
+                🗑️ Request Data Deletion
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* TDPSA Deletion Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Request Personal Data Deletion (TDPSA)"
+        size="md"
+        footer={
+          <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end', width: '100%' }}>
+            <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)} disabled={isDeletingData}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+              onClick={handleConfirmDeletion}
+              isLoading={isDeletingData}
+            >
+              Confirm Deletion Request
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ color: 'var(--color-gray-700)', fontSize: 'var(--text-sm)', margin: 0 }}>
+            You are exercising your right to deletion under the <strong>Texas Data Privacy and Security Act (TDPSA)</strong>.
+          </p>
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: '#991b1b' }}>
+            ⚠️ Submitting this request will initiate the permanent anonymization of your profile, addresses, garment passports, and communication records once pending orders are completed.
+          </div>
+          <p style={{ color: 'var(--color-gray-500)', fontSize: 'var(--text-xs)', margin: 0 }}>
+            Our compliance officer logs all requests to an immutable audit trail.
+          </p>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout } = useAuth();
@@ -386,6 +619,9 @@ export default function ProfilePage() {
                 </Link>
               </div>
             </Card>
+
+            {/* Security, Password Update, & TDPSA Data Rights */}
+            <SecurityAndPrivacySection />
           </div>
         </div>
       </div>

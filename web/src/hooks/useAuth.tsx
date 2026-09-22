@@ -28,6 +28,7 @@ interface AuthState {
   }) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (password: string) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -363,6 +364,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [isSupabaseConfigured]
   );
 
+  const updatePassword = useCallback(
+    async (password: string): Promise<{ error?: string }> => {
+      if (isSupabaseConfigured) {
+        try {
+          const supabase = createClient();
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) return { error: error.message };
+          return {};
+        } catch (e: unknown) {
+          return { error: (e as Error).message };
+        }
+      }
+      return {};
+    },
+    [isSupabaseConfigured]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -373,6 +391,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         resetPassword,
+        updatePassword,
       }}
     >
       {children}
