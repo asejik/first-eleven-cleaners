@@ -96,6 +96,7 @@ export function ConciergeWidget() {
                 className={styles.iconBtn}
                 onClick={resetChat}
                 title="Reset conversation"
+                aria-label="Reset conversation"
               >
                 🔄
               </button>
@@ -104,6 +105,7 @@ export function ConciergeWidget() {
                 className={styles.iconBtn}
                 onClick={() => setIsOpen(false)}
                 title="Close drawer"
+                aria-label="Close concierge drawer"
               >
                 ✕
               </button>
@@ -184,6 +186,7 @@ export function ConciergeWidget() {
               className={styles.sendBtn}
               disabled={!inputText.trim() || isLoading}
               title="Send message"
+              aria-label="Send message"
             >
               ➤
             </button>
