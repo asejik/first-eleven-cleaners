@@ -352,6 +352,15 @@ export async function POST(request: Request) {
           if (existingAddress) {
             addressId = existingAddress.id;
           } else {
+            // Only set as default if customer has no default address yet
+            const { count: defaultCount } = await supabase
+              .from('addresses')
+              .select('*', { count: 'exact', head: true })
+              .eq('customer_id', customerId)
+              .eq('is_default', true);
+
+            const isFirstOrNoDefault = (defaultCount ?? 0) === 0;
+
             const { data: addressRow } = await supabase
               .from('addresses')
               .insert({
@@ -362,7 +371,7 @@ export async function POST(request: Request) {
                 state: validated.address.state,
                 zip: validated.address.zip.trim(),
                 delivery_notes: validated.address.delivery_notes || null,
-                is_default: true,
+                is_default: isFirstOrNoDefault,
               })
               .select('id')
               .single();

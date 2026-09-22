@@ -33,7 +33,38 @@ export async function GET(request: Request) {
       return NextResponse.json({ addresses: [] });
     }
 
-    return NextResponse.json({ addresses: addresses || [] });
+    const addressList = addresses || [];
+
+    // Self-healing: Ensure at most one default address exists per customer
+    const defaultAddresses = addressList.filter((a) => a.is_default);
+    if (defaultAddresses.length > 1) {
+      // Keep the most recent default, demote older duplicate defaults
+      const duplicateDefaults = defaultAddresses.slice(1);
+      const duplicateIds = duplicateDefaults.map((d) => d.id);
+
+      await supabase
+        .from('addresses')
+        .update({ is_default: false })
+        .in('id', duplicateIds)
+        .eq('customer_id', customer.id);
+
+      for (const addr of addressList) {
+        if (duplicateIds.includes(addr.id)) {
+          addr.is_default = false;
+        }
+      }
+    } else if (defaultAddresses.length === 0 && addressList.length > 0) {
+      // If customer has addresses but none marked default, promote the first one
+      const newestAddr = addressList[0];
+      await supabase
+        .from('addresses')
+        .update({ is_default: true })
+        .eq('id', newestAddr.id)
+        .eq('customer_id', customer.id);
+      newestAddr.is_default = true;
+    }
+
+    return NextResponse.json({ addresses: addressList });
   } catch (err) {
     console.error('Addresses GET error:', err);
     return NextResponse.json({ addresses: [] }, { status: 500 });
