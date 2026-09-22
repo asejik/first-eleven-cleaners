@@ -159,20 +159,15 @@ export async function POST(req: Request) {
           });
         }
 
-        // Calculate exact items subtotal
+        // Calculate exact items subtotal strictly from catalog prices (SEC-006)
         const computedSubtotal = parseFloat(
           itemsToInsert.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)
         );
 
-        // Find the final "Total: $XXX" pattern in AI message
-        const totalMatches = [...response.content.matchAll(/(?:Total|Estimate|Order Total)[^$\d]*\$([0-9]+(?:\.[0-9]{2})?)/gi)];
-        const lastTotalMatch =
-          totalMatches.length > 0 ? parseFloat(totalMatches[totalMatches.length - 1][1]) : null;
+        // Enforce minimum price, never parse price from unverified AI text (SEC-006)
+        const totalAmount = computedSubtotal >= 45.00 ? computedSubtotal : 45.00;
 
-        const totalAmount =
-          lastTotalMatch && lastTotalMatch > 0 ? lastTotalMatch : computedSubtotal > 0 ? computedSubtotal : 113.90;
-
-        // Ensure we have an address ID
+        // Ensure customer has a legitimate verified address on file
         let addressId = context.defaultAddress?.id;
         if (!addressId) {
           const { data: firstAddr } = await adminSupabase
@@ -184,22 +179,21 @@ export async function POST(req: Request) {
 
           if (firstAddr) {
             addressId = firstAddr.id;
-          } else {
-            const { data: createdAddr } = await adminSupabase
-              .from('addresses')
-              .insert({
-                customer_id: targetCustomerId,
-                street: 'No. 24 Basin Road',
-                unit: 'Apt 304',
-                city: 'Dallas',
-                state: 'TX',
-                zip: '75205',
-                is_default: true,
-              })
-              .select('id')
-              .single();
-            if (createdAddr) addressId = createdAddr.id;
           }
+        }
+
+        if (!addressId) {
+          response.action = {
+            type: 'navigate',
+            label: '🧺 Complete Booking & Set Address',
+            url: '/book',
+          };
+          return NextResponse.json({
+            success: true,
+            response,
+            createdOrder: null,
+            engine: aiEngine.name,
+          });
         }
 
         // Insert new confirmed order into database
@@ -218,7 +212,7 @@ export async function POST(req: Request) {
             weight_lbs: wfWeight > 0 ? wfWeight : null,
             subtotal: totalAmount,
             total: totalAmount,
-            payment_status: 'authorized',
+            payment_status: 'pending',
             notes: `Booked via Eleven AI Concierge. Customer note: "${message}"`,
           })
           .select('id, order_number, status, pickup_date, total')
