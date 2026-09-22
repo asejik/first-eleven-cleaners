@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { Button, Input, Card, Badge, Loader } from '@/components/ui';
+import { Button, Input, Card, Badge, Loader, Modal } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import { useCustomerAddresses, useAddAddress, useSetDefaultAddress, useDeleteAddress } from '@/hooks/useAddresses';
@@ -24,6 +24,7 @@ export default function AddressesPage() {
   const [newZip, setNewZip] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [makeDefault, setMakeDefault] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
 
   const addToast = useUIStore((s) => s.addToast);
 
@@ -38,7 +39,7 @@ export default function AddressesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteClick = (id: string) => {
     if (addresses.length <= 1) {
       addToast({
         type: 'warning',
@@ -47,13 +48,17 @@ export default function AddressesPage() {
       });
       return;
     }
-    if (confirm('Are you sure you want to delete this address?')) {
-      try {
-        await deleteAddressMutation.mutateAsync(id);
-        addToast({ type: 'success', title: 'Address Removed' });
-      } catch (err: unknown) {
-        addToast({ type: 'error', title: 'Delete Failed', message: (err as Error).message });
-      }
+    setAddressToDelete(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!addressToDelete) return;
+    try {
+      await deleteAddressMutation.mutateAsync(addressToDelete);
+      addToast({ type: 'success', title: 'Address Removed' });
+      setAddressToDelete(null);
+    } catch (err: unknown) {
+      addToast({ type: 'error', title: 'Delete Failed', message: (err as Error).message });
     }
   };
 
@@ -273,8 +278,9 @@ export default function AddressesPage() {
                     <button
                       type="button"
                       className={styles.deleteBtn}
-                      onClick={() => handleDelete(addr.id)}
+                      onClick={() => handleDeleteClick(addr.id)}
                       title="Delete this address"
+                      aria-label="Delete this address"
                       disabled={deleteAddressMutation.isPending}
                     >
                       🗑️
@@ -284,6 +290,39 @@ export default function AddressesPage() {
               ))}
             </div>
           )}
+
+          {/* Accessible Confirmation Modal */}
+          <Modal
+            isOpen={!!addressToDelete}
+            onClose={() => setAddressToDelete(null)}
+            title="Confirm Address Removal"
+            size="sm"
+            footer={
+              <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end', width: '100%' }}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setAddressToDelete(null)}
+                  disabled={deleteAddressMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  type="button"
+                  style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+                  onClick={handleConfirmDelete}
+                  isLoading={deleteAddressMutation.isPending}
+                >
+                  Remove Address
+                </Button>
+              </div>
+            }
+          >
+            <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--text-sm)', margin: 0 }}>
+              Are you sure you want to remove this address from your profile? This action cannot be undone.
+            </p>
+          </Modal>
         </div>
       </div>
     </AuthGuard>
