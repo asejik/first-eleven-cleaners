@@ -10,7 +10,7 @@ import { useCustomerAddresses, useAddAddress, useSetDefaultAddress, useDeleteAdd
 import styles from './page.module.css';
 
 export default function AddressesPage() {
-  const { data, isLoading } = useCustomerAddresses();
+  const { data, isLoading, isError, refetch } = useCustomerAddresses();
   const addAddressMutation = useAddAddress();
   const setDefaultMutation = useSetDefaultAddress();
   const deleteAddressMutation = useDeleteAddress();
@@ -218,6 +218,17 @@ export default function AddressesPage() {
           {/* Address List */}
           {isLoading ? (
             <Loader text="Loading your saved addresses..." />
+          ) : isError ? (
+            <Card variant="surface" padding="lg" className={styles.emptyCard}>
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>⚠️</span>
+              <h3>Unable to Load Addresses</h3>
+              <p style={{ color: 'var(--color-gray-500)', marginTop: '4px', marginBottom: '16px' }}>
+                We could not retrieve your address book. Please check your connection and try again.
+              </p>
+              <Button variant="outline" onClick={() => refetch()}>
+                🔄 Retry Loading Addresses
+              </Button>
+            </Card>
           ) : addresses.length === 0 ? (
             <Card variant="surface" padding="lg" className={styles.emptyCard}>
               <h3>No Saved Addresses Yet</h3>

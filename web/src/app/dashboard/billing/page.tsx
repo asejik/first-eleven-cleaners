@@ -61,7 +61,7 @@ export default function BillingPage() {
   const [setAsDefault, setSetAsDefault] = useState(true);
 
   // Fetch billing data
-  const { data, isLoading, error } = useQuery<BillingResponse>({
+  const { data, isLoading, error, refetch } = useQuery<BillingResponse>({
     queryKey: ['customer_billing_data'],
     queryFn: async () => {
       const res = await fetch('/api/customer/payment-methods');
@@ -197,8 +197,13 @@ export default function BillingPage() {
           {isLoading ? (
             <Loader text="Loading your billing profile..." />
           ) : error ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#f87171' }}>
-              {(error as Error).message}
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+              <p style={{ color: '#f87171', marginBottom: '16px', fontWeight: '500' }}>
+                ⚠️ {(error as Error).message}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                🔄 Retry Loading Billing Info
+              </Button>
             </div>
           ) : (
             <>
