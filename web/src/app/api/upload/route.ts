@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
-import { uploadToStorage } from '@/lib/storage';
+import { uploadToStorage, ALLOWED_STORAGE_BUCKETS, validateImageMagicBytes } from '@/lib/storage';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -31,7 +31,18 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File | null;
     const orderId = (formData.get('order_id') as string | null) || 'general';
     const photoType = (formData.get('photo_type') as string | null) || 'proof';
-    const bucket = (formData.get('bucket') as string | null) || 'garment-photos';
+    const requestedBucket = (formData.get('bucket') as string | null) || 'garment-photos';
+
+    // 1. Bucket allowlist enforcement (SEC-010)
+    if (!ALLOWED_STORAGE_BUCKETS.has(requestedBucket)) {
+      return NextResponse.json(
+        {
+          error: `Unauthorized storage bucket target. Allowed: ${Array.from(ALLOWED_STORAGE_BUCKETS).join(', ')}`,
+        },
+        { status: 400 }
+      );
+    }
+    const bucket = requestedBucket;
 
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json(
@@ -55,6 +66,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 2. Magic-byte verification against file signature spoofing (SEC-010)
+    if (!validateImageMagicBytes(buffer)) {
+      return NextResponse.json(
+        {
+          error:
+            'Invalid file contents. The uploaded file does not match a valid image signature (JPEG, PNG, WEBP, HEIC).',
+        },
+        { status: 400 }
+      );
+    }
+
     const ext = mimeType.includes('png')
       ? 'png'
       : mimeType.includes('webp')
@@ -64,9 +89,6 @@ export async function POST(request: Request) {
     const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, '_');
     const safeType = photoType.replace(/[^a-zA-Z0-9_-]/g, '_');
     const filename = `${safeOrderId}/${Date.now()}_${safeType}_${crypto.randomUUID().slice(0, 6)}.${ext}`;
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     const publicUrl = await uploadToStorage(buffer, filename, mimeType, bucket);
 
