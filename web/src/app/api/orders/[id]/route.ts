@@ -28,8 +28,17 @@ export async function GET(
       const supabase = createAdminClient();
       const { customer } = await getAuthenticatedCustomer(request);
 
+      // Validate and sanitize identifier format (SEC-011)
+      const cleanId = id.trim();
+      if (!/^[a-zA-Z0-9_-]+$/.test(cleanId)) {
+        return NextResponse.json(
+          { error: 'Invalid order identifier format.' },
+          { status: 400 }
+        );
+      }
+
       // Check if query is UUID or order_number format (e.g. F11-2026-XXXX)
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
 
       const query = supabase
         .from('orders')
@@ -42,13 +51,13 @@ export async function GET(
         `);
 
       const { data: dbOrder, error } = isUUID
-        ? await query.eq('id', id).maybeSingle()
-        : await query.or(`order_number.eq.${id},id.eq.${id}`).maybeSingle();
+        ? await query.eq('id', cleanId).maybeSingle()
+        : await query.or(`order_number.eq.${cleanId},id.eq.${cleanId}`).maybeSingle();
 
       if (!error && dbOrder) {
-        // F003 IDOR Enforcement:
+        // IDOR Enforcement:
         // If an authenticated customer accesses an order, ensure it belongs to them (unless staff or admin)
-        if (customer && customer.role !== 'admin' && customer.role !== 'staff') {
+        if (customer && customer.role !== 'admin' && customer.role !== 'staff' && customer.role !== 'driver' && customer.role !== 'intake_staff') {
           if (dbOrder.customer_id && dbOrder.customer_id !== customer.id) {
             return NextResponse.json(
               { error: 'Forbidden. You do not have permission to view this order.' },
@@ -57,11 +66,20 @@ export async function GET(
           }
         }
 
-        // For public order tracking (unauthenticated SMS links), redact internal payment IDs
+        // For public unauthenticated order tracking (SMS links), redact physical address & gate codes (SEC-003)
         if (!customer) {
           const sanitizedOrder = {
             ...dbOrder,
             payment_id: undefined,
+            notes: undefined,
+            customer_id: undefined,
+            address: dbOrder.address
+              ? {
+                  city: dbOrder.address.city,
+                  state: dbOrder.address.state,
+                  zip: dbOrder.address.zip,
+                }
+              : undefined,
           };
           return NextResponse.json({ order: sanitizedOrder });
         }
