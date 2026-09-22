@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:file(og-image\\.(?:png|jpg|jpeg|webp)|icon\\.(?:png|webp)|logo\\.(?:png|webp))',
+        source: '/:file*(og-image.jpg|og-image.png|icon.png|logo.png|favicon.ico)',
         headers: [
           {
             key: 'Cache-Control',
