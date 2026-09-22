@@ -61,6 +61,10 @@ CREATE TABLE IF NOT EXISTS addresses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_addresses_single_default
+  ON addresses (customer_id)
+  WHERE is_default = true;
+
 -- 5. ORDERS
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
