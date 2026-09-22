@@ -111,11 +111,12 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Fetch order with customer
+    // Fetch order with customer (explicit columns only)
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id);
+    const orderCols = 'id, order_number, pickup_date, pickup_window, delivery_date, delivery_window, weight_lbs, total, customer:customers(id, full_name, phone)';
     const { data: order, error: orderErr } = isUUID
-      ? await supabase.from('orders').select('*, customer:customers(*)').eq('id', order_id).maybeSingle()
-      : await supabase.from('orders').select('*, customer:customers(*)').eq('order_number', order_id).maybeSingle();
+      ? await supabase.from('orders').select(orderCols).eq('id', order_id).maybeSingle()
+      : await supabase.from('orders').select(orderCols).eq('order_number', order_id).maybeSingle();
 
     if (orderErr || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });

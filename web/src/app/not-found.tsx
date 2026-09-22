@@ -9,7 +9,7 @@ export default function NotFound() {
     <div className={styles.container}>
       <div className={styles.content}>
         <Image
-          src="/icon.png"
+          src="/icon.webp"
           alt="First Eleven Cleaners"
           width={64}
           height={64}

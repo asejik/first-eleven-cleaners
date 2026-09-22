@@ -13,7 +13,7 @@ export function OpsHeader({ onRefresh }: OpsHeaderProps) {
     <div className={styles.topBar}>
       <div className={styles.brandCol}>
         <Image
-          src="/icon.png"
+          src="/icon.webp"
           alt="First Eleven"
           width={44}
           height={44}

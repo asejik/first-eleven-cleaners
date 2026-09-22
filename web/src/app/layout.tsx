@@ -50,7 +50,7 @@ export const metadata: Metadata = {
       'Every Garment Makes the Lineup. Premium pickup & delivery dry cleaning and wash-and-fold across DFW.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'First Eleven Cleaners - Every Garment Makes the Lineup',
@@ -62,15 +62,16 @@ export const metadata: Metadata = {
     title: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
     description:
       'Every Garment Makes the Lineup. Premium dry cleaning and laundry pickup & delivery across DFW.',
-    images: ['/og-image.png'],
+    images: ['/og-image.jpg'],
   },
   icons: {
     icon: [
+      { url: '/icon.webp', type: 'image/webp' },
       { url: '/icon.png', sizes: '32x32', type: 'image/png' },
       { url: '/icon.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon.png', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/icon.png',
+    shortcut: '/icon.webp',
     apple: [
       { url: '/icon.png', sizes: '180x180', type: 'image/png' },
     ],

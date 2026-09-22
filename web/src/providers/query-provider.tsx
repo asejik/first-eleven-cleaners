@@ -17,8 +17,8 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             // Retry failed queries once with exponential backoff (prevent retry storms)
             retry: 1,
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-            // Instantly refetch when user returns to the window/tab
-            refetchOnWindowFocus: true,
+            // Pause window focus refetches to prevent request bursts across background tabs (C-01)
+            refetchOnWindowFocus: false,
 
           },
           mutations: {

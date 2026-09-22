@@ -54,7 +54,8 @@ export function useMissionControl(options?: { page?: number; limit?: number; sta
     },
     staleTime: 10 * 1000,
     refetchInterval: 25 * 1000, // 25s quiet live dashboard poll (egress-protected)
-    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
 }
