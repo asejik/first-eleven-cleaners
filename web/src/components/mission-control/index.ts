@@ -12,3 +12,4 @@ export { FinancialsLedger } from './FinancialsLedger';
 export { DeliveredArchive } from './DeliveredArchive';
 export { ExpressGovernance } from './ExpressGovernance';
 export { ZoneGovernance } from './ZoneGovernance';
+export { IntakeTicketWorkspace } from './IntakeTicketWorkspace';
