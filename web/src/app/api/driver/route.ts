@@ -308,8 +308,10 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
     const { isDriverRole, isAdminRole, driverLabel, matchesDriver } = getDriverContext(auth);
 
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id.trim());
+
     // Fetch order with customer, photos, and events (explicit columns)
-    const { data: order, error: orderErr } = await supabase
+    const orderQuery = supabase
       .from('orders')
       .select(`
         id,
@@ -317,7 +319,6 @@ export async function POST(request: Request) {
         status,
         express_tier,
         subtotal,
-        express_auto_refunded,
         pickup_date,
         pickup_window,
         delivery_date,
@@ -327,11 +328,18 @@ export async function POST(request: Request) {
         customer:customers(id, full_name, phone, email),
         photos:garment_photos(id, photo_type, captured_by),
         events:order_events(id, status, triggered_by)
-      `)
-      .eq('id', order_id)
-      .maybeSingle();
+      `);
 
-    if (orderErr || !order) {
+    const { data: order, error: orderErr } = isUUID
+      ? await orderQuery.eq('id', order_id.trim()).maybeSingle()
+      : await orderQuery.or(`order_number.eq.${order_id.trim()},id.eq.${order_id.trim()}`).maybeSingle();
+
+    if (orderErr) {
+      console.error('Driver POST order fetch DB error:', orderErr);
+      return NextResponse.json({ error: `Database error: ${orderErr.message}` }, { status: 500 });
+    }
+
+    if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
