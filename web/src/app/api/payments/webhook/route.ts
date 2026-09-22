@@ -2,6 +2,30 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAppBaseUrl } from '@/lib/constants';
+
+/**
+ * Validates the cryptographic Square HMAC-SHA256 signature using timing-safe comparison (SEC-007).
+ */
+function verifySquareSignature(
+  url: string,
+  rawBody: string,
+  signature: string,
+  signatureKey: string
+): boolean {
+  try {
+    const hmac = crypto.createHmac('sha256', signatureKey);
+    hmac.update(Buffer.from(url + rawBody, 'utf-8'));
+    const computedSignature = hmac.digest('base64');
+
+    const sigBuf = Buffer.from(signature, 'utf8');
+    const compBuf = Buffer.from(computedSignature, 'utf8');
+    if (sigBuf.length !== compBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, compBuf);
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -12,24 +36,44 @@ export async function POST(request: Request) {
     }
 
     const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const hasValidKey = Boolean(
+      signatureKey &&
+      !signatureKey.includes('placeholder') &&
+      !signatureKey.includes('your-')
+    );
+
+    if (isProduction && !hasValidKey) {
+      console.error('[Square Webhook] SQUARE_WEBHOOK_SIGNATURE_KEY is missing in production');
+      return NextResponse.json(
+        { error: 'Square webhook configuration error: signature key missing' },
+        { status: 500 }
+      );
+    }
+
     const rawBody = await request.text();
 
-    // Verify cryptographic HMAC-SHA256 signature when signature key is configured
-    if (signatureKey) {
+    // Verify cryptographic HMAC-SHA256 signature when signature key is configured (SEC-007)
+    if (hasValidKey && signatureKey) {
       const signature = request.headers.get('x-square-hmacsha256-signature');
-      const webhookUrl = request.url;
-
       if (!signature) {
         return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
       }
 
-      const hmac = crypto.createHmac('sha256', signatureKey);
-      hmac.update(webhookUrl + rawBody);
-      const computedSignature = hmac.digest('base64');
+      const candidateUrls = Array.from(new Set([
+        request.url,
+        `${getAppBaseUrl()}/api/payments/webhook`,
+      ]));
 
-      if (signature !== computedSignature) {
+      const isValid = candidateUrls.some((targetUrl) =>
+        verifySquareSignature(targetUrl, rawBody, signature, signatureKey)
+      );
+
+      if (!isValid) {
         return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
       }
+    } else if (!isProduction) {
+      console.warn('[Square Webhook] Skipping signature verification in non-production (key not configured)');
     }
 
     const payload = JSON.parse(rawBody);
