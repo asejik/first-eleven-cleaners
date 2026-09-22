@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
+import { getAppBaseUrl } from '@/lib/constants';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import type { Address, Order, CustomerPreferences } from '@/types';
 
@@ -23,6 +25,35 @@ function createTwimlResponse(message: string): Response {
       'Content-Type': 'text/xml; charset=utf-8',
     },
   });
+}
+
+/**
+ * Validates the cryptographic Twilio HMAC-SHA1 signature (SEC-004).
+ */
+function verifyTwilioSignature(
+  url: string,
+  params: Record<string, string>,
+  signature: string,
+  authToken: string
+): boolean {
+  try {
+    const sortedKeys = Object.keys(params).sort();
+    let data = url;
+    for (const key of sortedKeys) {
+      data += `${key}${params[key]}`;
+    }
+    const computed = crypto
+      .createHmac('sha1', authToken)
+      .update(Buffer.from(data, 'utf-8'))
+      .digest('base64');
+
+    const sigBuf = Buffer.from(signature);
+    const compBuf = Buffer.from(computed);
+    if (sigBuf.length !== compBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, compBuf);
+  } catch {
+    return false;
+  }
 }
 
 // Clean phone string to numeric digits for matching
@@ -53,19 +84,54 @@ export async function POST(req: Request) {
     let to = '';
     let body = '';
     let messageSid = '';
+    const rawParams: Record<string, string> = {};
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await req.formData();
+      formData.forEach((val, key) => {
+        if (typeof val === 'string') rawParams[key] = val;
+      });
       from = (formData.get('From') as string) || '';
       to = (formData.get('To') as string) || '';
       body = (formData.get('Body') as string) || '';
       messageSid = (formData.get('MessageSid') as string) || '';
     } else {
       const json = await req.json();
+      Object.entries(json).forEach(([k, v]) => {
+        if (typeof v === 'string') rawParams[k] = v;
+      });
       from = json.From || json.from || '';
       to = json.To || json.to || '';
       body = json.Body || json.body || json.message || '';
       messageSid = json.MessageSid || json.messageSid || '';
+    }
+
+    // 3. Twilio Cryptographic Signature Verification (SEC-004)
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const isLiveTwilio = Boolean(
+      authToken &&
+      !authToken.includes('placeholder') &&
+      !authToken.includes('your-')
+    );
+
+    if (authToken && isLiveTwilio) {
+      const twilioSignature = req.headers.get('x-twilio-signature');
+      if (!twilioSignature) {
+        return new Response('Forbidden: Missing X-Twilio-Signature header.', { status: 403 });
+      }
+
+      const candidateUrls = [
+        req.url,
+        `${getAppBaseUrl()}/api/twilio/webhook`,
+      ];
+
+      const isValid = candidateUrls.some((targetUrl) =>
+        verifyTwilioSignature(targetUrl, rawParams, twilioSignature, authToken)
+      );
+
+      if (!isValid) {
+        return new Response('Forbidden: Invalid X-Twilio-Signature verification.', { status: 403 });
+      }
     }
 
     const trimmedBody = body.trim();
