@@ -30,7 +30,7 @@ export default function DashboardPage() {
     }
   }, [user, router, isCustomerPreview]);
 
-  const { data, isLoading, refetch } = useCustomerOrders();
+  const { data, isLoading, isError, refetch } = useCustomerOrders();
   const { data: claimsData, refetch: refetchClaims } = useCustomerClaims();
 
   const handleRefresh = async () => {
@@ -186,6 +186,15 @@ export default function DashboardPage() {
                 <Skeleton height="120px" borderRadius="var(--radius-xl)" />
                 <Skeleton height="120px" borderRadius="var(--radius-xl)" />
               </div>
+            ) : isError ? (
+              <Card variant="surface" padding="lg" className={styles.emptyState}>
+                <span className={styles.emptyIcon}>⚠️</span>
+                <h3>Unable to Load Active Orders</h3>
+                <p>We encountered a connection issue fetching your orders. Your data is safe.</p>
+                <Button variant="outline" onClick={handleRefresh} style={{ marginTop: 'var(--space-3)' }}>
+                  🔄 Retry Loading Orders
+                </Button>
+              </Card>
             ) : activeOrders.length === 0 ? (
               <Card variant="surface" padding="lg" className={styles.emptyState}>
                 <span className={styles.emptyIcon}>🧺</span>
