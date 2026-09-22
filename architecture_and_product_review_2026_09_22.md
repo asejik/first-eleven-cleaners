@@ -3,7 +3,7 @@
 **Review Date:** September 22, 2026  
 **Auditor:** Senior Software Architect & Product Quality Reviewer  
 **Rigor Level:** STRICT (Public PWA, Live Square Payment Tokenization, Customer PII & Gate Codes, TDPSA Compliance)  
-**Overall Grade:** **B (Solid & Pre-Launch Ready)**
+**Overall Grade:** **A (Exceptional & Production Certified)**
 
 ---
 
@@ -27,15 +27,15 @@ This review evaluates software architecture, maintainability, user experience, c
 ## 2. Top 5 Recommended Improvements
 
 1. **ARCH-001 (UX / Mobile)**: **Fix Floating AI Concierge Button Overlapping Mobile Bottom Navigation Bar.**
-   * *Impact*: On mobile screens (< 1024px), `.floatingTrigger` has `bottom: 24px; z-index: 1000`, positioning it directly on top of the fixed 60px `MobileNav`, blocking customer taps on "Orders" and "Account".
+   * *Status*: **RESOLVED** (`a33fdbb`). Elevated floating trigger and drawer above 60px mobile bottom nav bar.
 2. **ARCH-002 (UX / Resilience)**: **Add Explicit Error Banners with Retry Actions on Data Screens.**
-   * *Impact*: In `/dashboard`, `/dashboard/addresses`, and `/dashboard/billing`, when data fetching fails due to a network glitch, the UI silently falls through to empty states ("No Active Pickups", "No payment methods") rather than explaining the error and providing a "Retry" button.
+   * *Status*: **RESOLVED** (`15aa9d9`). Added dedicated error alert cards and `🔄 Retry` actions to dashboard, billing, and addresses.
 3. **ARCH-003 (A11y)**: **Add `aria-label` to Concierge Icon-Only Header Buttons.**
-   * *Impact*: The reset (`🔄`) and close (`✕`) buttons in `ConciergeWidget.tsx` have `title` attributes but lack `aria-label`, failing WCAG 2.2 SC 4.1.2 for screen reader accessibility.
+   * *Status*: **RESOLVED** (`2c156af`). Added explicit `aria-label` attributes to reset, close, and send buttons.
 4. **ARCH-004 (Maintainability)**: **Decompose Oversized Staff/Driver and Intake Pages.**
-   * *Impact*: `src/app/staff/driver/page.tsx` (789 lines) and `src/app/mission-control/intake/page.tsx` (652 lines) mix route state, photo modals, and multi-step forms in single monolithic files.
+   * *Status*: **RESOLVED** (`939ffb0`). Extracted `IntakeTicketWorkspace.tsx` and `DriverStopCard.tsx` into modular components.
 5. **ARCH-005 (Features)**: **Add In-App Password Change and TDPSA Data Deletion Button to Profile.**
-   * *Impact*: Authenticated customers have no UI option to update their password from `/dashboard/profile`, and the existing backend data erasure endpoint (`/api/customer/data-deletion`) has no self-service trigger in the customer profile.
+   * *Status*: **RESOLVED** (`8feba7e`). Added `updatePassword` hook, password change UI, and self-service TDPSA deletion modal.
 
 ---
 
@@ -43,17 +43,17 @@ This review evaluates software architecture, maintainability, user experience, c
 
 | ID | Severity | Section | Title | Location | Status |
 |---|---|---|---|---|---|
-| **ARCH-001** | **MEDIUM** | 2. User Experience | Floating Eleven widget overlaps and blocks mobile navigation bar | `src/components/concierge/ConciergeWidget.module.css:1-25` | VERIFIED |
-| **ARCH-002** | **MEDIUM** | 2. User Experience | Query errors silently mask as empty states in Dashboard & Billing | `src/app/dashboard/page.tsx:33-42, 190-200` | VERIFIED |
-| **ARCH-003** | **MEDIUM** | 4. Accessibility | Missing `aria-label` on icon-only drawer buttons in Concierge | `src/components/concierge/ConciergeWidget.tsx:94-110` | VERIFIED |
-| **ARCH-004** | **LOW** | 1. Architecture | Oversized monolithic files (>600 lines) mixing logic and UI | `src/app/staff/driver/page.tsx`, `src/app/mission-control/intake/page.tsx` | VERIFIED |
-| **ARCH-005** | **LOW** | 5. Completeness | Missing in-app password update and self-service data erasure trigger | `src/app/dashboard/profile/page.tsx:65-100` | VERIFIED |
-| **ARCH-006** | **LOW** | 1. Architecture | Unused dependencies (`react-hook-form`, `@hookform/resolvers`) in bundle | `web/package.json:23, 14` | VERIFIED |
-| **ARCH-007** | **LOW** | 3. Content | JSON-LD schema telephone lists obsolete placeholder phone number | `src/app/layout.tsx:108` | VERIFIED |
-| **ARCH-008** | **LOW** | 2. User Experience | Browser-native blocking `confirm()` used on address deletion | `src/app/dashboard/addresses/page.tsx:50` | VERIFIED |
-| **ARCH-009** | **LOW** | 4. Accessibility | Modal component lacks keyboard focus trap cycling | `src/components/ui/Modal/Modal.tsx:23-40` | VERIFIED |
-| **ARCH-010** | **LOW** | 6. Testing | Missing automated end-to-end (E2E) browser smoke test suite | `web/tests/` `[MISSING]` | VERIFIED |
-| **ARCH-011** | **LOW** | 1. Architecture | Root `CLAUDE.md` is 15-byte pointer rather than self-contained rules | `d:\projects\first eleven cleaners\CLAUDE.md:1-2` | VERIFIED |
+| **ARCH-001** | **MEDIUM** | 2. User Experience | Floating Eleven widget overlaps and blocks mobile navigation bar | `src/components/concierge/ConciergeWidget.module.css:1-25` | **RESOLVED** (`a33fdbb`) |
+| **ARCH-002** | **MEDIUM** | 2. User Experience | Query errors silently mask as empty states in Dashboard & Billing | `src/app/dashboard/page.tsx:33-42, 190-200` | **RESOLVED** (`15aa9d9`) |
+| **ARCH-003** | **MEDIUM** | 4. Accessibility | Missing `aria-label` on icon-only drawer buttons in Concierge | `src/components/concierge/ConciergeWidget.tsx:94-110` | **RESOLVED** (`2c156af`) |
+| **ARCH-004** | **LOW** | 1. Architecture | Oversized monolithic files (>600 lines) mixing logic and UI | `src/app/staff/driver/page.tsx`, `src/app/mission-control/intake/page.tsx` | **RESOLVED** (`939ffb0`) |
+| **ARCH-005** | **LOW** | 5. Completeness | Missing in-app password update and self-service data erasure trigger | `src/app/dashboard/profile/page.tsx:65-100` | **RESOLVED** (`8feba7e`) |
+| **ARCH-006** | **LOW** | 1. Architecture | Unused dependencies (`react-hook-form`, `@hookform/resolvers`) in bundle | `web/package.json:23, 14` | **RESOLVED** (`e498d84`) |
+| **ARCH-007** | **LOW** | 3. Content | JSON-LD schema telephone lists obsolete placeholder phone number | `src/app/layout.tsx:108` | **RESOLVED** (`550c88d`) |
+| **ARCH-008** | **LOW** | 2. User Experience | Browser-native blocking `confirm()` used on address deletion | `src/app/dashboard/addresses/page.tsx:50` | **RESOLVED** (`2051288`) |
+| **ARCH-009** | **LOW** | 4. Accessibility | Modal component lacks keyboard focus trap cycling | `src/components/ui/Modal/Modal.tsx:23-40` | **RESOLVED** (`e1ba1c7`) |
+| **ARCH-010** | **LOW** | 6. Testing | Missing automated end-to-end (E2E) browser smoke test suite | `web/tests/` `[MISSING]` | **RESOLVED** (`de03db2`) |
+| **ARCH-011** | **LOW** | 1. Architecture | Root `CLAUDE.md` is 15-byte pointer rather than self-contained rules | `d:\projects\first eleven cleaners\CLAUDE.md:1-2` | **RESOLVED** (`0c235ea`) |
 
 ---
 
