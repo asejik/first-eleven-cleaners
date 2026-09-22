@@ -75,6 +75,7 @@ export function StepPayment({
   const [isSquareReady, setIsSquareReady] = useState(false);
   const [isTokenizing, setIsTokenizing] = useState(false);
   const [squareError, setSquareError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const cardInstanceRef = useRef<SquareCardInstance | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -130,7 +131,18 @@ export function StepPayment({
         initializedRef.current = false;
       }
     };
-  }, [isSdkLoaded, appId, locationId]);
+  }, [isSdkLoaded, appId, locationId, retryCount]);
+
+  const handleRetrySquare = () => {
+    setSquareError(null);
+    setIsSquareReady(false);
+    initializedRef.current = false;
+    if (cardInstanceRef.current) {
+      cardInstanceRef.current.destroy().catch(() => {});
+      cardInstanceRef.current = null;
+    }
+    setRetryCount((prev) => prev + 1);
+  };
 
   const handleSubmit = async () => {
     setSquareError(null);
@@ -222,8 +234,43 @@ export function StepPayment({
             />
 
             {squareError && (
-              <div className={styles.errorMessage}>
-                ⚠️ {squareError}
+              <div
+                className={styles.errorMessage}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  alignItems: 'flex-start',
+                  padding: '14px',
+                  lineHeight: 1.4,
+                }}
+              >
+                <div>
+                  ⚠️ <strong>Payment Form Notice:</strong>{' '}
+                  {squareError.includes('unable to be initialized in time') || squareError.includes('Failed to load')
+                    ? 'The secure payment form was blocked or timed out by your browser. If you are using an AdBlocker, Brave Shields, or privacy blocker, please pause it for this site and click Retry.'
+                    : squareError}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRetrySquare}
+                  style={{
+                    background: 'var(--color-navy)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '8px 14px',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>🔄</span>
+                  <span>Retry Loading Card Form</span>
+                </button>
               </div>
             )}
           </div>
@@ -252,31 +299,6 @@ export function StepPayment({
             </div>
           </div>
         )}
-
-        {/* Instant Test / Demo Token Shortcut for Testing */}
-        <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px dashed var(--color-gray-200)', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={() => onCompleteBooking('sq_sim_token_demo', 'visa', '4242')}
-            disabled={isLoading}
-            style={{
-              background: 'var(--color-cream)',
-              border: '1px dashed var(--color-gold)',
-              color: 'var(--color-navy)',
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>⚡</span>
-            <span>Use Default Test Card (Instant Token • No Card Needed)</span>
-          </button>
-        </div>
       </div>
 
       <div className={styles.buttonSplit}>

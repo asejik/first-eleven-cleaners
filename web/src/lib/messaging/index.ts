@@ -2,6 +2,14 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatStageMessage, type MessagePayload, type FormattedMessage } from './templates';
 import { sendEmail, buildStageNotificationEmailHtml } from '@/lib/resend';
 
+function maskEmail(email?: string | null): string {
+  if (!email) return 'unknown';
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  const maskedLocal = local.length <= 2 ? `${local[0] || ''}***` : `${local[0]}***${local[local.length - 1]}`;
+  return `${maskedLocal}@${domain}`;
+}
+
 export interface DispatchResult {
   success: boolean;
   mode: 'simulated' | 'live_twilio';
@@ -128,10 +136,11 @@ export class SimulatedMessageProvider implements IMessagingProvider {
           html: emailHtml,
         });
 
+        const maskedTarget = maskEmail(customerEmail);
         if (!emailResult.success) {
-          console.error(`[Notification Engine] Failed to dispatch ${payload.stage} email to ${customerEmail}:`, emailResult.error);
+          console.error(`[Notification Engine] Failed to dispatch ${payload.stage} email to ${maskedTarget}:`, emailResult.error);
         } else {
-          console.log(`[Notification Engine] Dispatched ${payload.stage} email to ${customerEmail} (ID: ${emailResult.id})`);
+          console.log(`[Notification Engine] Dispatched ${payload.stage} email to ${maskedTarget} (ID: ${emailResult.id})`);
         }
       } catch (emailErr) {
         console.warn('Status notification email dispatch notice:', emailErr);

@@ -56,7 +56,7 @@ export function Footer() {
             <h4 className={styles.columnTitle}>Support</h4>
             <nav className={styles.columnLinks}>
               <a
-                href={`tel:${SUPPORT_PHONE.replace(/\D/g, '')}`}
+                href={`tel:+1${SUPPORT_PHONE.replace(/\D/g, '')}`}
                 className={styles.contactLink}
                 style={{ color: 'var(--color-gold)', fontWeight: 600 }}
               >
