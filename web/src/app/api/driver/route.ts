@@ -19,8 +19,8 @@ function getDriverContext(auth: {
   customer: { id?: string; full_name?: string; email?: string; role?: string } | null;
   user: { id?: string; email?: string; user_metadata?: { full_name?: string; role?: string } } | null;
 }): DriverContext {
-  const isDriverRole = auth.customer?.role === 'driver' || auth.user?.user_metadata?.role === 'driver';
-  const isAdminRole = auth.customer?.role === 'admin' || auth.user?.user_metadata?.role === 'admin';
+  const isDriverRole = auth.customer?.role === 'driver';
+  const isAdminRole = auth.customer?.role === 'admin';
   const currentDriverName = (auth.customer?.full_name || auth.user?.user_metadata?.full_name || '').toLowerCase().trim();
   const driverId = (auth.customer?.id || auth.user?.id || '').toLowerCase().trim();
   const driverEmail = (auth.customer?.email || auth.user?.email || '').toLowerCase().trim();
