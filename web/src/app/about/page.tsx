@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/about',
   },
-  title: 'Our FIFA World Cup IBC Story | First Eleven Cleaners',
+  title: 'Our FIFA World Cup IBC Story',
   description:
     'Every Garment Makes the Lineup. Born at the FIFA World Cup 2026 IBC in Dallas. First Eleven Cleaners is a veteran-owned, minority-certified premium dry cleaning and laundry service serving the Dallas-Fort Worth Metroplex.',
 };

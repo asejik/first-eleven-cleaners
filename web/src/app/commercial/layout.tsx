@@ -4,11 +4,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/commercial',
   },
-  title: 'Commercial Laundry & Dry Cleaning Dallas–Fort Worth | First Eleven',
+  title: 'Commercial B2B Laundry & Dry Cleaning',
   description:
     'SLA-backed B2B dry cleaning and commercial laundry programs for Dallas–Fort Worth businesses, hotels, salons, and athletic facilities. Certified MBE, SDVOSB, Veteran-HUB, DBE.',
   openGraph: {
-    title: 'Commercial Laundry & Dry Cleaning Dallas–Fort Worth | First Eleven',
+    title: 'Commercial B2B Laundry & Dry Cleaning | First Eleven Cleaners',
     description:
       'SLA-backed B2B dry cleaning and commercial laundry programs for Dallas–Fort Worth businesses, hotels, salons, and athletic facilities. Certified MBE, SDVOSB, Veteran-HUB, DBE.',
     images: [
