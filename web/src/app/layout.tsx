@@ -105,7 +105,7 @@ const jsonLd = {
   image: 'https://firstelevencleaners.com/icon.png',
   '@id': 'https://firstelevencleaners.com',
   url: 'https://firstelevencleaners.com',
-  telephone: '+1-214-555-0199',
+  telephone: '+1-682-200-0039',
   priceRange: '$$',
   address: {
     '@type': 'PostalAddress',
