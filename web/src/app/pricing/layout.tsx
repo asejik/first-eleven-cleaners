@@ -11,6 +11,14 @@ export const metadata: Metadata = {
     title: 'Laundry & Dry Cleaning Prices Dallas | First Eleven Cleaners',
     description:
       'Transparent, published pricing for dry cleaning and wash-and-fold laundry pickup in Dallas–Fort Worth. $3.00/lb wash & fold ($45 min), dry cleaning from $8.99. Zero hidden fees.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'First Eleven Cleaners - Laundry & Dry Cleaning Pricing in Dallas–Fort Worth',
+      },
+    ],
   },
 };
 

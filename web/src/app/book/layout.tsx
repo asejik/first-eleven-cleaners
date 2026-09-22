@@ -11,6 +11,14 @@ export const metadata: Metadata = {
     title: 'Schedule Laundry Pickup & Delivery | First Eleven Cleaners',
     description:
       'Schedule premium dry cleaning and wash-and-fold laundry pickup across Dallas–Fort Worth. Choose morning or evening windows. 48-hour Match-Ready turnaround.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'First Eleven Cleaners - Schedule Laundry Pickup & Delivery',
+      },
+    ],
   },
 };
 
