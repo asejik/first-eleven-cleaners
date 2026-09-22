@@ -283,6 +283,8 @@ export function FinancialsLedger() {
                     <td>
                       {tx.payment_status === 'charged' ? (
                         <Badge variant="delivered">Paid / Settled</Badge>
+                      ) : tx.payment_status === 'failed' ? (
+                        <Badge variant="error">Failed / Declined</Badge>
                       ) : tx.payment_status === 'authorized' ? (
                         <Badge variant="warning">In Vault (Auth)</Badge>
                       ) : (
@@ -290,7 +292,7 @@ export function FinancialsLedger() {
                       )}
                     </td>
                     <td>
-                      <strong style={{ fontSize: 'var(--text-sm)', color: tx.payment_status === 'charged' ? '#34d399' : '#ffffff' }}>
+                      <strong style={{ fontSize: 'var(--text-sm)', color: tx.payment_status === 'charged' ? '#34d399' : tx.payment_status === 'failed' ? '#f87171' : '#ffffff' }}>
                         ${tx.total.toFixed(2)}
                       </strong>
                     </td>

@@ -250,7 +250,7 @@ export default function DashboardPage() {
                               : '🧺 Wash & Fold'}
                           </span>
                           <span>•</span>
-                          <span>Est. Total: ${order.total.toFixed(2)}</span>
+                          <span>{order.status === 'weighed_itemized' ? 'Itemized Total:' : 'Est. Total:'} ${order.total.toFixed(2)}</span>
                           {order.weight_lbs && (
                             <>
                               <span>•</span>
@@ -258,6 +258,44 @@ export default function DashboardPage() {
                             </>
                           )}
                         </div>
+
+                        {order.payment_status === 'failed' && (
+                          <div
+                            style={{
+                              marginTop: 'var(--space-2)',
+                              padding: '8px 12px',
+                              background: 'rgba(239, 68, 68, 0.12)',
+                              border: '1px solid rgba(239, 68, 68, 0.35)',
+                              borderRadius: 'var(--radius-md)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <span style={{ fontSize: 'var(--text-xs)', color: '#f87171', fontWeight: 600 }}>
+                              ⚠️ Card authorization declined (${order.total.toFixed(2)}). Update payment card so cleaning can commence.
+                            </span>
+                            <Link href={ROUTES.billing}>
+                              <button
+                                type="button"
+                                style={{
+                                  background: 'var(--color-gold)',
+                                  color: '#0b1120',
+                                  border: 'none',
+                                  borderRadius: 'var(--radius-sm)',
+                                  padding: '4px 10px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Update Card →
+                              </button>
+                            </Link>
+                          </div>
+                        )}
 
                         <div className={styles.deliveryEstimate}>
                           ⏱️ <strong>Match-Ready Promise:</strong> Delivery on {order.delivery_date || 'Within 48 hours'}
@@ -296,10 +334,25 @@ export default function DashboardPage() {
                         </Badge>
                       </div>
                       <div className={styles.orderSummaryText}>
-                        <span>Total Paid: ${order.total.toFixed(2)}</span>
+                        {order.payment_status === 'charged' ? (
+                          <span style={{ color: '#34d399', fontWeight: 600 }}>Total Paid: ${order.total.toFixed(2)}</span>
+                        ) : order.payment_status === 'failed' ? (
+                          <span style={{ color: '#f87171', fontWeight: 700 }}>
+                            ⚠️ Payment Due: ${order.total.toFixed(2)}
+                          </span>
+                        ) : (
+                          <span>Total: ${order.total.toFixed(2)}</span>
+                        )}
                       </div>
                     </div>
                     <div className={styles.orderActions}>
+                      {order.payment_status === 'failed' && (
+                        <Link href={ROUTES.billing}>
+                          <Button variant="outline" size="sm" style={{ borderColor: '#ef4444', color: '#f87171' }}>
+                            Settle Payment
+                          </Button>
+                        </Link>
+                      )}
                       <Link href={ROUTES.orderDetail(order.id)}>
                         <Button variant="outline" size="sm">
                           View Garment Passport
