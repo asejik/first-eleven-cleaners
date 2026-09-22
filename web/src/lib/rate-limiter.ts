@@ -99,15 +99,31 @@ export async function checkRateLimitAsync(
 
 /**
  * Extracts client IP safely from request headers.
+ * Prioritizes edge-verified headers (x-vercel-ip, cf-connecting-ip) to prevent
+ * client header spoofing attacks on rate limiters (SEC-012).
  */
 export function getClientIp(req: Request): string {
+  // 1. Edge-verified reverse proxy headers (Vercel & Cloudflare strip client-sent headers)
+  const vercelIp = req.headers.get('x-vercel-ip');
+  if (vercelIp) {
+    return vercelIp.trim();
+  }
+
+  const cfIp = req.headers.get('cf-connecting-ip');
+  if (cfIp) {
+    return cfIp.trim();
+  }
+
+  // 2. Standard proxy header fallback
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
     return forwarded.split(',')[0].trim();
   }
+
   const realIp = req.headers.get('x-real-ip');
   if (realIp) {
     return realIp.trim();
   }
+
   return '127.0.0.1';
 }

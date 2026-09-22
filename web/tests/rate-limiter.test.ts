@@ -69,6 +69,26 @@ describe('Rate Limiter & Client IP Extraction', () => {
   });
 
   describe('getClientIp()', () => {
+    it('prioritizes x-vercel-ip over client-spoofed x-forwarded-for header (SEC-012)', () => {
+      const req = new Request('https://firstelevencleaners.com/api/bookings', {
+        headers: {
+          'x-vercel-ip': '76.76.21.21',
+          'x-forwarded-for': '198.51.100.99, 10.0.0.1',
+        },
+      });
+      expect(getClientIp(req)).toBe('76.76.21.21');
+    });
+
+    it('prioritizes cf-connecting-ip over client-spoofed x-forwarded-for header (SEC-012)', () => {
+      const req = new Request('https://firstelevencleaners.com/api/bookings', {
+        headers: {
+          'cf-connecting-ip': '104.16.123.96',
+          'x-forwarded-for': '198.51.100.99',
+        },
+      });
+      expect(getClientIp(req)).toBe('104.16.123.96');
+    });
+
     it('extracts primary client IP from x-forwarded-for header', () => {
       const req = new Request('https://firstelevencleaners.com/api/bookings', {
         headers: { 'x-forwarded-for': '198.51.100.24, 10.0.0.1, 172.16.0.1' },
