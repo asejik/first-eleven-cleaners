@@ -77,12 +77,18 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
       .limit(50);
 
+    const revenueQuery = supabase
+      .from('orders')
+      .select('total');
+
     const [
       { data: allOrders, count: totalOrdersCount, error: ordersErr },
-      { data: claims }
+      { data: claims },
+      { data: revenueRows }
     ] = await Promise.all([
       ordersQuery.range(offset, offset + limit - 1),
-      claimsQuery
+      claimsQuery,
+      revenueQuery
     ]);
 
     if (ordersErr) {
@@ -98,7 +104,7 @@ export async function GET(request: Request) {
 
     const todayOrders = orders.filter((o) => o.created_at?.startsWith(todayStr) || o.pickup_date === todayStr);
     const todayRevenue = todayOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-    const allTimeRevenue = orders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+    const allTimeRevenue = (revenueRows || []).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
 
     const totalLbs = orders.reduce((acc, o) => acc + (Number(o.weight_lbs) || 0), 0);
     const totalDryCleanPieces = orders.reduce((acc, o) => {
@@ -231,7 +237,7 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', claim_id)
-        .select('*')
+        .select('id, status, resolution_notes, updated_at')
         .single();
 
       if (claimErr) {

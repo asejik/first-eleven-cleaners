@@ -31,7 +31,7 @@ export function StepConfirmation({
     <Card variant="bordered" padding="lg" className={styles.confirmationCard}>
       <div className={styles.confHeader}>
         <Image
-          src="/icon.png"
+          src="/icon.webp"
           alt="First Eleven"
           width={52}
           height={52}

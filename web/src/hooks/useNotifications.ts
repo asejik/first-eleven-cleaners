@@ -25,8 +25,9 @@ export function useNotifications(orderId?: string) {
       if (!res.ok) throw new Error('Failed to load notifications');
       return res.json();
     },
-    staleTime: 5 * 1000,
-    refetchInterval: 5 * 1000, // 5s fast poll for live ops simulator feed
+    staleTime: 10 * 1000,
+    refetchInterval: 15 * 1000, // 15s poll (egress-protected)
+    refetchIntervalInBackground: false,
   });
 }
 

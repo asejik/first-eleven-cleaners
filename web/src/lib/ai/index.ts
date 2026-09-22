@@ -292,8 +292,12 @@ export class ClaudeAIEngineProvider implements IAIEngineProvider {
     context?: ConciergeContext
   ): Promise<AIResponse> {
     try {
+      // Keep only recent conversational turns (last 10 messages) to prevent unbounded token expansion (F-01)
+      const MAX_HISTORY = 10;
+      const recentHistory = history.slice(-MAX_HISTORY);
+
       const messages = [
-        ...history.map((h) => ({
+        ...recentHistory.map((h) => ({
           role: h.role === 'assistant' ? 'assistant' : 'user',
           content: h.content,
         })),

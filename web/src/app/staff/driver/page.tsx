@@ -153,7 +153,7 @@ export default function DriverPage() {
           <div className={styles.driverHeader}>
             <div className={styles.brandCol}>
               <Image
-                src="/icon.png"
+                src="/icon.webp"
                 alt="First Eleven"
                 width={42}
                 height={42}

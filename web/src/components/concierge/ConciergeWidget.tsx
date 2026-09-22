@@ -54,7 +54,7 @@ export function ConciergeWidget() {
         >
           <div className={styles.avatarBadge}>
             <Image
-              src="/icon.png"
+              src="/icon.webp"
               alt="Eleven AI"
               width={34}
               height={34}
@@ -76,7 +76,7 @@ export function ConciergeWidget() {
           <div className={styles.drawerHeader}>
             <div className={styles.headerBrand}>
               <Image
-                src="/icon.png"
+                src="/icon.webp"
                 alt="Eleven AI"
                 width={36}
                 height={36}

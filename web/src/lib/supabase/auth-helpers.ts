@@ -47,16 +47,16 @@ export async function getAuthenticatedCustomer(request?: Request): Promise<AuthC
       }
     }
 
-    // 2. Fall back to cookie-based session
+    // 2. Fall back to cookie-based session (local JWT check, zero network egress)
     if (!user) {
       const authClient = await createClient();
       const {
-        data: { user: cookieUser },
+        data: { session },
         error: authError,
-      } = await authClient.auth.getUser();
+      } = await authClient.auth.getSession();
 
-      if (!authError && cookieUser) {
-        user = cookieUser;
+      if (!authError && session?.user) {
+        user = session.user;
       }
     }
 

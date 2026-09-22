@@ -453,7 +453,7 @@ export default function CentralIntakePage() {
           <div className={styles.headerRow}>
             <div className={styles.brandArea}>
               <Image
-                src="/icon.png"
+                src="/icon.webp"
                 alt="First Eleven"
                 width={42}
                 height={42}

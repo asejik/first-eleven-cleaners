@@ -37,7 +37,8 @@ export function useCustomerOrders(options?: { page?: number; limit?: number }) {
     },
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000, // 30s quiet customer dashboard poll (egress-protected)
-    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -64,6 +65,7 @@ export function useOrderDetail(orderId: string) {
     enabled: Boolean(orderId),
     staleTime: 10 * 1000,
     refetchInterval: 20 * 1000, // 20s quiet tracker updates
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 

@@ -47,7 +47,8 @@ export function useDriverManifest(shift: string = 'all') {
     },
     staleTime: 10 * 1000,
     refetchInterval: 25 * 1000, // 25s quiet background poll (egress-protected)
-    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
 }

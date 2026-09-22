@@ -36,7 +36,8 @@ export function useIntakeQueue() {
     },
     staleTime: 10 * 1000,
     refetchInterval: 25 * 1000, // 25s quiet intake queue poll (egress-protected)
-    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
 }

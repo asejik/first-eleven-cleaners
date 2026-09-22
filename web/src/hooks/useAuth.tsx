@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (data.user) {
             const { data: customerData } = await supabase
               .from('customers')
-              .select('*')
+              .select('id, auth_id, email, phone, full_name, role, created_at, updated_at')
               .eq('auth_id', data.user.id)
               .maybeSingle();
 
@@ -251,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // 1. First check if the Supabase Postgres trigger already created the customer record
             const { data: existingCustomer } = await supabase
               .from('customers')
-              .select('*')
+              .select('id, auth_id, email, phone, full_name, role, created_at, updated_at')
               .eq('auth_id', authData.user.id)
               .maybeSingle();
 
