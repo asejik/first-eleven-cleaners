@@ -8,7 +8,7 @@ export const AUTH_TTL_MS = 4 * 60 * 1000; // 4-minute TTL cache
 /**
  * Resolves user role based on email or explicit database/metadata role.
  */
-export function determineRole(email: string, metaRole?: string, dbRole?: string): UserRole {
+export function determineRole(email: string, _metaRole?: string, dbRole?: string): UserRole {
   const clean = email.toLowerCase().trim();
   // Exact administrative and staff accounts take precedence
   if (clean === 'admin@firstelevencleaners.com' || clean === 'admin@firsteleven.com') return 'admin';
@@ -17,9 +17,6 @@ export function determineRole(email: string, metaRole?: string, dbRole?: string)
 
   if (dbRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(dbRole)) {
     return dbRole as UserRole;
-  }
-  if (metaRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(metaRole)) {
-    return metaRole as UserRole;
   }
   return 'customer';
 }

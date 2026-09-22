@@ -60,16 +60,14 @@ export async function GET(request: Request) {
       const emailLower = (c.email || '').toLowerCase().trim();
       const authInfo = c.auth_id ? authMap.get(c.auth_id) : undefined;
 
-      // Determine staff role
+      // Determine staff role strictly from database role or primary company accounts
       let staffRole: 'admin' | 'driver' | 'intake_staff' | null = null;
       if (emailLower === 'admin@firstelevencleaners.com' || emailLower === 'admin@firsteleven.com' || c.role === 'admin') {
         staffRole = 'admin';
-      } else if (emailLower === 'driver@firstelevencleaners.com' || emailLower === 'driver@firsteleven.com' || authInfo?.metaRole === 'driver') {
+      } else if (emailLower === 'driver@firstelevencleaners.com' || emailLower === 'driver@firsteleven.com' || c.role === 'driver') {
         staffRole = 'driver';
-      } else if (emailLower === 'intake@firstelevencleaners.com' || emailLower === 'intake@firsteleven.com' || authInfo?.metaRole === 'intake_staff') {
+      } else if (emailLower === 'intake@firstelevencleaners.com' || emailLower === 'intake@firsteleven.com' || c.role === 'intake_staff') {
         staffRole = 'intake_staff';
-      } else if (c.role === 'staff') {
-        staffRole = (authInfo?.metaRole as 'driver' | 'intake_staff') || 'driver';
       }
 
       if (staffRole) {

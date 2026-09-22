@@ -139,23 +139,20 @@ export async function verifyApiAuth(
   }
 
   const email = (user.email || customer.email || '').toLowerCase().trim();
-  const metaRole = user.user_metadata?.role as UserRole | undefined;
 
   let userRole: UserRole = 'customer';
 
-  // Multi-tier role resolution
+  // Authoritative role resolution:
+  // 1. Hardcoded domain primary staff and admin accounts
   if (email === 'admin@firstelevencleaners.com' || email === 'admin@firsteleven.com') {
     userRole = 'admin';
   } else if (email === 'driver@firstelevencleaners.com' || email === 'driver@firsteleven.com') {
     userRole = 'driver';
   } else if (email === 'intake@firstelevencleaners.com' || email === 'intake@firsteleven.com') {
     userRole = 'intake_staff';
-  } else if (metaRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(metaRole)) {
-    userRole = metaRole;
   } else if (customer.role && ['admin', 'driver', 'intake_staff', 'customer'].includes(customer.role)) {
+    // 2. Server-controlled role column in database customers table
     userRole = customer.role;
-  } else if (customer.role === 'staff') {
-    userRole = metaRole || (email.includes('intake') ? 'intake_staff' : 'driver');
   }
 
   // Construct full set of effective roles for permission checks
@@ -165,16 +162,11 @@ export async function verifyApiAuth(
     effectiveRoles.add('intake_staff');
     effectiveRoles.add('driver');
   }
-  if (userRole === 'intake_staff' || email.includes('intake')) {
+  if (userRole === 'intake_staff') {
     effectiveRoles.add('intake_staff');
   }
-  if (userRole === 'driver' || email.includes('driver')) {
+  if (userRole === 'driver') {
     effectiveRoles.add('driver');
-  }
-  if (customer.role === 'staff') {
-    if (metaRole) effectiveRoles.add(metaRole);
-    if (email.includes('intake')) effectiveRoles.add('intake_staff');
-    if (email.includes('driver')) effectiveRoles.add('driver');
   }
 
   // Core administrative and intake staff are always permitted on staff routes
@@ -189,7 +181,6 @@ export async function verifyApiAuth(
         email,
         userRole,
         customerRole: customer.role,
-        metaRole,
         effectiveRoles: Array.from(effectiveRoles),
         allowedRoles,
       });
