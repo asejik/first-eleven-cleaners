@@ -34,7 +34,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { customer } = await getAuthenticatedCustomer(request);
+    const { customer, user } = await getAuthenticatedCustomer(request);
+    if (!user || !customer) {
+      return NextResponse.json(
+        { error: 'Unauthorized: You must be logged in to view claims.' },
+        { status: 401 }
+      );
+    }
+
     const supabase = createAdminClient();
 
     let query = supabase
@@ -57,23 +64,28 @@ export async function GET(request: Request) {
 
     if (orderId) {
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
-      if (isUUID) {
-        query = query.eq('order_id', orderId);
-      } else {
-        const { data: matchedOrder } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('order_number', orderId)
-          .maybeSingle();
+      const { data: matchedOrder } = isUUID
+        ? await supabase.from('orders').select('id, customer_id').eq('id', orderId).maybeSingle()
+        : await supabase.from('orders').select('id, customer_id').eq('order_number', orderId).maybeSingle();
 
-        if (matchedOrder) {
-          query = query.eq('order_id', matchedOrder.id);
-        } else {
-          return NextResponse.json({ claims: [] });
-        }
+      if (!matchedOrder) {
+        return NextResponse.json({ claims: [] });
       }
-    } else if (customer) {
-      query = query.eq('customer_id', customer.id);
+
+      // IDOR check: Only owner or admin can view claims for this order
+      if (matchedOrder.customer_id !== customer.id && customer.role !== 'admin') {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to view claims for this order.' },
+          { status: 403 }
+        );
+      }
+
+      query = query.eq('order_id', matchedOrder.id);
+    } else {
+      // Non-admins are strictly limited to their own claims
+      if (customer.role !== 'admin') {
+        query = query.eq('customer_id', customer.id);
+      }
     }
 
     const { data: claims, error } = await query;
