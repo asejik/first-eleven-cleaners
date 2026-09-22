@@ -103,40 +103,89 @@ import { DynamicConcierge } from '@/components/concierge/DynamicConcierge';
 
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'DryCleaningOrLaundryService',
-  name: 'First Eleven Cleaners',
-  image: 'https://firstelevencleaners.com/icon.png',
-  '@id': 'https://firstelevencleaners.com',
-  url: 'https://firstelevencleaners.com',
-  telephone: '+1-682-200-0039',
-  priceRange: '$$',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: 'Downtown Dallas',
-    addressLocality: 'Dallas',
-    addressRegion: 'TX',
-    postalCode: '75201',
-    addressCountry: 'US',
-  },
-  geo: {
-    '@type': 'GeoCoordinates',
-    latitude: 32.7767,
-    longitude: -96.797,
-  },
-  areaServed: [
-    { '@type': 'City', name: 'Dallas' },
-    { '@type': 'City', name: 'Highland Park' },
-    { '@type': 'City', name: 'University Park' },
-    { '@type': 'City', name: 'Frisco' },
-    { '@type': 'City', name: 'Plano' },
-    { '@type': 'City', name: 'Fort Worth' },
-  ],
-  openingHoursSpecification: [
+  '@graph': [
     {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      opens: '07:00',
-      closes: '20:00',
+      '@type': 'WebSite',
+      '@id': 'https://firstelevencleaners.com/#website',
+      url: 'https://firstelevencleaners.com',
+      name: 'First Eleven Cleaners',
+      description:
+        'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex.',
+      publisher: {
+        '@id': 'https://firstelevencleaners.com/#organization',
+      },
+    },
+    {
+      '@type': 'DryCleaningOrLaundryService',
+      '@id': 'https://firstelevencleaners.com/#organization',
+      name: 'First Eleven Cleaners',
+      image: [
+        'https://firstelevencleaners.com/og-image.jpg',
+        'https://firstelevencleaners.com/logo.png',
+        'https://firstelevencleaners.com/icon.png',
+      ],
+      url: 'https://firstelevencleaners.com',
+      telephone: '+1-682-200-0039',
+      email: 'support@firstelevencleaners.com',
+      priceRange: '$$',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Downtown Dallas',
+        addressLocality: 'Dallas',
+        addressRegion: 'TX',
+        postalCode: '75201',
+        addressCountry: 'US',
+      },
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: 32.7767,
+        longitude: -96.797,
+      },
+      areaServed: [
+        { '@type': 'City', name: 'Dallas' },
+        { '@type': 'City', name: 'Highland Park' },
+        { '@type': 'City', name: 'University Park' },
+        { '@type': 'City', name: 'Frisco' },
+        { '@type': 'City', name: 'Plano' },
+        { '@type': 'City', name: 'Fort Worth' },
+      ],
+      openingHoursSpecification: [
+        {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+          opens: '07:00',
+          closes: '20:00',
+        },
+      ],
+      hasOfferCatalog: {
+        '@type': 'OfferCatalog',
+        name: 'Garment Care Services',
+        itemListElement: [
+          {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Service',
+              name: 'Wash & Fold Laundry Pickup & Delivery',
+              description:
+                'Weighed on digital calibrated scales, sorted by fabric color, washed, dried, hand-folded, and packaged with digital passport documentation.',
+            },
+            price: '3.00',
+            priceCurrency: 'USD',
+            unitText: 'lb',
+          },
+          {
+            '@type': 'Offer',
+            itemOffered: {
+              '@type': 'Service',
+              name: 'Match-Ready Dry Cleaning',
+              description:
+                'Individual stain pre-treatment, gentle eco-solvent cleaning, hand-finishing, and custom hanger packaging.',
+            },
+            price: '8.99',
+            priceCurrency: 'USD',
+          },
+        ],
+      },
     },
   ],
 };
