@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/book',
+  },
   title: 'Schedule Laundry Pickup & Delivery | First Eleven Cleaners',
   description:
     'Schedule premium dry cleaning and wash-and-fold laundry pickup across Dallas–Fort Worth. Choose morning or evening windows. 48-hour Match-Ready turnaround.',

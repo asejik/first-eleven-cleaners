@@ -5,6 +5,9 @@ import { ROUTES, ZONES_LIST } from '@/lib/constants';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/service-areas',
+  },
   title: 'DFW Service Areas | Dry Cleaning & Laundry Pickup Dallas–Fort Worth',
   description:
     'Full-coverage dry cleaning and wash-and-fold laundry pickup & delivery across Dallas, Plano, Frisco, Fort Worth, Highland Park, Southlake, and the entire DFW Metroplex.',

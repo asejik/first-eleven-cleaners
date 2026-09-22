@@ -4,6 +4,9 @@ import { ROUTES, APP_NAME } from '@/lib/constants';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/terms',
+  },
   title: 'Terms of Service',
   description: 'First Eleven Cleaners Terms of Service. Governing law, garment care guarantees, liability limitations, and operational policies across Dallas-Fort Worth.',
 };

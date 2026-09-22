@@ -4,6 +4,9 @@ import { ROUTES, APP_NAME } from '@/lib/constants';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/privacy',
+  },
   title: 'Privacy Policy',
   description: 'First Eleven Cleaners Privacy Policy. How we collect, use, and protect your information across Dallas-Fort Worth.',
 };

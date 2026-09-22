@@ -25,6 +25,9 @@ const archivo = Archivo({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://firstelevencleaners.com'),
+  alternates: {
+    canonical: '/',
+  },
   title: {
     default: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
     template: '%s | First Eleven Cleaners',
