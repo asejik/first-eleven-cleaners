@@ -1,7 +1,58 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
+export const ALLOWED_STORAGE_BUCKETS = new Set([
+  'garment-photos',
+  'intake-photos',
+  'delivery-proofs',
+]);
+
 /**
- * Uploads a binary buffer to a Supabase Storage bucket and returns the public CDN URL.
+ * Validates binary buffer headers against authentic image magic bytes (SEC-010).
+ * Prevents file extension spoofing, polyglots, and embedded script attacks.
+ */
+export function validateImageMagicBytes(buffer: Buffer): boolean {
+  if (buffer.length < 12) return false;
+
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return true;
+  }
+
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return true;
+  }
+
+  // WEBP: 'RIFF' .... 'WEBP'
+  const isRiff = buffer.toString('ascii', 0, 4) === 'RIFF';
+  const isWebp = buffer.toString('ascii', 8, 12) === 'WEBP';
+  if (isRiff && isWebp) {
+    return true;
+  }
+
+  // HEIC / HEIF: bytes 4-8 equal 'ftyp'
+  const isFtyp = buffer.toString('ascii', 4, 8) === 'ftyp';
+  if (isFtyp) {
+    const brand = buffer.toString('ascii', 8, 12).toLowerCase();
+    if (['heic', 'heix', 'mif1', 'msf1', 'hevc'].includes(brand)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Uploads a binary buffer to an approved Supabase Storage bucket and returns the public CDN URL.
  */
 export async function uploadToStorage(
   buffer: Buffer,
@@ -10,6 +61,15 @@ export async function uploadToStorage(
   bucket: string = 'garment-photos'
 ): Promise<string | null> {
   try {
+    if (!ALLOWED_STORAGE_BUCKETS.has(bucket)) {
+      console.error(`[Storage] Rejected upload to unauthorized bucket target: "${bucket}" (SEC-010)`);
+      return null;
+    }
+
+    if (!validateImageMagicBytes(buffer)) {
+      console.error(`[Storage] Rejected upload with invalid image magic bytes (SEC-010)`);
+      return null;
+    }
     const supabase = createAdminClient();
 
     const { data, error } = await supabase.storage
