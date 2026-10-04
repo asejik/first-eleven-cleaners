@@ -6,18 +6,25 @@ export const AUTH_CACHE_TIME_KEY = 'f11_auth_timestamp';
 export const AUTH_TTL_MS = 4 * 60 * 1000; // 4-minute TTL cache
 
 /**
- * Resolves user role based on email or explicit database/metadata role.
+ * Resolves user role from the server-controlled customers.role column only (SEC-02).
+ * Email addresses and user-editable metadata never grant a role.
  */
-export function determineRole(email: string, _metaRole?: string, dbRole?: string): UserRole {
-  const clean = email.toLowerCase().trim();
-  // Exact administrative and staff accounts take precedence
-  if (clean === 'admin@firstelevencleaners.com' || clean === 'admin@firsteleven.com') return 'admin';
-  if (clean === 'driver@firstelevencleaners.com' || clean === 'driver@firsteleven.com') return 'driver';
-  if (clean === 'intake@firstelevencleaners.com' || clean === 'intake@firsteleven.com') return 'intake_staff';
-
+export function determineRole(_email: string, _metaRole?: string, dbRole?: string): UserRole {
   if (dbRole && ['admin', 'driver', 'intake_staff', 'customer'].includes(dbRole)) {
     return dbRole as UserRole;
   }
+  return 'customer';
+}
+
+/**
+ * Local mock mode only (Supabase not configured): lets developers preview staff areas
+ * by logging in with the company staff addresses. Never used with a real database.
+ */
+function mockRoleForEmail(email: string): UserRole {
+  const clean = email.toLowerCase().trim();
+  if (clean === 'admin@firstelevencleaners.com') return 'admin';
+  if (clean === 'driver@firstelevencleaners.com') return 'driver';
+  if (clean === 'intake@firstelevencleaners.com') return 'intake_staff';
   return 'customer';
 }
 
@@ -85,7 +92,7 @@ export function createMockCustomer(
   email: string,
   partial?: Partial<Customer>
 ): Customer {
-  const role = determineRole(email, undefined, partial?.role);
+  const role = partial?.role ? determineRole(email, undefined, partial.role) : mockRoleForEmail(email);
   return {
     id: partial?.id || 'c0000000-0000-0000-0000-000000000001',
     auth_id: partial?.auth_id || 'c0000000-0000-0000-0000-000000000001',

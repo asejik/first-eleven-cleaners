@@ -11,17 +11,21 @@ vi.mock('next/headers', () => ({
 
 // Service-role client used for the customer lookup
 const customerLookup = vi.fn();
+const lookupFilter = vi.fn();
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: () => ({
       select: () => ({
-        or: () => ({ maybeSingle: customerLookup }),
+        eq: (column: string, value: string) => {
+          lookupFilter(column, value);
+          return { maybeSingle: customerLookup };
+        },
       }),
     }),
   }),
 }));
 
-import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { getAuthenticatedCustomer, verifyApiAuth } from '@/lib/supabase/auth-helpers';
 
 const PROJECT_REF = 'exampleref';
 
@@ -100,5 +104,84 @@ describe('getAuthenticatedCustomer cookie verification (SEC-01)', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/auth/v1/user');
     expect(result.user?.id).toBe(verifiedUser.id);
     expect(result.customer).toEqual(customer);
+    // SEC-03: the customer is resolved by account ID only, never by email
+    expect(lookupFilter).toHaveBeenCalledWith('auth_id', verifiedUser.id);
+  });
+});
+
+describe('verifyApiAuth role resolution (SEC-02)', () => {
+  const originalEnv = { ...process.env };
+
+  // Signs in a verified Supabase user whose customers row has the given role
+  function signInAs(email: string, dbRole: string) {
+    const verifiedUser = {
+      id: '22222222-2222-2222-2222-222222222222',
+      email,
+      aud: 'authenticated',
+      role: 'authenticated',
+      app_metadata: {},
+      user_metadata: { role: 'admin' }, // user-editable metadata must be ignored
+      created_at: new Date().toISOString(),
+    };
+    requestCookies = [sessionCookie('valid.signed.token', email)];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify(verifiedUser), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+    customerLookup.mockResolvedValue({
+      data: { id: 'cust-2', auth_id: verifiedUser.id, email, role: dbRole },
+      error: null,
+    });
+  }
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+    customerLookup.mockReset();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('does not grant admin to a hardcoded staff email whose database role is customer', async () => {
+    signInAs('admin@firsteleven.com', 'customer');
+    const result = await verifyApiAuth(['admin']);
+    expect(result.errorResponse?.status).toBe(403);
+  });
+
+  it('does not let intake staff bypass admin-only routes', async () => {
+    signInAs('intake@firstelevencleaners.com', 'intake_staff');
+    const result = await verifyApiAuth(['admin']);
+    expect(result.errorResponse?.status).toBe(403);
+  });
+
+  it('allows intake staff on intake routes', async () => {
+    signInAs('intake@firstelevencleaners.com', 'intake_staff');
+    const result = await verifyApiAuth(['intake_staff', 'admin']);
+    expect(result.errorResponse).toBeUndefined();
+    expect(result.customer?.role).toBe('intake_staff');
+  });
+
+  it('allows a driver role from the database on driver routes', async () => {
+    signInAs('new.driver@example.com', 'driver');
+    const result = await verifyApiAuth(['driver', 'admin']);
+    expect(result.errorResponse).toBeUndefined();
+    expect(result.customer?.role).toBe('driver');
+  });
+
+  it('allows admin on admin routes when the database role is admin', async () => {
+    signInAs('owner@example.com', 'admin');
+    const result = await verifyApiAuth(['admin']);
+    expect(result.errorResponse).toBeUndefined();
   });
 });

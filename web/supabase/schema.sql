@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS customers (
   email VARCHAR(255) UNIQUE NOT NULL,
   phone VARCHAR(50),
   full_name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'staff', 'admin')),
+  role VARCHAR(50) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'staff', 'admin', 'driver', 'intake_staff')),
   sms_consent BOOLEAN NOT NULL DEFAULT false,
   sms_promotions_consent BOOLEAN NOT NULL DEFAULT false,
   sms_consent_at TIMESTAMPTZ,
@@ -253,6 +253,97 @@ FOR EACH ROW EXECUTE FUNCTION update_timestamp_column();
 CREATE TRIGGER update_orders_modtime
 BEFORE UPDATE ON orders
 FOR EACH ROW EXECUTE FUNCTION update_timestamp_column();
+
+-- =================================================================
+-- AUTH TRIGGERS: customer rows and verified-email account linking (SEC-03)
+-- =================================================================
+-- Signup: create the customer row; link an existing guest row only if confirmed
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  new_cust_id UUID;
+BEGIN
+  INSERT INTO public.customers (auth_id, email, full_name, phone)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'phone', '')
+  )
+  ON CONFLICT (email) DO UPDATE
+    SET auth_id = EXCLUDED.auth_id
+    WHERE public.customers.auth_id IS NULL
+      AND NEW.email_confirmed_at IS NOT NULL
+  RETURNING id INTO new_cust_id;
+
+  -- Create default customer preferences entry
+  IF new_cust_id IS NOT NULL THEN
+    INSERT INTO public.customer_preferences (customer_id)
+    VALUES (new_cust_id)
+    ON CONFLICT (customer_id) DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+-- Email confirmed: link the oldest unlinked guest record with that email
+CREATE OR REPLACE FUNCTION public.link_customer_on_email_confirm()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  linked_id UUID;
+BEGIN
+  -- Already linked at signup (no guest record existed): nothing to do
+  IF EXISTS (SELECT 1 FROM public.customers WHERE auth_id = NEW.id) THEN
+    RETURN NEW;
+  END IF;
+
+  UPDATE public.customers
+  SET auth_id = NEW.id,
+      updated_at = NOW()
+  WHERE id = (
+    SELECT id FROM public.customers
+    WHERE lower(email) = lower(NEW.email) AND auth_id IS NULL
+    ORDER BY created_at
+    LIMIT 1
+  )
+  RETURNING id INTO linked_id;
+
+  IF linked_id IS NOT NULL THEN
+    INSERT INTO public.customer_preferences (customer_id)
+    VALUES (linked_id)
+    ON CONFLICT (customer_id) DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Never block email confirmation because of a linking problem
+  RAISE WARNING 'link_customer_on_email_confirm failed for %: %', NEW.id, SQLERRM;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS on_auth_user_email_confirmed ON auth.users;
+CREATE TRIGGER on_auth_user_email_confirmed
+  AFTER UPDATE OF email_confirmed_at ON auth.users
+  FOR EACH ROW
+  WHEN (OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL)
+  EXECUTE FUNCTION public.link_customer_on_email_confirm();
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.link_customer_on_email_confirm() FROM PUBLIC, anon, authenticated;
 
 -- =================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES

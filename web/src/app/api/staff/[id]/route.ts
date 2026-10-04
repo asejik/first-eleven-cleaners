@@ -67,6 +67,8 @@ export async function PATCH(
     };
     if (updates.full_name) customerFieldsToUpdate.full_name = updates.full_name;
     if (updates.phone) customerFieldsToUpdate.phone = updates.phone;
+    // Role changes take effect only through the server-controlled customers.role column (SEC-02)
+    if (updates.role && !isPrimaryAdmin) customerFieldsToUpdate.role = updates.role;
 
     const { data: updatedCust, error: custUpdateErr } = await supabase
       .from('customers')
@@ -118,7 +120,9 @@ export async function PATCH(
       }
     }
 
-    const effectiveRole = updates.role || (customer.role === 'admin' ? 'admin' : 'driver');
+    const effectiveRole =
+      updates.role ||
+      (customer.role === 'admin' || customer.role === 'intake_staff' ? customer.role : 'driver');
 
     const resultStaff: StaffMember = {
       id: updatedCust.id,

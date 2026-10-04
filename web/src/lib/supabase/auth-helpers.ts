@@ -67,11 +67,12 @@ export async function getAuthenticatedCustomer(request?: Request): Promise<AuthC
 
     const supabase = createAdminClient();
 
-    // Fetch customer record with specific required columns to minimize egress
+    // Resolve the customer strictly by auth_id (SEC-03). Guest records are linked to an
+    // account by database triggers only after the email address is verified.
     const { data: customer, error: customerError } = await supabase
       .from('customers')
       .select('id, auth_id, email, phone, full_name, role, created_at, updated_at')
-      .or(`auth_id.eq.${user.id},email.eq.${user.email}`)
+      .eq('auth_id', user.id)
       .maybeSingle();
 
     if (customerError) {
@@ -141,18 +142,10 @@ export async function verifyApiAuth(
 
   const email = (user.email || customer.email || '').toLowerCase().trim();
 
+  // Authoritative role resolution: the server-controlled customers.role column only (SEC-02).
+  // Never grant roles by email address or user-editable metadata.
   let userRole: UserRole = 'customer';
-
-  // Authoritative role resolution:
-  // 1. Hardcoded domain primary staff and admin accounts
-  if (email === 'admin@firstelevencleaners.com' || email === 'admin@firsteleven.com') {
-    userRole = 'admin';
-  } else if (email === 'driver@firstelevencleaners.com' || email === 'driver@firsteleven.com') {
-    userRole = 'driver';
-  } else if (email === 'intake@firstelevencleaners.com' || email === 'intake@firsteleven.com') {
-    userRole = 'intake_staff';
-  } else if (customer.role && ['admin', 'driver', 'intake_staff', 'customer'].includes(customer.role)) {
-    // 2. Server-controlled role column in database customers table
+  if (customer.role && ['admin', 'driver', 'intake_staff', 'customer'].includes(customer.role)) {
     userRole = customer.role;
   }
 
@@ -168,11 +161,6 @@ export async function verifyApiAuth(
   }
   if (userRole === 'driver') {
     effectiveRoles.add('driver');
-  }
-
-  // Core administrative and intake staff are always permitted on staff routes
-  if (email === 'intake@firstelevencleaners.com' || email === 'admin@firstelevencleaners.com') {
-    return { customer: { ...customer, role: userRole }, user };
   }
 
   if (allowedRoles && allowedRoles.length > 0) {

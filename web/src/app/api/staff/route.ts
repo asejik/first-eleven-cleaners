@@ -57,17 +57,12 @@ export async function GET(request: Request) {
     const staffList: StaffMember[] = [];
 
     for (const c of customerRows || []) {
-      const emailLower = (c.email || '').toLowerCase().trim();
       const authInfo = c.auth_id ? authMap.get(c.auth_id) : undefined;
 
-      // Determine staff role strictly from database role or primary company accounts
+      // Determine staff role strictly from the server-controlled database role (SEC-02)
       let staffRole: 'admin' | 'driver' | 'intake_staff' | null = null;
-      if (emailLower === 'admin@firstelevencleaners.com' || emailLower === 'admin@firsteleven.com' || c.role === 'admin') {
-        staffRole = 'admin';
-      } else if (emailLower === 'driver@firstelevencleaners.com' || emailLower === 'driver@firsteleven.com' || c.role === 'driver') {
-        staffRole = 'driver';
-      } else if (emailLower === 'intake@firstelevencleaners.com' || emailLower === 'intake@firsteleven.com' || c.role === 'intake_staff') {
-        staffRole = 'intake_staff';
+      if (c.role === 'admin' || c.role === 'driver' || c.role === 'intake_staff') {
+        staffRole = c.role;
       }
 
       if (staffRole) {
@@ -131,7 +126,7 @@ export async function POST(request: Request) {
       .eq('email', cleanEmail)
       .maybeSingle();
 
-    if (existingCust && (existingCust.role === 'staff' || existingCust.role === 'admin')) {
+    if (existingCust && ['staff', 'admin', 'driver', 'intake_staff'].includes(existingCust.role)) {
       return NextResponse.json(
         { error: `An active staff member with email ${cleanEmail} is already in your roster.` },
         { status: 409 }
@@ -208,7 +203,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Update or Insert customer record with role 'staff' (compliant with customers_role_check)
+    // 3. Update or Insert customer record with the staff member's real role (SEC-02)
     let staffCustomerId: string = '';
     let createdAtTimestamp: string = new Date().toISOString();
 
@@ -220,7 +215,7 @@ export async function POST(request: Request) {
           auth_id: authUserId,
           full_name,
           phone,
-          role: 'staff',
+          role,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingCust.id)
@@ -245,7 +240,7 @@ export async function POST(request: Request) {
           email: cleanEmail,
           full_name,
           phone,
-          role: 'staff',
+          role,
         })
         .select()
         .single();
