@@ -54,3 +54,16 @@ describe('Photo uploads are staff-only (SEC-24)', () => {
     expect(state.uploads).toBe(1);
   });
 });
+
+describe('Upload bucket allow-list matches real buckets (SEC-31)', () => {
+  it('lists exactly the buckets that exist in Supabase Storage', async () => {
+    const { ALLOWED_STORAGE_BUCKETS } = await vi.importActual<typeof import('@/lib/storage')>('@/lib/storage');
+    expect([...ALLOWED_STORAGE_BUCKETS].sort()).toEqual(['claims-photos', 'garment-photos']);
+  });
+
+  it('rejects a bucket that does not exist', async () => {
+    state.role = 'intake_staff';
+    const res = await upload('delivery-proofs');
+    expect(res.status).toBe(400);
+  });
+});

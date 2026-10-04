@@ -1,9 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
+// Must match the buckets that exist in Supabase Storage (SEC-31)
 export const ALLOWED_STORAGE_BUCKETS = new Set([
   'garment-photos',
-  'intake-photos',
-  'delivery-proofs',
+  'claims-photos',
 ]);
 
 /**
