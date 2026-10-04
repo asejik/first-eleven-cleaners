@@ -322,22 +322,22 @@ export async function POST(request: Request) {
         if (!customerId) {
           const { data: custByEmail } = await supabase
             .from('customers')
-            .select('id')
+            .select('id, auth_id')
             .eq('email', validated.customer.email)
             .maybeSingle();
 
+          if (custByEmail?.auth_id) {
+            // A registered account owns this email: only its owner, signed in, may book on it (SEC-11)
+            return NextResponse.json(
+              { error: 'An account already exists for this email. Please log in to book.', code: 'ACCOUNT_EXISTS' },
+              { status: 409 }
+            );
+          }
+
           if (custByEmail) {
+            // Returning guest. Their saved SMS consent is never changed by an unauthenticated
+            // booking (SEC-11); this booking's own consent still applies to its notifications.
             customerId = custByEmail.id;
-            if (validated.consents.sms_order_updates || validated.consents.sms_promotions) {
-              await supabase
-                .from('customers')
-                .update({
-                  sms_consent: validated.consents.sms_order_updates,
-                  sms_promotions_consent: validated.consents.sms_promotions,
-                  sms_consent_at: validated.consents.sms_order_updates ? new Date().toISOString() : null,
-                })
-                .eq('id', customerId);
-            }
           } else {
             const { data: newCust, error: custErr } = await supabase
               .from('customers')
