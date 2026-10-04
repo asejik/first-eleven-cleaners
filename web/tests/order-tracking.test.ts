@@ -33,7 +33,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   },
 }));
 
-import { GET } from '@/app/api/orders/[id]/route';
+import { GET, PATCH } from '@/app/api/orders/[id]/route';
 
 const ORDER_ID = '1089e6e9-4906-495b-9714-1a3072ceeab3';
 const fullOrder = {
@@ -128,5 +128,28 @@ describe('Public order tracking exposes only the tracking view (SEC-07)', () => 
     state.customer = { id: 'someone-else', role: 'customer' };
     const res = await get(ORDER_ID);
     expect(res.status).toBe(403);
+  });
+});
+
+describe('Order cancel route validates the identifier before filtering (SEC-20)', () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://exampleref.supabase.co';
+    state.customer = { id: 'cust-owner', role: 'customer' };
+    state.order = { ...fullOrder, status: 'booked' };
+    state.lookups = [];
+  });
+
+  it('rejects an identifier carrying PostgREST filter syntax without querying', async () => {
+    const id = 'x,customer_id.neq.null';
+    const res = await PATCH(
+      new Request(`http://localhost/api/orders/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      }),
+      { params: Promise.resolve({ id }) }
+    );
+    expect(res.status).toBe(400);
+    expect(state.lookups).toHaveLength(0);
   });
 });

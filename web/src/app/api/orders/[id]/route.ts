@@ -274,6 +274,10 @@ export async function PATCH(
     if (isSupabaseConfigured) {
       const supabase = createAdminClient();
 
+      // Same identifier check as GET before the value is used in a filter string (SEC-20)
+      if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+        return NextResponse.json({ error: 'Invalid order identifier format.' }, { status: 400 });
+      }
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
       const query = supabase.from('orders').select('id, customer_id, status, order_number');
       const { data: order, error } = isUUID
