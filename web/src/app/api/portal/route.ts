@@ -6,6 +6,7 @@ import {
   SAMPLE_RECURRING_SCHEDULES,
 } from '@/lib/commercial';
 import type { CommercialAccount } from '@/lib/commercial/types';
+import { apiError } from '@/lib/api-errors';
 
 export async function GET(req: Request) {
   const auth = await verifyApiAuth(['admin'], req);
@@ -76,7 +77,7 @@ export async function GET(req: Request) {
     });
   } catch (err: unknown) {
     console.error('Commercial API error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/portal', err, 500);
   }
 }
 
@@ -98,6 +99,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, updatedSchedule: schedule });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/portal', err, 500);
   }
 }

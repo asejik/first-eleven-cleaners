@@ -140,8 +140,6 @@ export async function verifyApiAuth(
     };
   }
 
-  const email = (user.email || customer.email || '').toLowerCase().trim();
-
   // Authoritative role resolution: the server-controlled customers.role column only (SEC-02).
   // Never grant roles by email address or user-editable metadata.
   let userRole: UserRole = 'customer';
@@ -166,23 +164,17 @@ export async function verifyApiAuth(
   if (allowedRoles && allowedRoles.length > 0) {
     const isPermitted = allowedRoles.some((r) => effectiveRoles.has(r));
     if (!isPermitted) {
-      console.error('[verifyApiAuth 403 Forbidden]:', {
-        email,
+      // Log by customer ID (no email) and never echo roles or identity to the client (SEC-19)
+      console.warn('[verifyApiAuth 403 Forbidden]:', {
+        customerId: customer.id,
         userRole,
-        customerRole: customer.role,
-        effectiveRoles: Array.from(effectiveRoles),
         allowedRoles,
       });
       return {
         customer,
         user,
         errorResponse: NextResponse.json(
-          {
-            error: `Forbidden: Account role '${userRole}' is not permitted to access this resource.`,
-            detectedEmail: email,
-            detectedRole: userRole,
-            effectiveRoles: Array.from(effectiveRoles),
-          },
+          { error: 'Forbidden: you do not have access to this resource.' },
           { status: 403 }
         ),
       };

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +101,7 @@ export async function GET(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Customer payment methods GET error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/customer/payment-methods', err, 500);
   }
 }
 
@@ -186,7 +187,7 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Customer payment methods POST error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/customer/payment-methods', err, 500);
   }
 }
 
@@ -257,6 +258,6 @@ export async function DELETE(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Customer payment methods DELETE error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/customer/payment-methods', err, 500);
   }
 }

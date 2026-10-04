@@ -5,6 +5,7 @@ import { messagingService } from '@/lib/messaging';
 import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
+import { apiError } from '@/lib/api-errors';
 
 
 export async function GET(request: Request) {
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error('Mission control query error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/mission-control', err, 500);
   }
 }
 
@@ -274,7 +275,7 @@ export async function POST(request: Request) {
         .single();
 
       if (claimErr) {
-        return NextResponse.json({ error: claimErr.message }, { status: 500 });
+        return apiError('api/mission-control', claimErr, 500);
       }
 
       return NextResponse.json({ success: true, claim: updatedClaim });
@@ -283,6 +284,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (err: unknown) {
     console.error('Mission control action error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/mission-control', err, 500);
   }
 }

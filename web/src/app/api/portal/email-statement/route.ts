@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendEmail, buildStatementEmailHtml } from '@/lib/resend';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
+import { apiError } from '@/lib/api-errors';
 
 export async function POST(request: Request) {
   try {
@@ -64,6 +65,6 @@ export async function POST(request: Request) {
       message: `Statement #${invoice_number} dispatched to ${recipient_email} via Resend.`,
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/portal/email-statement', err, 500);
   }
 }

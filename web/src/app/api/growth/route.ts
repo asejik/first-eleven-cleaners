@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 import {
   POS_ATTACH_RECOMMENDATIONS,
   evaluateChurnWinbackList,
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/growth', err, 500);
   }
 }
 
@@ -113,6 +114,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/growth', err, 500);
   }
 }

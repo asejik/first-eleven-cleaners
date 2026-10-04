@@ -5,6 +5,7 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import type { Address, Order, CustomerPreferences } from '@/types';
+import { apiError } from '@/lib/api-errors';
 
 // Request size and cost limits (SEC-10): every message calls the paid AI API
 const MAX_MESSAGE_CHARS = 1000;
@@ -180,6 +181,6 @@ export async function POST(req: Request) {
     });
   } catch (err: unknown) {
     console.error('Concierge API error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/concierge', err, 500);
   }
 }

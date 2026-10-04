@@ -9,6 +9,7 @@ import {
   getZoneMinimumGap,
 } from '@/lib/constants';
 import type { PriceCalculation } from '@/types';
+import { apiError } from '@/lib/api-errors';
 
 export async function POST(request: Request) {
   try {
@@ -87,6 +88,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/pricing/calculate', err, 400);
   }
 }

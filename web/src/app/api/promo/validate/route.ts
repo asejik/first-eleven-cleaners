@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { apiError } from '@/lib/api-errors';
 
 export async function POST(request: Request) {
   try {
@@ -97,6 +98,6 @@ export async function POST(request: Request) {
       message: 'Invalid or expired promo code.',
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/promo/validate', err, 400);
   }
 }

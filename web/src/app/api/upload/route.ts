@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { uploadToStorage, ALLOWED_STORAGE_BUCKETS, validateImageMagicBytes } from '@/lib/storage';
+import { apiError } from '@/lib/api-errors';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -107,9 +108,6 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Photo upload API error:', err);
-    return NextResponse.json(
-      { error: (err as Error).message || 'Internal server error during upload.' },
-      { status: 500 }
-    );
+    return apiError('api/upload', err, 500);
   }
 }

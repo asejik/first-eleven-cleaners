@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/resend';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
+import { apiError } from '@/lib/api-errors';
 
 export async function POST(request: Request) {
   try {
@@ -93,6 +94,6 @@ export async function POST(request: Request) {
       message: `Test email successfully dispatched to ${recipient_email} via Resend.`,
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/notifications/test-email', err, 500);
   }
 }

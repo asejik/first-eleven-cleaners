@@ -6,6 +6,7 @@ import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import { getAppBaseUrl } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
+import { apiError } from '@/lib/api-errors';
 
 
 interface DriverContext {
@@ -530,6 +531,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Unknown driver action' }, { status: 400 });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/driver', err, 500);
   }
 }

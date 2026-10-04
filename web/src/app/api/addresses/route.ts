@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 export async function GET(request: Request) {
   const isSupabaseConfigured =
@@ -125,12 +126,12 @@ export async function POST(request: Request) {
 
     if (insertErr) {
       console.error('Address insert error:', insertErr);
-      return NextResponse.json({ error: insertErr.message }, { status: 500 });
+      return apiError('api/addresses', insertErr, 500);
     }
 
     return NextResponse.json({ success: true, address: newAddress });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/addresses', err, 400);
   }
 }
 
@@ -167,13 +168,13 @@ export async function PATCH(request: Request) {
         .select('id, customer_id, street, unit, city, state, zip, lat, lng, is_default, delivery_notes, zone_id, created_at')
         .single();
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return apiError('api/addresses', error, 500);
       return NextResponse.json({ success: true, address: updated });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/addresses', err, 400);
   }
 }
 
@@ -209,7 +210,7 @@ export async function DELETE(request: Request) {
       .eq('customer_id', customer.id);
 
     if (deleteErr) {
-      return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+      return apiError('api/addresses', deleteErr, 500);
     }
 
     // If deleted address was default, make the most recent remaining address default
@@ -232,6 +233,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/addresses', err, 400);
   }
 }

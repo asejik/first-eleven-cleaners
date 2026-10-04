@@ -5,6 +5,7 @@ import { sendEmail, buildWelcomeEmailHtml } from '@/lib/resend';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 const WelcomeSchema = z.object({
   // Invalid names fall back to a generic greeting rather than blocking the email (SEC-09)
@@ -80,9 +81,6 @@ export async function POST(request: Request) {
     return ACCEPTED();
   } catch (err: unknown) {
     console.error('Welcome email error:', err);
-    return NextResponse.json(
-      { error: (err as Error).message || 'Invalid request payload' },
-      { status: 400 }
-    );
+    return apiError('api/auth/welcome', err, 400);
   }
 }

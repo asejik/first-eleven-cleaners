@@ -3,6 +3,7 @@ import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/resend';
+import { apiError } from '@/lib/api-errors';
 
 export async function POST(request: Request) {
   try {
@@ -100,9 +101,6 @@ export async function POST(request: Request) {
       message: 'Your personal data request has been officially received and queued for review under the Texas Data Privacy and Security Act. A confirmation has been logged with First Eleven Data Privacy compliance.',
     });
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: (err as Error).message || 'Failed to submit data privacy request.' },
-      { status: 500 }
-    );
+    return apiError('api/customer/data-deletion', err, 500);
   }
 }

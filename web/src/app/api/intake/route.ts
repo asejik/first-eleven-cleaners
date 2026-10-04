@@ -14,6 +14,7 @@ import {
 import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
+import { apiError } from '@/lib/api-errors';
 
 
 export const dynamic = 'force-dynamic';
@@ -367,6 +368,6 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Intake POST error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/intake', err, 500);
   }
 }

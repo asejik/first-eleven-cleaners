@@ -4,6 +4,7 @@ import { personNameSchema } from '@/lib/sanitize';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
+import { apiError } from '@/lib/api-errors';
 
 const UpdateStaffSchema = z.object({
   full_name: personNameSchema.optional(),
@@ -160,10 +161,7 @@ export async function PATCH(
     });
   } catch (err: unknown) {
     console.error('Staff PATCH API exception:', err);
-    return NextResponse.json(
-      { error: (err as Error).message || 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('api/staff/[id]', err, 500);
   }
 }
 
@@ -239,9 +237,6 @@ export async function DELETE(
     });
   } catch (err: unknown) {
     console.error('Staff DELETE API exception:', err);
-    return NextResponse.json(
-      { error: (err as Error).message || 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('api/staff/[id]', err, 500);
   }
 }

@@ -16,6 +16,7 @@ import {
   computeBookingFinancials,
 } from '@/lib/constants';
 import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
+import { apiError } from '@/lib/api-errors';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -683,9 +684,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    return NextResponse.json(
-      { error: (err as Error).message },
-      { status: 400 }
-    );
+    return apiError('api/bookings', err, 400);
   }
 }

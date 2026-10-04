@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Mission control financials error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError('api/mission-control/financials', error, 500);
     }
 
     const allOrders = orders || [];
@@ -106,6 +107,6 @@ export async function GET(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Financials API error:', err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/mission-control/financials', err, 500);
   }
 }

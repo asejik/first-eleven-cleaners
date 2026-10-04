@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppBaseUrl } from '@/lib/constants';
+import { apiError } from '@/lib/api-errors';
 
 /**
  * Validates the cryptographic Square HMAC-SHA256 signature using timing-safe comparison (SEC-007).
@@ -227,6 +228,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/payments/webhook', err, 400);
   }
 }

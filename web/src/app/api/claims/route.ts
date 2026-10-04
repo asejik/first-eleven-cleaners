@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 // Maps incoming form values to exact PostgreSQL check constraint: ('damage', 'lost_item', 'quality', 'wrong_item', 'other')
 function normalizeIssueType(type: string): 'damage' | 'lost_item' | 'quality' | 'wrong_item' | 'other' {
@@ -204,6 +205,6 @@ export async function POST(request: Request) {
         'Your claim has been opened with highest priority under our Refund-First policy. A member of our executive resolution team will reach out within 2 business hours.',
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/claims', err, 400);
   }
 }

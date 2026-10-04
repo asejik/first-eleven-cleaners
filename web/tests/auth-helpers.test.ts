@@ -185,3 +185,37 @@ describe('verifyApiAuth role resolution (SEC-02)', () => {
     expect(result.errorResponse).toBeUndefined();
   });
 });
+
+describe('Forbidden responses reveal nothing about the caller (SEC-19)', () => {
+  const originalEnv = { ...process.env };
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('403 body contains only a generic message', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const email = 'curious.customer@example.com';
+    requestCookies = [sessionCookie('valid.signed.token', email)];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ id: 'u-9', email, aud: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: '' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+    customerLookup.mockResolvedValue({ data: { id: 'cust-9', auth_id: 'u-9', email, role: 'customer' }, error: null });
+
+    const result = await verifyApiAuth(['admin']);
+    const body = await result.errorResponse!.json();
+    expect(result.errorResponse!.status).toBe(403);
+    expect(Object.keys(body)).toEqual(['error']);
+    expect(JSON.stringify(body)).not.toContain(email);
+    expect(JSON.stringify(body)).not.toContain('customer');
+  });
+});

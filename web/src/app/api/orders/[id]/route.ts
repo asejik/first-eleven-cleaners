@@ -3,6 +3,7 @@ import type { Order } from '@/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
+import { apiError } from '@/lib/api-errors';
 
 export async function GET(
   request: Request,
@@ -310,7 +311,7 @@ export async function PATCH(
         .single();
 
       if (updateErr) {
-        return NextResponse.json({ error: updateErr.message }, { status: 500 });
+        return apiError('api/orders/[id]', updateErr, 500);
       }
 
       // Record event
@@ -332,6 +333,6 @@ export async function PATCH(
       message: 'Pickup cancelled successfully.',
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/orders/[id]', err, 500);
   }
 }

@@ -4,6 +4,7 @@ import { personNameSchema } from '@/lib/sanitize';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
+import { apiError } from '@/lib/api-errors';
 
 const CreateStaffSchema = z.object({
   full_name: personNameSchema,
@@ -94,10 +95,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ staff: staffList });
   } catch (err: unknown) {
     console.error('Staff GET API exception:', err);
-    return NextResponse.json(
-      { error: (err as Error).message || 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('api/staff', err, 500);
   }
 }
 
@@ -281,9 +279,6 @@ export async function POST(request: Request) {
     });
   } catch (err: unknown) {
     console.error('Staff POST API exception:', err);
-    return NextResponse.json(
-      { error: (err as Error).message || 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('api/staff', err, 500);
   }
 }

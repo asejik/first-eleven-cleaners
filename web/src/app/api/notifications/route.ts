@@ -5,6 +5,7 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
 import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
+import { apiError } from '@/lib/api-errors';
 
 
 export async function GET(request: Request) {
@@ -150,6 +151,6 @@ export async function POST(request: Request) {
       result: dispatchResult,
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/notifications', err, 500);
   }
 }

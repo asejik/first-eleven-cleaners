@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SAMPLE_INVOICES } from '@/lib/commercial';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 export async function GET(req: Request) {
   const auth = await verifyApiAuth(['admin'], req);
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ invoices });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/portal/invoices', err, 500);
   }
 }
 
@@ -38,6 +39,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError('api/portal/invoices', err, 500);
   }
 }

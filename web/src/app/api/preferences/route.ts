@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { apiError } from '@/lib/api-errors';
 
 export async function GET(request: Request) {
   const isSupabaseConfigured =
@@ -82,11 +83,11 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Preferences save error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError('api/preferences', error, 500);
     }
 
     return NextResponse.json({ success: true, preferences: savedPrefs });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    return apiError('api/preferences', err, 400);
   }
 }
