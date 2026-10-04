@@ -332,6 +332,16 @@ export class ClaudeAIEngineProvider implements IAIEngineProvider {
       const content = data.content?.[0]?.text || 'I am ready to assist with your garments.';
 
       const isEscalation = /escalat|claim|support ticket|manager/i.test(content);
+      // Booking requests always go through the booking page; the concierge never books (SEC-10)
+      const wantsBooking = /\b(book|booking|schedule|pick ?up|agendar|programar|recolecci[oó]n)\b/i.test(message);
+
+      if (wantsBooking && !isEscalation) {
+        return {
+          content,
+          intent: 'book_usual',
+          action: { type: 'navigate', label: '🧺 Book a Pickup', url: '/book' },
+        };
+      }
 
       return {
         content,

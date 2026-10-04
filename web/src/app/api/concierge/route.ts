@@ -1,17 +1,27 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import type { Address, Order, CustomerPreferences } from '@/types';
 
+// Request size and cost limits (SEC-10): every message calls the paid AI API
+const MAX_MESSAGE_CHARS = 1000;
+const MAX_HISTORY_TURNS = 10;
+const MAX_HISTORY_TURN_CHARS = 2000;
+const ONE_MINUTE = 60 * 1000;
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
 export async function POST(req: Request) {
   try {
-    // 1. IP Rate Limiting (15 requests / minute)
+    // 1. Shared (Upstash-backed) rate limits per IP: burst and daily cost cap
     const clientIp = getClientIp(req);
-    const rateCheck = checkRateLimit(`concierge:${clientIp}`, 15, 60 * 1000);
-    if (!rateCheck.allowed) {
+    const [minuteCheck, dayCheck] = await Promise.all([
+      checkRateLimitAsync(`concierge:${clientIp}`, 15, ONE_MINUTE),
+      checkRateLimitAsync(`concierge_day:${clientIp}`, 100, ONE_DAY),
+    ]);
+    if (!minuteCheck.allowed || !dayCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many requests. Please wait a moment before sending another message.' },
         { status: 429 }
@@ -24,12 +34,40 @@ export async function POST(req: Request) {
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return NextResponse.json(
+        { error: `Please keep messages under ${MAX_MESSAGE_CHARS} characters.` },
+        { status: 400 }
+      );
+    }
+
+    // Client-held history: keep recent user/assistant turns only, each length-capped
+    const safeHistory: AIConversationMessage[] = (Array.isArray(history) ? history : [])
+      .filter(
+        (h: unknown): h is AIConversationMessage =>
+          typeof h === 'object' &&
+          h !== null &&
+          ((h as AIConversationMessage).role === 'user' || (h as AIConversationMessage).role === 'assistant') &&
+          typeof (h as AIConversationMessage).content === 'string'
+      )
+      .slice(-MAX_HISTORY_TURNS)
+      .map((h) => ({ role: h.role, content: h.content.slice(0, MAX_HISTORY_TURN_CHARS) }));
 
     const adminSupabase = createAdminClient();
 
     // 2. Identify user / customer context strictly via authenticated session
     let targetCustomerId: string | null = null;
     const { customer } = await getAuthenticatedCustomer(req);
+
+    if (customer) {
+      const userDayCheck = await checkRateLimitAsync(`concierge_user_day:${customer.id}`, 300, ONE_DAY);
+      if (!userDayCheck.allowed) {
+        return NextResponse.json(
+          { error: "You've reached today's message limit. Please call us or try again tomorrow." },
+          { status: 429 }
+        );
+      }
+    }
 
     if (customer) {
       targetCustomerId = customer.id;
@@ -80,175 +118,13 @@ export async function POST(req: Request) {
     const aiEngine = getAIEngine();
     const response = await aiEngine.generateResponse(
       message,
-      history as AIConversationMessage[],
+      safeHistory,
       context
     );
 
-    let createdOrderRecord = null;
-
-    // 4. Conversational Booking Execution: Detect if customer confirmed a pickup booking
-    const isBookingConfirmation =
-      /\b(lock in|confirm|schedule|book|agendar|confirmar|yes|si|ready|proceed)\b/i.test(message) &&
-      (/\b(pickup|evening|morning|order|tonight|tomorrow|shift|recoleccion)\b/i.test(message) ||
-        /locked in|confirmed|scheduled|orden confirmada/i.test(response.content));
-
-    if (isBookingConfirmation && targetCustomerId) {
-      try {
-        const orderNumber = `F11-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-        const pickupDate = new Date().toISOString().split('T')[0];
-
-        const pickup = new Date();
-        const delivery = new Date(pickup);
-        delivery.setDate(delivery.getDate() + 2);
-        if (delivery.getDay() === 0) delivery.setDate(delivery.getDate() + 1);
-        const deliveryDate = delivery.toISOString().split('T')[0];
-
-        const isEvening = /evening|tarde|tonight|noche/i.test(message) || /evening/i.test(response.content);
-        const pickupWindow = isEvening ? 'evening' : 'morning';
-
-        // Prepare itemized garments dynamically
-        const itemsToInsert: Array<{
-          garment_type: string;
-          service_type: 'dry_clean' | 'wash_fold';
-          quantity: number;
-          unit_price: number;
-          subtotal: number;
-          notes?: string;
-        }> = [];
-
-        // Check for 2-Piece Suits
-        const suitMatch = (response.content + ' ' + message).match(/(\d+)\s*(?:x\s*)?(?:2-Piece\s*)?Suits?/i);
-        const suitQty = suitMatch ? parseInt(suitMatch[1], 10) : 2;
-        if (suitQty > 0) {
-          itemsToInsert.push({
-            garment_type: '2-Piece Suit',
-            service_type: 'dry_clean',
-            quantity: suitQty,
-            unit_price: 19.95,
-            subtotal: parseFloat((suitQty * 19.95).toFixed(2)),
-          });
-        }
-
-        // Check for Formal Dresses
-        const dressMatch = (response.content + ' ' + message).match(/(\d+)\s*(?:x\s*)?(?:Formal\s*)?Dress(?:es)?/i);
-        const dressQty = dressMatch ? parseInt(dressMatch[1], 10) : 1;
-        if (dressQty > 0) {
-          itemsToInsert.push({
-            garment_type: 'Formal Dress',
-            service_type: 'dry_clean',
-            quantity: dressQty,
-            unit_price: 14.00,
-            subtotal: parseFloat((dressQty * 14.00).toFixed(2)),
-          });
-        }
-
-        // Check for Wash & Fold weight
-        const wfMatch =
-          (response.content + ' ' + message).match(/Wash\s*&\s*Fold[^\d]*(\d+)\s*lbs?/i) ||
-          (response.content + ' ' + message).match(/(\d+)\s*lbs?/i);
-        const wfWeight = wfMatch ? parseInt(wfMatch[1], 10) : 20;
-        if (wfWeight > 0) {
-          const wfCost = Math.max(45.0, wfWeight * 3.0);
-          itemsToInsert.push({
-            garment_type: 'wash_fold',
-            service_type: 'wash_fold',
-            quantity: 1,
-            unit_price: 3.00,
-            subtotal: parseFloat(wfCost.toFixed(2)),
-            notes: `${wfWeight} lbs wash & fold laundry`,
-          });
-        }
-
-        // Calculate exact items subtotal strictly from catalog prices (SEC-006)
-        const computedSubtotal = parseFloat(
-          itemsToInsert.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)
-        );
-
-        // Enforce minimum price, never parse price from unverified AI text (SEC-006)
-        const totalAmount = computedSubtotal >= 45.00 ? computedSubtotal : 45.00;
-
-        // Ensure customer has a legitimate verified address on file
-        let addressId = context.defaultAddress?.id;
-        if (!addressId) {
-          const { data: firstAddr } = await adminSupabase
-            .from('addresses')
-            .select('id')
-            .eq('customer_id', targetCustomerId)
-            .limit(1)
-            .maybeSingle();
-
-          if (firstAddr) {
-            addressId = firstAddr.id;
-          }
-        }
-
-        if (!addressId) {
-          response.action = {
-            type: 'navigate',
-            label: '🧺 Complete Booking & Set Address',
-            url: '/book',
-          };
-          return NextResponse.json({
-            success: true,
-            response,
-            createdOrder: null,
-            engine: aiEngine.name,
-          });
-        }
-
-        // Insert new confirmed order into database
-        const { data: insertedOrder, error: orderInsertErr } = await adminSupabase
-          .from('orders')
-          .insert({
-            order_number: orderNumber,
-            customer_id: targetCustomerId,
-            address_id: addressId,
-            status: 'booked',
-            order_type: 'mixed',
-            pickup_date: pickupDate,
-            pickup_window: pickupWindow,
-            delivery_date: deliveryDate,
-            delivery_window: pickupWindow,
-            weight_lbs: wfWeight > 0 ? wfWeight : null,
-            subtotal: totalAmount,
-            total: totalAmount,
-            payment_status: 'pending',
-            notes: `Booked via Eleven AI Concierge. Customer note: "${message}"`,
-          })
-          .select('id, order_number, status, pickup_date, total')
-          .single();
-
-        if (!orderInsertErr && insertedOrder) {
-          createdOrderRecord = insertedOrder;
-
-          // Insert order event
-          await adminSupabase.from('order_events').insert({
-            order_id: insertedOrder.id,
-            status: 'booked',
-            note: `Pickup booked conversatially via Eleven AI Concierge for ${pickupDate} (${pickupWindow === 'morning' ? '7:30-10:00 AM' : '5:00-8:00 PM'})`,
-            triggered_by: 'Eleven AI Concierge',
-          });
-
-          // Insert order items
-          if (itemsToInsert.length > 0) {
-            const itemsWithOrderId = itemsToInsert.map((it) => ({
-              ...it,
-              order_id: insertedOrder.id,
-            }));
-            await adminSupabase.from('order_items').insert(itemsWithOrderId);
-          }
-
-          // Attach live tracking action button
-          response.action = {
-            type: 'track_order',
-            label: `📍 View Live Domino's Tracker (#${orderNumber})`,
-            url: `/track/${insertedOrder.id}`,
-          };
-        }
-      } catch (bookErr) {
-        console.warn('Conversational booking auto-insert notice:', bookErr);
-      }
-    }
+    // The concierge never creates orders (SEC-10). Booking requests get the engine's
+    // "Review & Confirm Pickup Slot" action, which opens /book, where pricing, zone,
+    // capacity and card-on-file rules apply.
 
     // 5. If Escalated to Human, append into conversations JSON messages array for Mission Control HUD
     if (response.escalateToHuman && targetCustomerId) {
@@ -263,7 +139,7 @@ export async function POST(req: Request) {
         const timestamp = new Date().toISOString();
         const escalationEntry = {
           id: crypto.randomUUID(),
-          order_id: createdOrderRecord?.id || context.recentOrders?.[0]?.id || undefined,
+          order_id: context.recentOrders?.[0]?.id || undefined,
           stage: 'booked',
           text: `[AI CONCIERGE ESCALATION]: Customer ${context.customerName || 'User'} requested human intervention: "${message}"`,
           media_url: null,
@@ -299,7 +175,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       response,
-      createdOrder: createdOrderRecord,
+      createdOrder: null,
       engine: aiEngine.name,
     });
   } catch (err: unknown) {
