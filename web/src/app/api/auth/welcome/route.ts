@@ -12,6 +12,11 @@ const WelcomeSchema = z.object({
   email: z.string().email(),
 });
 
+// Same response whether or not an email has an account, so this endpoint can't be used
+// to test who is a customer (SEC-18). Only eligible requests actually send an email.
+const ACCEPTED = () =>
+  NextResponse.json({ success: true, message: 'If this account is eligible, a welcome email is on its way.' }, { status: 202 });
+
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
@@ -36,10 +41,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (!customer) {
-      return NextResponse.json(
-        { error: 'No registered customer account found for this email address.' },
-        { status: 404 }
-      );
+      return ACCEPTED();
     }
 
     // 2. Ownership & Recency verification (SEC-008)
@@ -50,13 +52,7 @@ export async function POST(request: Request) {
     const isRecentSignup = accountAgeMs >= 0 && accountAgeMs <= 15 * 60 * 1000;
 
     if (!isSessionMatch && !isRecentSignup) {
-      return NextResponse.json(
-        {
-          error:
-            'Forbidden: Welcome emails can only be requested upon recent account registration or with an active authenticated session.',
-        },
-        { status: 403 }
-      );
+      return ACCEPTED();
     }
 
     // 3. Per-recipient rate limiting: Maximum 1 welcome email per 24 hours (SEC-008)
@@ -66,10 +62,7 @@ export async function POST(request: Request) {
       24 * 60 * 60 * 1000
     );
     if (!recipientRateCheck.allowed) {
-      return NextResponse.json(
-        { error: 'A welcome email has already been dispatched to this account.' },
-        { status: 429 }
-      );
+      return ACCEPTED();
     }
 
     const html = buildWelcomeEmailHtml({ name });
@@ -82,10 +75,9 @@ export async function POST(request: Request) {
 
     if (!result.success) {
       console.warn('Welcome email delivery note:', result.error);
-      return NextResponse.json({ success: false, error: result.error }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, messageId: result.id });
+    return ACCEPTED();
   } catch (err: unknown) {
     console.error('Welcome email error:', err);
     return NextResponse.json(
