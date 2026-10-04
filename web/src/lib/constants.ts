@@ -293,6 +293,8 @@ export const ROUTES = {
   book: '/book',
   login: '/login',
   signup: '/signup',
+  resetPassword: '/reset-password',
+  authConfirm: '/auth/confirm',
   dashboard: '/dashboard',
   orders: '/dashboard/orders',
   orderDetail: (id: string) => `/dashboard/orders/${id}`,

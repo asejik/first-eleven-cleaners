@@ -71,3 +71,26 @@
   color: var(--color-gold-dark);
   font-weight: var(--font-semibold);
 }
+
+.successState {
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
+.successIcon {
+  font-size: var(--text-4xl);
+  margin-bottom: var(--space-3);
+}
+
+.successState h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  margin-bottom: var(--space-2);
+}
+
+.successState p {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  line-height: var(--leading-relaxed);
+}

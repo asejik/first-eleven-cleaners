@@ -1,14 +1,26 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { Suspense, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
+
+// Shown when /auth/confirm sends the user back after an invalid or expired email link (SEC-28)
+function LinkExpiredNotice() {
+  const searchParams = useSearchParams();
+  if (searchParams.get('error') !== 'link_expired') return null;
+  return (
+    <div className={styles.errorAlert} role="alert">
+      That email link is invalid or has expired. Log in below, or request a new link from{' '}
+      <Link href="/forgot-password">Forgot password</Link>.
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -65,6 +77,10 @@ export default function LoginPage() {
           <h1 className={styles.title}>Welcome Back</h1>
           <p className={styles.subtitle}>Log in to track your garments and manage pickups</p>
         </div>
+
+        <Suspense fallback={null}>
+          <LinkExpiredNotice />
+        </Suspense>
 
         {error && (
           <div className={styles.errorAlert} role="alert">

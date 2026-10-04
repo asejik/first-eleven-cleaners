@@ -12,6 +12,7 @@ import {
   hasFreshCachedSession,
   createMockCustomer,
 } from '@/lib/mock-auth';
+import { ROUTES } from '@/lib/constants';
 
 interface AuthState {
   user: Customer | null;
@@ -25,7 +26,7 @@ interface AuthState {
     password?: string;
     sms_consent?: boolean;
     sms_promotions_consent?: boolean;
-  }) => Promise<{ error?: string }>;
+  }) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
@@ -230,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password?: string;
       sms_consent?: boolean;
       sms_promotions_consent?: boolean;
-    }): Promise<{ error?: string }> => {
+    }): Promise<{ error?: string; needsConfirmation?: boolean }> => {
       if (isSupabaseConfigured) {
         try {
           const supabase = createClient();
@@ -238,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: data.email,
             password: data.password || 'TemporaryPassword123!',
             options: {
+              emailRedirectTo: `${window.location.origin}${ROUTES.authConfirm}`,
               data: {
                 full_name: data.full_name,
                 phone: data.phone,
@@ -247,6 +249,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             },
           });
           if (authError) return { error: authError.message };
+
+          // Email confirmation required: no session yet, so cache nothing (SEC-28)
+          if (!authData.session) return { needsConfirmation: true };
 
           if (authData.user) {
             // 1. First check if the Supabase Postgres trigger already created the customer record
@@ -352,7 +357,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isSupabaseConfigured) {
         try {
           const supabase = createClient();
-          const { error } = await supabase.auth.resetPasswordForEmail(email);
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}${ROUTES.authConfirm}`,
+          });
           if (error) return { error: error.message };
           return {};
         } catch (e: unknown) {

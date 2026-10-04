@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
   const { signup } = useAuth();
   const addToast = useUIStore((s) => s.addToast);
@@ -63,6 +64,12 @@ export default function SignupPage() {
 
     setIsSubmitting(false);
 
+    // Email confirmation required: the account can't be used until the link is clicked (SEC-28)
+    if (res.needsConfirmation) {
+      setAwaitingConfirmation(true);
+      return;
+    }
+
     addToast({
       type: 'success',
       title: 'Account Created!',
@@ -91,6 +98,22 @@ export default function SignupPage() {
           </p>
         </div>
 
+        {awaitingConfirmation ? (
+          <div className={styles.successState}>
+            <div className={styles.successIcon}>✉️</div>
+            <h3>Confirm Your Email</h3>
+            <p>
+              We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click it to activate your account,
+              then you&apos;ll be signed in automatically.
+            </p>
+            <Link href={ROUTES.login}>
+              <Button variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
+                Go to Log In
+              </Button>
+            </Link>
+          </div>
+        ) : (
+        <>
         {error && (
           <div className={styles.errorAlert} role="alert">
             {error}
@@ -160,6 +183,8 @@ export default function SignupPage() {
             </Link>
           </p>
         </div>
+        </>
+        )}
       </Card>
     </div>
   );
