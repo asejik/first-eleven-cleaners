@@ -96,8 +96,6 @@ graph TD
 
 ```
 first-eleven-cleaners/
-├── PROJECT_CONTEXT.md          # Brand guidelines, business rules, and technical specifications
-├── ROADMAP.md                  # 14-Week phased milestone roadmap and progress tracking
 ├── README.md                   # Platform documentation and developer guide
 ├── web/                        # Next.js 16 Web Application
 │   ├── public/                 # Static assets, logos, PWA manifest

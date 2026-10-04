@@ -112,3 +112,15 @@ desktop.ini
 *.swn
 *.bak
 
+
+# --- Internal Audits, Planning Docs & AI Agent Instructions (local only) ---
+*_audit_*.md
+*_review_*.md
+PROJECT_CONTEXT.md
+ROADMAP.md
+CLAUDE.md
+web/CLAUDE.md
+web/AGENTS.md
+AGENTS.md
+.agents/
+.claude/
