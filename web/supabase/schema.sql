@@ -273,6 +273,7 @@ CREATE POLICY customers_update_self ON customers
   FOR UPDATE USING (auth.uid() = auth_id) WITH CHECK (auth.uid() = auth_id);
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON customers FROM anon, authenticated;
 GRANT UPDATE (full_name, phone) ON customers TO authenticated;
+GRANT UPDATE (sms_consent, sms_promotions_consent, sms_consent_at) ON customers TO authenticated;
 
 -- Customer Preferences
 CREATE POLICY customer_prefs_self ON customer_preferences
