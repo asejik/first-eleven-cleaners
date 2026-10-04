@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
 import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`notif:${clientIp}`, 20, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`notif:${clientIp}`, 20, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json({ error: 'Too many dispatch requests.' }, { status: 429 });
     }

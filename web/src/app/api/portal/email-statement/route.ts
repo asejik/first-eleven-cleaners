@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendEmail, buildStatementEmailHtml } from '@/lib/resend';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (auth.errorResponse) return auth.errorResponse;
 
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`email_statement:${clientIp}`, 10, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`email_statement:${clientIp}`, 10, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded for statement dispatch. Please wait a minute.' },

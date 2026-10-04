@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`promo:${clientIp}`, 10, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`promo:${clientIp}`, 10, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { valid: false, message: 'Too many promo validation attempts. Please try again later.' },

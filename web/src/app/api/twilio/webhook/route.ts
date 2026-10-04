@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
 import { getAppBaseUrl } from '@/lib/constants';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
   try {
     // 1. IP Rate Limiting
     const clientIp = getClientIp(req);
-    const rateCheck = checkRateLimit(`twilio_inbound:${clientIp}`, 60, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`twilio_inbound:${clientIp}`, 60, 60 * 1000);
     if (!rateCheck.allowed) {
       return createTwimlResponse('First Eleven: Too many requests. Please wait a moment before sending another message.');
     }

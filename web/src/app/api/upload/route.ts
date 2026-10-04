@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { uploadToStorage, ALLOWED_STORAGE_BUCKETS, validateImageMagicBytes } from '@/lib/storage';
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -16,7 +16,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`upload:${clientIp}`, 30, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`upload:${clientIp}`, 30, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Upload rate limit exceeded. Please wait a minute.' },

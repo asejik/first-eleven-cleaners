@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/resend';
 
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`data_deletion:${clientIp}`, 5, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`data_deletion:${clientIp}`, 5, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },

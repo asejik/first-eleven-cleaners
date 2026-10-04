@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import type { Order } from '@/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const clientIp = getClientIp(request);
-  const rateCheck = checkRateLimit(`order_detail:${clientIp}`, 60, 60 * 1000);
+  const rateCheck = await checkRateLimitAsync(`order_detail:${clientIp}`, 60, 60 * 1000);
   if (!rateCheck.allowed) {
     return NextResponse.json(
       { error: 'Too many order lookups from this network. Please wait a minute.' },

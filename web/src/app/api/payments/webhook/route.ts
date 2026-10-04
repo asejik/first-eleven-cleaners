@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppBaseUrl } from '@/lib/constants';
 
@@ -30,7 +30,7 @@ function verifySquareSignature(
 export async function POST(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`square_webhook:${clientIp}`, 100, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`square_webhook:${clientIp}`, 100, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json({ error: 'Too many webhook requests' }, { status: 429 });
     }

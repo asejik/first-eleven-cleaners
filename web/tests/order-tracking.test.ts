@@ -12,7 +12,7 @@ vi.mock('@/lib/supabase/auth-helpers', () => ({
   getAuthenticatedCustomer: async () => ({ customer: state.customer, user: state.customer ? {} : null }),
 }));
 vi.mock('@/lib/rate-limiter', () => ({
-  checkRateLimit: () => ({ allowed: true, remaining: 59 }),
+  checkRateLimitAsync: async () => ({ allowed: true, remaining: 59 }),
   getClientIp: () => '127.0.0.1',
 }));
 vi.mock('@/lib/supabase/admin', () => ({

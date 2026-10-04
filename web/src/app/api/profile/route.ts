@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { personNameSchema } from '@/lib/sanitize';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 
 const ProfileUpdateSchema = z.object({
   full_name: personNameSchema,
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const clientIp = getClientIp(request);
-    const rateCheck = checkRateLimit(`profile_update:${clientIp}`, 15, 60 * 1000);
+    const rateCheck = await checkRateLimitAsync(`profile_update:${clientIp}`, 15, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many profile updates. Please wait a minute.' },
