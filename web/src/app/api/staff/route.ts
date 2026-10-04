@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { personNameSchema } from '@/lib/sanitize';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
 
 const CreateStaffSchema = z.object({
-  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
+  full_name: personNameSchema,
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(7, 'Please enter a valid phone number'),
   role: z.enum(['driver', 'intake_staff']),

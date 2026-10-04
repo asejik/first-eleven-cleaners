@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { personNameSchema } from '@/lib/sanitize';
 import { sendEmail, buildWelcomeEmailHtml } from '@/lib/resend';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 
 const WelcomeSchema = z.object({
-  name: z.string().min(1).default('Valued Customer'),
+  // Invalid names fall back to a generic greeting rather than blocking the email (SEC-09)
+  name: personNameSchema.catch('Valued Customer'),
   email: z.string().email(),
 });
 

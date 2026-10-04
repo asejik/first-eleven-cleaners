@@ -1,4 +1,5 @@
 import type { OrderStatusKey } from '@/lib/constants';
+import { greetingFirstName } from '@/lib/sanitize';
 
 export interface MessagePayload {
   orderId: string;
@@ -39,7 +40,8 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
     };
   }
 
-  const firstName = data.customerName.split(' ')[0] || 'Valued Customer';
+  // Letters only: a customer-supplied name can never carry a link into an SMS (SEC-09)
+  const firstName = greetingFirstName(data.customerName);
   const orderNum = data.orderNumber || data.orderId.slice(0, 8);
   const pDate = data.pickupDate || 'Scheduled date';
   const pWindow = data.pickupWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : 'Evening (5:00–8:00 PM)';

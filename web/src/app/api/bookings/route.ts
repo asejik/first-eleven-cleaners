@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { personNameSchema } from '@/lib/sanitize';
 import type { Order } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -18,7 +19,7 @@ import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
 
 const BookingSchema = z.object({
   customer: z.object({
-    full_name: z.string().min(2),
+    full_name: personNameSchema,
     email: z.string().email(),
     phone: z.string().min(7),
   }),
@@ -74,6 +75,22 @@ export async function POST(request: Request) {
 
     const rawBody = await request.json();
     const validated = BookingSchema.parse(rawBody);
+
+    // Per-contact limits (SEC-09): bookings send an email/SMS to the supplied contact, so cap
+    // them per recipient as well as per network to stop spam and SMS bombing.
+    const contactEmail = validated.customer.email.trim().toLowerCase();
+    const contactPhone = validated.customer.phone.replace(/\D/g, '').slice(-10);
+    const ONE_HOUR = 60 * 60 * 1000;
+    const [emailCheck, phoneCheck] = await Promise.all([
+      checkRateLimitAsync(`booking_email:${contactEmail}`, 5, ONE_HOUR),
+      contactPhone ? checkRateLimitAsync(`booking_phone:${contactPhone}`, 5, ONE_HOUR) : Promise.resolve({ allowed: true }),
+    ]);
+    if (!emailCheck.allowed || !phoneCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Too many bookings for this email or phone number in the last hour. Please try again later or call us.' },
+        { status: 429 }
+      );
+    }
 
     const isSupabaseConfigured =
       Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
@@ -628,6 +645,12 @@ export async function POST(request: Request) {
       message: 'Your pickup has been confirmed and scheduled!',
     });
   } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: err.issues[0]?.message || 'Please check your booking details.' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: (err as Error).message },
       { status: 400 }

@@ -2,6 +2,8 @@
 // FIRST ELEVEN CLEANERS — Resend Transactional Email Service
 // ============================================================================
 
+import { escapeHtml, greetingFirstName } from '@/lib/sanitize';
+
 export interface SendEmailOptions {
   to: string | string[];
   subject: string;
@@ -104,8 +106,8 @@ export function buildStatementEmailHtml({
     .map(
       (item) => `
       <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 10px 12px; font-size: 14px; color: #1e293b;">${item.description}</td>
-        <td style="padding: 10px 12px; font-size: 14px; color: #64748b; text-align: center;">${item.quantity} ${item.unit}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #1e293b;">${escapeHtml(item.description)}</td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #64748b; text-align: center;">${escapeHtml(item.quantity)} ${escapeHtml(item.unit)}</td>
         <td style="padding: 10px 12px; font-size: 14px; color: #64748b; text-align: right;">$${item.unit_price.toFixed(2)}</td>
         <td style="padding: 10px 12px; font-size: 14px; color: #0f172a; font-weight: bold; text-align: right;">$${item.total.toFixed(2)}</td>
       </tr>`
@@ -117,7 +119,7 @@ export function buildStatementEmailHtml({
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Statement ${invoiceNumber}</title>
+  <title>Statement ${escapeHtml(invoiceNumber)}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 620px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
@@ -133,14 +135,14 @@ export function buildStatementEmailHtml({
       <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
         <div>
           <p style="margin: 0; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold;">Billed To</p>
-          <h2 style="margin: 4px 0 0; font-size: 18px; color: #0f172a;">${businessName}</h2>
-          <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Billing Cycle: ${billingPeriod}</p>
+          <h2 style="margin: 4px 0 0; font-size: 18px; color: #0f172a;">${escapeHtml(businessName)}</h2>
+          <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Billing Cycle: ${escapeHtml(billingPeriod)}</p>
         </div>
       </div>
 
       <div style="background-color: #f1f5f9; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px;">
-        <span style="font-size: 13px; color: #475569;">Statement Ref: <strong>#${invoiceNumber}</strong></span> • 
-        <span style="font-size: 13px; color: #475569;">Status: <strong style="color: ${status === 'paid' ? '#16a34a' : '#ea580c'}; text-transform: uppercase;">${status.toUpperCase()}</strong></span>
+        <span style="font-size: 13px; color: #475569;">Statement Ref: <strong>#${escapeHtml(invoiceNumber)}</strong></span> • 
+        <span style="font-size: 13px; color: #475569;">Status: <strong style="color: ${status === 'paid' ? '#16a34a' : '#ea580c'}; text-transform: uppercase;">${escapeHtml(status.toUpperCase())}</strong></span>
       </div>
 
       <!-- Items Table -->
@@ -189,7 +191,7 @@ export function buildWelcomeEmailHtml({
   promoCode?: string;
   discountPercent?: number;
 }): string {
-  const firstName = name.split(' ')[0] || 'there';
+  const firstName = greetingFirstName(name, 'there');
 
   return `
 <!DOCTYPE html>
@@ -209,7 +211,7 @@ export function buildWelcomeEmailHtml({
 
     <!-- Body -->
     <div style="padding: 32px 28px;">
-      <h2 style="color: #0B1F3A; margin: 0 0 16px; font-size: 20px;">Welcome to the Starting Lineup, ${firstName}!</h2>
+      <h2 style="color: #0B1F3A; margin: 0 0 16px; font-size: 20px;">Welcome to the Starting Lineup, ${escapeHtml(firstName)}!</h2>
       
       <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px;">
         Thank you for creating an account with First Eleven Cleaners. We are proud to bring premier, AI-augmented dry cleaning, wash &amp; fold, and doorstep pickup &amp; delivery to homes and businesses across the Dallas-Fort Worth Metroplex.
@@ -218,8 +220,8 @@ export function buildWelcomeEmailHtml({
       <!-- Promo Box -->
       <div style="background-color: #fef9ee; border: 2px dashed #C9A14A; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0;">
         <p style="margin: 0; font-size: 13px; color: #854d0e; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Your New Customer Kickoff Gift</p>
-        <p style="margin: 8px 0 4px; font-size: 24px; font-weight: 800; color: #0B1F3A; letter-spacing: 2px;">${promoCode}</p>
-        <p style="margin: 0; font-size: 14px; color: #475569;">Take <strong>${discountPercent}% OFF</strong> your first order at checkout.</p>
+        <p style="margin: 8px 0 4px; font-size: 24px; font-weight: 800; color: #0B1F3A; letter-spacing: 2px;">${escapeHtml(promoCode)}</p>
+        <p style="margin: 0; font-size: 14px; color: #475569;">Take <strong>${escapeHtml(discountPercent)}% OFF</strong> your first order at checkout.</p>
       </div>
 
       <!-- What to Expect -->
@@ -277,7 +279,7 @@ export function buildStageNotificationEmailHtml({
   total?: number;
   trackingUrl: string;
 }): string {
-  const firstName = customerName.split(' ')[0] || 'Valued Customer';
+  const firstName = greetingFirstName(customerName);
   const pWindow = pickupWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : pickupWindow === 'evening' ? 'Evening (5:00–8:00 PM)' : (pickupWindow || '');
   const dWindow = deliveryWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : deliveryWindow === 'evening' ? 'Evening (5:00–8:00 PM)' : (deliveryWindow || '');
 
@@ -286,7 +288,7 @@ export function buildStageNotificationEmailHtml({
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${stageTitle} - Order #${orderNumber}</title>
+  <title>${escapeHtml(stageTitle)} - Order #${escapeHtml(orderNumber)}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
@@ -300,15 +302,15 @@ export function buildStageNotificationEmailHtml({
     <!-- Body -->
     <div style="padding: 32px 28px;">
       <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
-        <h2 style="color: #166534; margin: 0; font-size: 18px;">${stageTitle}</h2>
+        <h2 style="color: #166534; margin: 0; font-size: 18px;">${escapeHtml(stageTitle)}</h2>
       </div>
 
       <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 16px;">
-        Hi ${firstName}, here is the latest update on your Order <strong>#${orderNumber}</strong>:
+        Hi ${escapeHtml(firstName)}, here is the latest update on your Order <strong>#${escapeHtml(orderNumber)}</strong>:
       </p>
 
       <div style="background-color: #f8fafc; border-left: 4px solid #0B1F3A; padding: 14px 18px; margin: 16px 0; border-radius: 0 8px 8px 0;">
-        <p style="margin: 0; color: #1e293b; font-size: 15px; line-height: 1.5;">${messageBody}</p>
+        <p style="margin: 0; color: #1e293b; font-size: 15px; line-height: 1.5;">${escapeHtml(messageBody)}</p>
       </div>
 
       <!-- Details Summary -->
@@ -316,12 +318,12 @@ export function buildStageNotificationEmailHtml({
         ${pickupDate ? `
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 10px 0; color: #64748b;">Pickup Window:</td>
-          <td style="padding: 10px 0; color: #0f172a; font-weight: 600; text-align: right;">${pickupDate} ${pWindow ? `(${pWindow})` : ''}</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 600; text-align: right;">${escapeHtml(pickupDate)} ${pWindow ? `(${escapeHtml(pWindow)})` : ''}</td>
         </tr>` : ''}
         ${deliveryDate ? `
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 10px 0; color: #64748b;">Estimated Delivery:</td>
-          <td style="padding: 10px 0; color: #0f172a; font-weight: 600; text-align: right;">${deliveryDate} ${dWindow ? `(${dWindow})` : ''}</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 600; text-align: right;">${escapeHtml(deliveryDate)} ${dWindow ? `(${escapeHtml(dWindow)})` : ''}</td>
         </tr>` : ''}
         ${total !== undefined ? `
         <tr style="border-bottom: 1px solid #e2e8f0;">
@@ -332,7 +334,7 @@ export function buildStageNotificationEmailHtml({
 
       <!-- CTA Button -->
       <div style="text-align: center; margin: 28px 0 16px;">
-        <a href="${trackingUrl}" style="background-color: #0B1F3A; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
+        <a href="${escapeHtml(trackingUrl)}" style="background-color: #0B1F3A; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
           Track Your Order Live &rarr;
         </a>
       </div>

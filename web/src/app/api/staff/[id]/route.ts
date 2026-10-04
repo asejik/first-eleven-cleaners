@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { personNameSchema } from '@/lib/sanitize';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
 
 const UpdateStaffSchema = z.object({
-  full_name: z.string().min(2).optional(),
+  full_name: personNameSchema.optional(),
   phone: z.string().min(7).optional(),
   role: z.enum(['driver', 'intake_staff']).optional(),
   is_active: z.boolean().optional(),

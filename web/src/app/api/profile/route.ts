@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { personNameSchema } from '@/lib/sanitize';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 
 const ProfileUpdateSchema = z.object({
-  full_name: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100),
+  full_name: personNameSchema,
   phone: z.string().trim().min(7, 'Please enter a valid phone number').max(30),
   preferred_channel: z.enum(['sms', 'whatsapp', 'email']).optional().default('sms'),
   promo_opt_in: z.boolean().optional().default(true),
