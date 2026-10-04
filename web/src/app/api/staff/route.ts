@@ -135,12 +135,14 @@ export async function POST(request: Request) {
     }
 
     let authUserId: string = existingCust?.auth_id || '';
+    // An existing account keeps its own password; the admin's password applies only to
+    // brand-new accounts and is never echoed back (SEC-22)
+    let usedExistingAccount = Boolean(authUserId);
 
     // 2. Provision or update Auth User via Supabase Auth Admin
     if (authUserId) {
-      // User has existing auth ID — update password, metadata, and ensure unbanned
+      // User has existing auth ID — update metadata and ensure unbanned (password unchanged)
       const { error: updateAuthErr } = await supabase.auth.admin.updateUserById(authUserId, {
-        password,
         ban_duration: 'none',
         user_metadata: {
           full_name,
@@ -165,6 +167,7 @@ export async function POST(request: Request) {
           );
         }
         authUserId = newAuth.user.id;
+        usedExistingAccount = false;
       }
     } else {
       // No existing auth ID — attempt to create or find existing auth user by email
@@ -187,8 +190,8 @@ export async function POST(request: Request) {
 
         if (existingAuth) {
           authUserId = existingAuth.id;
+          usedExistingAccount = true;
           await supabase.auth.admin.updateUserById(existingAuth.id, {
-            password,
             ban_duration: 'none',
             user_metadata: { full_name, phone, role, is_active: true },
           });
@@ -272,8 +275,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       staff: createdStaff,
-      temporary_password: password,
-      message: `${role === 'driver' ? 'Driver' : 'Intake Specialist'} ${full_name} successfully provisioned.`,
+      message: usedExistingAccount
+        ? `${full_name} already had an account and now has ${role === 'driver' ? 'Driver' : 'Intake Specialist'} access. Their existing password is unchanged.`
+        : `${role === 'driver' ? 'Driver' : 'Intake Specialist'} ${full_name} successfully provisioned with the password you set.`,
     });
   } catch (err: unknown) {
     console.error('Staff POST API exception:', err);

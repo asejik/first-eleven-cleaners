@@ -22,7 +22,7 @@ export function useStaffList() {
 export function useCreateStaff() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ success: boolean; staff: StaffMember; temporary_password?: string; message: string }, Error, CreateStaffPayload>({
+  return useMutation<{ success: boolean; staff: StaffMember; message: string }, Error, CreateStaffPayload>({
     mutationFn: async (payload) => {
       const res = await fetch('/api/staff', {
         method: 'POST',
