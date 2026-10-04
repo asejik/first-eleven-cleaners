@@ -71,6 +71,8 @@ export async function GET(
           const sanitizedOrder = {
             ...dbOrder,
             payment_id: undefined,
+            square_customer_id: undefined,
+            square_card_id: undefined,
             notes: undefined,
             customer_id: undefined,
             address: dbOrder.address

@@ -2,7 +2,16 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
-import { WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, DRY_CLEAN_PRICES, getAppBaseUrl } from '@/lib/constants';
+import {
+  WASH_FOLD_PRICE_PER_LB,
+  WASH_FOLD_MINIMUM_LBS,
+  DRY_CLEAN_PRICES,
+  PROMO_CODE_LAUNCH,
+  PROMO_DISCOUNT_PERCENT,
+  calculateOrderFinancials,
+  getAppBaseUrl,
+} from '@/lib/constants';
+import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
 
@@ -86,8 +95,12 @@ export async function POST(request: Request) {
         delivery_window,
         weight_lbs,
         discount_amount,
+        express_tier,
+        promo_code,
         payment_status,
         payment_id,
+        square_customer_id,
+        square_card_id,
         notes,
         customer:customers(id, full_name, phone, email)
       `)
@@ -147,8 +160,40 @@ export async function POST(request: Request) {
     }
 
     const subtotal = Number((washFoldSubtotal + dryCleanSubtotal).toFixed(2));
-    const discountAmount = Number(order.discount_amount || 0);
-    const finalTotal = Math.max(0, Number((subtotal - discountAmount).toFixed(2)));
+
+    // Final total uses the same rules as booking (SEC-06): Express surcharge, promo and
+    // recurring-plan discounts as percentages of the weighed subtotal, environmental fee, tax.
+    let promoDiscountPercent = 0;
+    let promoDiscountAmount: number | undefined;
+    if (order.promo_code === PROMO_CODE_LAUNCH) {
+      promoDiscountPercent = PROMO_DISCOUNT_PERCENT;
+    } else if (order.promo_code) {
+      const { data: promoRow } = await supabase
+        .from('promo_codes')
+        .select('discount_type, discount_value')
+        .eq('code', order.promo_code)
+        .maybeSingle();
+      if (promoRow?.discount_type === 'fixed') {
+        promoDiscountAmount = Number(promoRow.discount_value) || 0;
+      } else if (promoRow) {
+        promoDiscountPercent = Number(promoRow.discount_value) || 0;
+      }
+    }
+    // Booking records the recurring plan in the order notes ("Recurring Plan: Weekly | Bi-Weekly")
+    const frequency = order.notes?.includes('Recurring Plan: Bi-Weekly')
+      ? 'biweekly'
+      : order.notes?.includes('Recurring Plan: Weekly')
+        ? 'weekly'
+        : 'one_time';
+
+    const financials = calculateOrderFinancials({
+      subtotal,
+      isExpress: order.express_tier === 'express_24hr',
+      discountPercent: promoDiscountPercent,
+      discountAmount: promoDiscountAmount,
+      frequency,
+    });
+    const finalTotal = financials.finalTotal;
 
     // 3. Clear old items and insert fresh itemized breakdown
     await supabase.from('order_items').delete().eq('order_id', order.id);
@@ -179,51 +224,35 @@ export async function POST(request: Request) {
     let paymentId = order.payment_id;
 
     if (finalTotal > 0 && (paymentStatus === 'authorized' || paymentStatus === 'pending')) {
-      const accessToken = process.env.SQUARE_ACCESS_TOKEN;
-      const isLiveSquare = Boolean(accessToken && !accessToken.includes('placeholder') && accessToken.startsWith('EAAA'));
+      const squareConfig = getSquareConfig();
+      let failureReason = '';
 
-      if (isLiveSquare) {
-        try {
-          const squareBaseUrl = process.env.SQUARE_ENVIRONMENT === 'sandbox'
-            ? 'https://connect.squareupsandbox.com/v2'
-            : 'https://connect.squareup.com/v2';
-
-          const squareRes = await fetch(`${squareBaseUrl}/payments`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-              'Square-Version': '2025-01-23',
-            },
-            body: JSON.stringify({
-              idempotency_key: `f11_intake_${order.id}`,
-              source_id: paymentId || 'cnon:card-nonce-ok',
-              amount_money: {
-                amount: Math.round(finalTotal * 100),
-                currency: 'USD',
-              },
-              autocomplete: true,
-              note: `First Eleven Cleaners - Order #${order.order_number || order.id.slice(0, 8)} (Intake Weighed)`,
-            }),
+      if (squareConfig.isLive) {
+        // Charge the card saved at booking (SEC-06). Never fall back to a test token.
+        if (order.square_customer_id && order.square_card_id) {
+          const charge = await chargeCardOnFile(squareConfig, {
+            squareCustomerId: order.square_customer_id,
+            cardId: order.square_card_id,
+            amount: finalTotal,
+            orderId: order.id,
+            orderNumber: order.order_number || order.id.slice(0, 8),
           });
-
-          const squareData = await squareRes.json();
-          if (squareRes.ok && squareData.payment) {
+          if (charge.ok && charge.status === 'COMPLETED') {
             paymentStatus = 'charged';
-            paymentId = squareData.payment.id;
+            paymentId = charge.paymentId;
           } else {
-            const errorDetail = squareData.errors?.[0]?.detail || 'Square payment charge authorization failed.';
-            console.error('Square live capture declined in intake:', errorDetail);
+            failureReason = charge.ok ? `Square payment status ${charge.status}` : charge.error;
+            console.error('Square card-on-file charge declined in intake:', failureReason);
             paymentStatus = 'failed';
           }
-        } catch (sqErr) {
-          console.error('Square live capture error in intake:', sqErr);
+        } else {
+          failureReason = 'No card on file for this order';
           paymentStatus = 'failed';
         }
       }
 
       // In live production or when Square is configured, never simulate a charge
-      if (isLiveSquare) {
+      if (squareConfig.isLive) {
         if (paymentStatus === 'charged') {
           // Log payment charge audit event
           await supabase.from('order_events').insert({
@@ -237,7 +266,7 @@ export async function POST(request: Request) {
           await supabase.from('order_events').insert({
             order_id: order.id,
             status: 'payment_failed',
-            note: `Automatic payment of $${finalTotal.toFixed(2)} failed on card on file. Order placed on Payment Hold.`,
+            note: `Automatic payment of $${finalTotal.toFixed(2)} failed on card on file (${failureReason}). Order placed on Payment Hold.`,
             triggered_by: 'Square Web Payments (Intake Auto-Charge)',
           });
         }
@@ -267,6 +296,8 @@ export async function POST(request: Request) {
       .update({
         weight_lbs: Number(weight_lbs) || null,
         subtotal,
+        express_surcharge: financials.expressSurcharge,
+        discount_amount: financials.discountAmount,
         total: finalTotal,
         status: 'weighed_itemized',
         payment_status: paymentStatus,

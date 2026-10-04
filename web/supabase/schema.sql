@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS customers (
   sms_consent BOOLEAN NOT NULL DEFAULT false,
   sms_promotions_consent BOOLEAN NOT NULL DEFAULT false,
   sms_consent_at TIMESTAMPTZ,
+  square_customer_id VARCHAR(255), -- Square customer holding saved cards (SEC-06)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -98,6 +99,8 @@ CREATE TABLE IF NOT EXISTS orders (
   express_auto_refunded BOOLEAN NOT NULL DEFAULT false,
   express_refund_amount NUMERIC(10, 2),
   express_refund_reason TEXT,
+  square_customer_id VARCHAR(255), -- card on file charged at intake (SEC-06)
+  square_card_id VARCHAR(255),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

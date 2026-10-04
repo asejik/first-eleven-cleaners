@@ -14,6 +14,7 @@ import {
   PROMO_DISCOUNT_PERCENT,
   computeBookingFinancials,
 } from '@/lib/constants';
+import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -78,19 +79,24 @@ export async function POST(request: Request) {
       Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
       !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
 
-    // Square card pre-authorization token gating for production abuse prevention (F001 Fix)
-    const isSquareConfigured =
-      Boolean(process.env.SQUARE_ACCESS_TOKEN) &&
-      !process.env.SQUARE_ACCESS_TOKEN?.includes('your-token');
+    // Card on file is required whenever Square is configured (SEC-06). The card token is
+    // exchanged for a saved Square card below, before the order is created.
+    const squareConfig = getSquareConfig();
+    const cardToken = validated.payment_method?.payment_token || null;
 
-    if (isSquareConfigured && process.env.NODE_ENV === 'production') {
-      const token = validated.payment_method?.payment_token;
-      if (!token || token.startsWith('sim_') || token.startsWith('sq_sim_')) {
+    if (squareConfig.isLive) {
+      if (!cardToken || cardToken.startsWith('sim_') || cardToken.startsWith('sq_sim_')) {
         return NextResponse.json(
           { error: 'A verified payment card token is required to schedule a pickup.' },
           { status: 400 }
         );
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      console.error('[Bookings] Square is not configured in production; refusing unpaid booking.');
+      return NextResponse.json(
+        { error: 'Online booking is temporarily unavailable. Please call us to schedule your pickup.' },
+        { status: 503 }
+      );
     }
 
     // 1. Resolve Zone & Validate Delivery Coverage
@@ -233,7 +239,6 @@ export async function POST(request: Request) {
     }
 
     const deliveryDateStr = delivery.toISOString().split('T')[0];
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `F11-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     let isGuest = true;
 
@@ -338,6 +343,41 @@ export async function POST(request: Request) {
         }
 
         if (customerId) {
+          // 1b. Save the card on file with Square before anything else is created (SEC-06).
+          // A declined card stops the booking here.
+          let savedCard: SavedCard | null = null;
+          if (squareConfig.isLive && cardToken) {
+            const { data: custSquare } = await supabase
+              .from('customers')
+              .select('square_customer_id')
+              .eq('id', customerId)
+              .maybeSingle();
+
+            const cardResult = await saveCardOnFile(squareConfig, {
+              cardToken,
+              existingSquareCustomerId: custSquare?.square_customer_id,
+              email: validated.customer.email,
+              fullName: validated.customer.full_name,
+              referenceId: customerId,
+            });
+
+            if (!cardResult.ok) {
+              console.warn('Square card on file declined at booking:', cardResult.error);
+              return NextResponse.json(
+                { error: `Your card could not be verified: ${cardResult.error} Please check the details or try another card.` },
+                { status: 402 }
+              );
+            }
+
+            savedCard = cardResult.card;
+            if (!custSquare?.square_customer_id) {
+              await supabase
+                .from('customers')
+                .update({ square_customer_id: savedCard.squareCustomerId })
+                .eq('id', customerId);
+            }
+          }
+
           // 2. Resolve or Insert Delivery Address (Address Deduplication)
           let addressId: string | null = null;
 
@@ -398,8 +438,12 @@ export async function POST(request: Request) {
               promo_code: verifiedPromoCode,
               discount_amount: computed.financials.discountAmount,
               total: computed.financials.finalTotal,
-              payment_id: validated.payment_method?.payment_token || `sq_sim_${randomSuffix}`,
-              payment_status: validated.services.type === 'wash_fold' ? 'authorized' : 'charged',
+              // Never 'charged' at booking (SEC-05): the saved card is charged at intake.
+              // payment_id is filled with the Square payment ID once intake charges it.
+              payment_id: null,
+              payment_status: savedCard ? 'authorized' : 'pending',
+              square_customer_id: savedCard?.squareCustomerId || null,
+              square_card_id: savedCard?.cardId || null,
               notes: [
                 validated.address.delivery_notes,
                 validated.schedule.frequency && validated.schedule.frequency !== 'one_time'
@@ -516,8 +560,8 @@ export async function POST(request: Request) {
       promo_code: verifiedPromoCode,
       discount_amount: computed.financials.discountAmount,
       total: computed.financials.finalTotal,
-      payment_id: validated.payment_method?.payment_token || `sq_tok_${crypto.randomUUID().slice(0, 8)}`,
-      payment_status: validated.services.type === 'wash_fold' ? 'authorized' : 'charged',
+      payment_id: null,
+      payment_status: 'pending',
       notes: validated.address.delivery_notes || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
