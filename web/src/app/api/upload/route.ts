@@ -24,7 +24,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff', 'customer'], request);
+    // Staff-only: no customer screen uploads, and customers must not write into order folders (SEC-24)
+    const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff'], request);
     if (auth.errorResponse) return auth.errorResponse;
 
     const formData = await request.formData();
