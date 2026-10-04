@@ -40,6 +40,15 @@ export async function GET(
       // Check if query is UUID or order_number format (e.g. F11-2026-XXXX)
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
 
+      // Public tracking links carry the unguessable order UUID; order numbers can be
+      // guessed, so they only work for signed-in owners and staff (SEC-07)
+      if (!customer && !isUUID) {
+        return NextResponse.json(
+          { error: 'Order not found. Please verify the order number or tracking link.' },
+          { status: 404 }
+        );
+      }
+
       const query = supabase
         .from('orders')
         .select(`
@@ -66,24 +75,30 @@ export async function GET(
           }
         }
 
-        // For public unauthenticated order tracking (SMS links), redact physical address & gate codes (SEC-003)
+        // Public tracking (SMS/email links): return only what the tracking page shows (SEC-07).
+        // Items, events, totals, discounts, address, notes and payment data stay private.
         if (!customer) {
-          const sanitizedOrder = {
-            ...dbOrder,
-            payment_id: undefined,
-            square_customer_id: undefined,
-            square_card_id: undefined,
-            notes: undefined,
-            customer_id: undefined,
-            address: dbOrder.address
-              ? {
-                  city: dbOrder.address.city,
-                  state: dbOrder.address.state,
-                  zip: dbOrder.address.zip,
-                }
-              : undefined,
+          const trackingView = {
+            id: dbOrder.id,
+            order_number: dbOrder.order_number,
+            status: dbOrder.status,
+            order_type: dbOrder.order_type,
+            express_tier: dbOrder.express_tier,
+            pickup_date: dbOrder.pickup_date,
+            pickup_window: dbOrder.pickup_window,
+            delivery_date: dbOrder.delivery_date,
+            delivery_window: dbOrder.delivery_window,
+            created_at: dbOrder.created_at,
+            updated_at: dbOrder.updated_at,
+            photos: ((dbOrder.photos || []) as Array<Record<string, unknown>>).map((photo) => ({
+              id: photo.id,
+              photo_type: photo.photo_type,
+              photo_url: photo.photo_url,
+              condition_notes: photo.condition_notes,
+              captured_at: photo.captured_at,
+            })),
           };
-          return NextResponse.json({ order: sanitizedOrder });
+          return NextResponse.json({ order: trackingView });
         }
 
         return NextResponse.json({ order: dbOrder });
