@@ -155,35 +155,55 @@ export async function POST(request: Request) {
 
     // 3. Server-Side Promo Code Validation
     let promoDiscountPercent = 0;
+    let promoDiscountAmount: number | undefined;
     let verifiedPromoCode: string | null = null;
+    // True when the code has a promo_codes row, so a use must be reserved atomically (SEC-15)
+    let promoNeedsReservation = false;
     if (validated.pricing.promo_code) {
       const cleanPromo = validated.pricing.promo_code.toUpperCase().trim();
-      if (cleanPromo === PROMO_CODE_LAUNCH) {
-        promoDiscountPercent = PROMO_DISCOUNT_PERCENT;
-        verifiedPromoCode = PROMO_CODE_LAUNCH;
-      } else if (isSupabaseConfigured) {
+      let promoRow: {
+        discount_type: string;
+        discount_value: number;
+        max_uses: number | null;
+        current_uses: number | null;
+        valid_from: string | null;
+        valid_until: string | null;
+      } | null = null;
+
+      if (isSupabaseConfigured) {
         try {
           const adminSupabase = createAdminClient();
-          const { data: promoRow } = await adminSupabase
+          const { data } = await adminSupabase
             .from('promo_codes')
-            .select('code, discount_value, max_uses, current_uses, valid_from, valid_until, is_active')
+            .select('discount_type, discount_value, max_uses, current_uses, valid_from, valid_until')
             .eq('code', cleanPromo)
             .eq('is_active', true)
             .maybeSingle();
-
-          if (promoRow) {
-            const now = new Date();
-            const validDates = (!promoRow.valid_from || new Date(promoRow.valid_from) <= now) &&
-              (!promoRow.valid_until || new Date(promoRow.valid_until) >= now);
-            const validUses = promoRow.max_uses === null || (promoRow.current_uses || 0) < promoRow.max_uses;
-            if (validDates && validUses) {
-              promoDiscountPercent = Number(promoRow.discount_value) || 0;
-              verifiedPromoCode = cleanPromo;
-            }
-          }
+          promoRow = data;
         } catch (promoErr) {
           console.warn('Server promo verification fallback:', promoErr);
         }
+      }
+
+      if (promoRow) {
+        const now = new Date();
+        const validDates = (!promoRow.valid_from || new Date(promoRow.valid_from) <= now) &&
+          (!promoRow.valid_until || new Date(promoRow.valid_until) >= now);
+        const validUses = promoRow.max_uses === null || (promoRow.current_uses || 0) < promoRow.max_uses;
+        if (validDates && validUses) {
+          // Fixed codes are dollar amounts, not percentages (SEC-15)
+          if (promoRow.discount_type === 'fixed') {
+            promoDiscountAmount = Number(promoRow.discount_value) || 0;
+          } else {
+            promoDiscountPercent = Number(promoRow.discount_value) || 0;
+          }
+          verifiedPromoCode = cleanPromo;
+          promoNeedsReservation = true;
+        }
+      } else if (cleanPromo === PROMO_CODE_LAUNCH) {
+        // Built-in launch code when it has no promo_codes row
+        promoDiscountPercent = PROMO_DISCOUNT_PERCENT;
+        verifiedPromoCode = PROMO_CODE_LAUNCH;
       }
     }
 
@@ -193,6 +213,7 @@ export async function POST(request: Request) {
       weightLbs: validated.services.estimated_weight_lbs,
       isExpress,
       promoDiscountPercent,
+      promoDiscountAmount,
       frequency: validated.schedule.frequency,
     });
 
@@ -362,6 +383,22 @@ export async function POST(request: Request) {
         }
 
         if (customerId) {
+          // 1a. One use per customer per promo code (SEC-15)
+          if (verifiedPromoCode) {
+            const { count: priorUses } = await supabase
+              .from('orders')
+              .select('id', { count: 'exact', head: true })
+              .eq('customer_id', customerId)
+              .eq('promo_code', verifiedPromoCode)
+              .neq('status', 'cancelled');
+            if ((priorUses ?? 0) > 0) {
+              return NextResponse.json(
+                { error: `Promo code ${verifiedPromoCode} has already been used on this account. Please remove it and try again.` },
+                { status: 400 }
+              );
+            }
+          }
+
           // 1b. Save the card on file with Square before anything else is created (SEC-06).
           // A declined card stops the booking here.
           let savedCard: SavedCard | null = null;
@@ -438,6 +475,21 @@ export async function POST(request: Request) {
             addressId = addressRow?.id || null;
           }
 
+          // 2b. Reserve one promo use atomically so max_uses can't be exceeded by
+          // simultaneous bookings (SEC-15)
+          if (promoNeedsReservation && verifiedPromoCode) {
+            const { data: reserved, error: reserveErr } = await supabase.rpc('reserve_promo_use', {
+              p_code: verifiedPromoCode,
+            });
+            if (reserveErr || reserved !== true) {
+              if (reserveErr) console.error('[Bookings] Promo reservation failed:', reserveErr);
+              return NextResponse.json(
+                { error: `Promo code ${verifiedPromoCode} has reached its usage limit. Please remove it and try again.` },
+                { status: 409 }
+              );
+            }
+          }
+
           // 3. Insert Order
           const { data: insertedOrder, error: orderErr } = await supabase
             .from('orders')
@@ -497,26 +549,6 @@ export async function POST(request: Request) {
               note: `Pickup scheduled for ${validated.schedule.pickup_date} (${validated.schedule.pickup_window === 'morning' ? '7:30-10:00 AM' : '5:00-8:00 PM'})`,
               triggered_by: 'Customer (Web Booking)',
             });
-
-            // 6. Increment promo code usage count in database if verified promo was used
-            if (verifiedPromoCode) {
-              try {
-                const { data: promoRow } = await supabase
-                  .from('promo_codes')
-                  .select('id, current_uses')
-                  .eq('code', verifiedPromoCode)
-                  .maybeSingle();
-
-                if (promoRow) {
-                  await supabase
-                    .from('promo_codes')
-                    .update({ current_uses: (promoRow.current_uses || 0) + 1 })
-                    .eq('id', promoRow.id);
-                }
-              } catch (promoErr) {
-                console.warn('Failed to increment promo code usage counter:', promoErr);
-              }
-            }
 
             // 7. Dispatch stage notification for 'booked' (sends SMS/WhatsApp and/or Resend email)
             try {

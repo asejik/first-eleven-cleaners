@@ -444,12 +444,15 @@ export function computeBookingFinancials({
   weightLbs = 0,
   isExpress = false,
   promoDiscountPercent = 0,
+  promoDiscountAmount,
   frequency = 'one_time',
 }: {
   dryCleanItems?: BookingItemInput[];
   weightLbs?: number;
   isExpress?: boolean;
   promoDiscountPercent?: number;
+  /** Fixed-dollar promo (discount_type 'fixed'); takes precedence over the percentage (SEC-15) */
+  promoDiscountAmount?: number;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
 }): RecomputedBookingPricing {
   let washFoldSubtotal = 0;
@@ -491,6 +494,7 @@ export function computeBookingFinancials({
     subtotal,
     isExpress,
     discountPercent: promoDiscountPercent,
+    discountAmount: promoDiscountAmount,
     frequency,
   });
 

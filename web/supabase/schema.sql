@@ -248,7 +248,8 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$ LANGUAGE plpgsql;
+ALTER FUNCTION update_timestamp_column() SET search_path = public, pg_temp; -- SEC-17
 
 CREATE TRIGGER update_customers_modtime
 BEFORE UPDATE ON customers
@@ -418,3 +419,29 @@ CREATE POLICY claims_self ON claims
   FOR ALL USING (
     customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid())
   );
+
+-- =================================================================
+-- SERVER FUNCTIONS
+-- =================================================================
+-- Atomic promo-code reservation used by /api/bookings (SEC-15)
+CREATE OR REPLACE FUNCTION public.reserve_promo_use(p_code TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+  WITH reserved AS (
+    UPDATE promo_codes
+    SET current_uses = current_uses + 1
+    WHERE code = p_code
+      AND is_active = true
+      AND (max_uses IS NULL OR current_uses < max_uses)
+      AND (valid_from IS NULL OR valid_from <= NOW())
+      AND (valid_until IS NULL OR valid_until >= NOW())
+    RETURNING id
+  )
+  SELECT EXISTS (SELECT 1 FROM reserved);
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.reserve_promo_use(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reserve_promo_use(TEXT) TO service_role;
