@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
-import { resolveAndUploadPhotoUrl } from '@/lib/storage';
+import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import { getAppBaseUrl } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
@@ -255,7 +255,7 @@ export async function GET(request: Request) {
       return true;
     });
 
-    return NextResponse.json({
+    return NextResponse.json(await withSignedPhotoUrls({
       pickups,
       picked_up_history: pickedUpHistory,
       picked_up_completed: pickedUpCompleted,
@@ -272,7 +272,7 @@ export async function GET(request: Request) {
         selected_shift: shift,
         date,
       },
-    });
+    }));
   } catch (err) {
     console.error('Driver API error:', err);
     return NextResponse.json({ pickups: [], picked_up_history: [], picked_up_completed: [], ready_at_plant: [], deliveries: [], completed: [] }, { status: 500 });

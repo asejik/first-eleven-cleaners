@@ -6,6 +6,7 @@ import { messagingService } from '@/lib/messaging';
 import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
+import { withSignedPhotoUrls } from '@/lib/storage';
 
 
 export async function GET(request: Request) {
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     // Sort newest first
     allNotifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    return NextResponse.json({ notifications: allNotifications });
+    return NextResponse.json(await withSignedPhotoUrls({ notifications: allNotifications }));
   } catch (err) {
     console.error('Notifications query error:', err);
     return NextResponse.json({ notifications: [] });

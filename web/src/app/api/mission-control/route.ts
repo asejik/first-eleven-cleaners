@@ -6,6 +6,7 @@ import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
+import { withSignedPhotoUrls } from '@/lib/storage';
 
 
 export async function GET(request: Request) {
@@ -118,7 +119,7 @@ export async function GET(request: Request) {
     const estimatedLaborCost = Number((todayRevenue * baseLaborRate).toFixed(2));
     const laborPercentage = todayRevenue > 0 ? Number(((estimatedLaborCost / todayRevenue) * 100).toFixed(1)) : 28.0;
 
-    return NextResponse.json({
+    return NextResponse.json(await withSignedPhotoUrls({
       orders,
       claims: claims || [],
       page,
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
           status: laborPercentage <= 32.0 ? 'optimal' : 'alert',
         },
       },
-    });
+    }));
   } catch (err) {
     console.error('Mission control query error:', err);
     return apiError('api/mission-control', err, 500);

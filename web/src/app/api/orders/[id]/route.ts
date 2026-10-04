@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
+import { withSignedPhotoUrls } from '@/lib/storage';
 
 export async function GET(
   request: Request,
@@ -99,10 +100,10 @@ export async function GET(
               captured_at: photo.captured_at,
             })),
           };
-          return NextResponse.json({ order: trackingView });
+          return NextResponse.json(await withSignedPhotoUrls({ order: trackingView }));
         }
 
-        return NextResponse.json({ order: dbOrder });
+        return NextResponse.json(await withSignedPhotoUrls({ order: dbOrder }));
       }
 
       if (error) {

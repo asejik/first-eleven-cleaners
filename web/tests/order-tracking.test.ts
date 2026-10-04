@@ -29,7 +29,17 @@ vi.mock('@/lib/supabase/admin', () => ({
       },
       maybeSingle: async () => ({ data: state.order, error: null }),
     };
-    return { from: () => b };
+    return {
+      from: () => b,
+      storage: {
+        from: (bucket: string) => ({
+          createSignedUrls: async (paths: string[]) => ({
+            data: paths.map((p) => ({ signedUrl: `https://example.supabase.co/storage/v1/object/sign/${bucket}/${p}?token=t` })),
+            error: null,
+          }),
+        }),
+      },
+    };
   },
 }));
 
@@ -103,6 +113,9 @@ describe('Public order tracking exposes only the tracking view (SEC-07)', () => 
     );
     expect(order.photos[0]).not.toHaveProperty('captured_by');
     expect(order.photos[0].photo_url).toContain('garment-photos');
+    // SEC-30: photos are served as short-lived signed links, never the permanent public URL
+    expect(order.photos[0].photo_url).toContain('/object/sign/');
+    expect(order.photos[0].photo_url).not.toContain('/object/public/');
     const json = JSON.stringify(order);
     for (const secret of ['Gate code', 'KICKOFF15', '56.83', 'Marcus', '100 Test St', 'PAY1']) {
       expect(json).not.toContain(secret);

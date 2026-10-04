@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { Order } from '@/types';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
+import { withSignedPhotoUrls } from '@/lib/storage';
 
 // Mock sample orders for instant testing & visual verification
 const MOCK_ORDERS: Order[] = [
@@ -218,13 +219,13 @@ export async function GET(request: Request) {
 
       const totalCount = count ?? (orders?.length || 0);
 
-      return NextResponse.json({
+      return NextResponse.json(await withSignedPhotoUrls({
         orders: orders || [],
         total_count: totalCount,
         page,
         limit,
         total_pages: Math.ceil(totalCount / limit),
-      });
+      }));
     } catch (err) {
       console.error('Supabase get orders error:', err);
       return NextResponse.json({ orders: [], total_count: 0, page, limit, total_pages: 0 });

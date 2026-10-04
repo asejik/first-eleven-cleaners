@@ -44,7 +44,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
 
   // Intake photos state: if viewing an order already processed, show its intake photos;
   // if order is in 'picked_up' queue awaiting initial intake, start with empty array.
-  const [photos, setPhotos] = useState<Array<{ photo_url: string; condition_notes?: string }>>(() => {
+  const [photos, setPhotos] = useState<Array<{ photo_url: string; preview_url?: string; condition_notes?: string }>>(() => {
     if (order.status !== 'picked_up' && order.photos && order.photos.length > 0) {
       return order.photos
         .filter((p) => p.photo_type === 'intake')
@@ -82,7 +82,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
       if (res.ok && uploadData.url) {
         setPhotos((prev) => [
           ...prev,
-          { photo_url: uploadData.url, condition_notes: 'Intake inspection proof' },
+          { photo_url: uploadData.url, preview_url: uploadData.preview_url, condition_notes: 'Intake inspection proof' },
         ]);
         addToast({
           type: 'success',
@@ -387,9 +387,9 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
                 </button>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={p.photo_url}
+                  src={p.preview_url || p.photo_url}
                   alt={`Intake ${idx + 1}`}
-                  onClick={() => onZoomPhoto(p.photo_url)}
+                  onClick={() => onZoomPhoto(p.preview_url || p.photo_url)}
                   style={{ cursor: 'pointer' }}
                   title="Click to view full photo"
                 />

@@ -12,7 +12,7 @@ import {
   getAppBaseUrl,
 } from '@/lib/constants';
 import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
-import { resolveAndUploadPhotoUrl } from '@/lib/storage';
+import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     const todayStr = new Date().toISOString().split('T')[0];
     const todayIntakeCount = intakeHistory.filter((o) => o.updated_at && o.updated_at.startsWith(todayStr)).length;
 
-    return NextResponse.json({ queue, intakeHistory, todayIntakeCount, allOrders: orders || [] });
+    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount, allOrders: orders || [] }));
   } catch (err) {
     console.error('Intake API error:', err);
     return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 }, { status: 500 });

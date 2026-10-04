@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formatStageMessage, type MessagePayload, type FormattedMessage } from './templates';
 import { sendEmail, buildStageNotificationEmailHtml } from '@/lib/resend';
+import { signStorageUrl, MMS_PHOTO_LINK_TTL_SECONDS } from '@/lib/storage';
 
 function maskEmail(email?: string | null): string {
   if (!email) return 'unknown';
@@ -251,7 +252,8 @@ export class TwilioMessageProvider implements IMessagingProvider {
       }
 
       if (formatted.mediaUrl) {
-        params.append('MediaUrl', formatted.mediaUrl);
+        // Photo buckets are private: Twilio gets a signed link valid long enough to fetch it (SEC-30)
+        params.append('MediaUrl', await signStorageUrl(formatted.mediaUrl, MMS_PHOTO_LINK_TTL_SECONDS));
       }
 
       const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {

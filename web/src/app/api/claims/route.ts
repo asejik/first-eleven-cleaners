@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { apiError } from '@/lib/api-errors';
+import { withSignedPhotoUrls, canonicalStorageUrl } from '@/lib/storage';
 
 // Maps incoming form values to exact PostgreSQL check constraint: ('damage', 'lost_item', 'quality', 'wrong_item', 'other')
 function normalizeIssueType(type: string): 'damage' | 'lost_item' | 'quality' | 'wrong_item' | 'other' {
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ claims: [] });
     }
 
-    return NextResponse.json({ claims: claims || [] });
+    return NextResponse.json(await withSignedPhotoUrls({ claims: claims || [] }));
   } catch (err) {
     console.error('Claims GET error:', err);
     return NextResponse.json({ claims: [] });
@@ -163,7 +164,10 @@ export async function POST(request: Request) {
           customer_id: resolvedCustomerId,
           issue_type: validIssueType,
           description: description.trim(),
-          photo_urls: photo_urls || [],
+          // Store permanent photo URLs, never expiring signed links (SEC-30)
+          photo_urls: (Array.isArray(photo_urls) ? photo_urls : [])
+            .filter((u: unknown): u is string => typeof u === 'string')
+            .map(canonicalStorageUrl),
           status: 'open',
         })
         .select('id, order_id, customer_id, issue_type, description, photo_urls, status, created_at')

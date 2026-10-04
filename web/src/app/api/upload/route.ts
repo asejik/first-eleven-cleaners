@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
-import { uploadToStorage, ALLOWED_STORAGE_BUCKETS, validateImageMagicBytes } from '@/lib/storage';
+import { uploadToStorage, ALLOWED_STORAGE_BUCKETS, validateImageMagicBytes, signStorageUrl } from '@/lib/storage';
 import { apiError } from '@/lib/api-errors';
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -103,7 +103,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      // url is the permanent reference to save; preview_url is a short-lived link to display (SEC-30)
       url: publicUrl,
+      preview_url: await signStorageUrl(publicUrl),
       filename,
     });
   } catch (err: unknown) {
