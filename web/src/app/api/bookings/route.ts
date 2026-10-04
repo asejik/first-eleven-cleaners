@@ -338,6 +338,8 @@ export async function POST(request: Request) {
 
             if (!custErr && newCust) {
               customerId = newCust.id;
+            } else {
+              console.error('[Bookings] Customer insert failed:', custErr);
             }
           }
         }
@@ -467,7 +469,8 @@ export async function POST(request: Request) {
             }));
 
             if (itemsToInsert.length > 0) {
-              await supabase.from('order_items').insert(itemsToInsert);
+              const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert);
+              if (itemsErr) console.error('[Bookings] Order items insert failed:', itemsErr);
             }
 
             // 5. Insert Initial Booking Event
@@ -535,14 +538,34 @@ export async function POST(request: Request) {
               message: 'Your pickup has been confirmed and scheduled!',
             });
           }
+          console.error('[Bookings] Order insert failed:', orderErr);
+        } else {
+          console.error('[Bookings] Could not resolve or create the customer record.');
         }
       } catch (dbErr) {
         console.error('Supabase booking insert error:', dbErr);
-        // Fall through to mock order return
       }
+
+      // Reaching here means the booking was NOT saved (SEC-12). Never send a fake
+      // confirmation: tell the customer, and send no SMS or email.
+      return NextResponse.json(
+        {
+          error:
+            "We couldn't save your booking. Your card hasn't been charged. Please try again, or call us to schedule your pickup.",
+        },
+        { status: 503 }
+      );
     }
 
-    // Fallback response if Supabase is offline
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Bookings] Supabase is not configured in production; refusing mock booking.');
+      return NextResponse.json(
+        { error: 'Online booking is temporarily unavailable. Please call us to schedule your pickup.' },
+        { status: 503 }
+      );
+    }
+
+    // Local mock mode only (Supabase not configured, outside production)
     const orderId = crypto.randomUUID();
     const createdOrder: Order = {
       id: orderId,
