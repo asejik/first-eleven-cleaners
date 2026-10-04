@@ -266,9 +266,13 @@ ALTER TABLE order_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE garment_photos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
 
--- Customers can view & edit their own record
-CREATE POLICY customers_self ON customers
-  FOR ALL USING (auth.uid() = auth_id);
+-- Customers can view their own record and edit only name/phone (SEC-04)
+CREATE POLICY customers_select_self ON customers
+  FOR SELECT USING (auth.uid() = auth_id);
+CREATE POLICY customers_update_self ON customers
+  FOR UPDATE USING (auth.uid() = auth_id) WITH CHECK (auth.uid() = auth_id);
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON customers FROM anon, authenticated;
+GRANT UPDATE (full_name, phone) ON customers TO authenticated;
 
 -- Customer Preferences
 CREATE POLICY customer_prefs_self ON customer_preferences
