@@ -85,7 +85,8 @@ CREATE TABLE IF NOT EXISTS orders (
   weight_lbs NUMERIC(6, 2),
   subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   express_tier VARCHAR(50) NOT NULL DEFAULT 'standard' CHECK (
-    express_tier IN ('standard', 'express_24hr')
+    -- express_8hr / express_4hr are retired tiers kept valid for historical rows (SEC-29)
+    express_tier IN ('standard', 'express_24hr', 'express_8hr', 'express_4hr')
   ),
   promo_code VARCHAR(50),
   discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
