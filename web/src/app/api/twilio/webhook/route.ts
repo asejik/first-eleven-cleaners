@@ -114,6 +114,13 @@ export async function POST(req: Request) {
       !authToken.includes('your-')
     );
 
+    // Fail closed in production (SEC-14): without the auth token, signatures can't be checked,
+    // so anyone could post fake inbound messages (STOP/START for any number, AI as any customer).
+    if (!isLiveTwilio && process.env.NODE_ENV === 'production') {
+      console.error('[Twilio Webhook] TWILIO_AUTH_TOKEN is missing in production; rejecting request');
+      return new Response('Twilio webhook configuration error: auth token missing.', { status: 500 });
+    }
+
     if (authToken && isLiveTwilio) {
       const twilioSignature = req.headers.get('x-twilio-signature');
       if (!twilioSignature) {
