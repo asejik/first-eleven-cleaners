@@ -43,17 +43,18 @@ interface SquareError {
 async function squareRequest<T>(
   config: SquareConfig,
   path: string,
-  body: Record<string, unknown>
+  body?: Record<string, unknown>,
+  method: 'GET' | 'POST' = 'POST'
 ): Promise<{ ok: true; data: T } | { ok: false; error: string; code?: string }> {
   try {
     const res = await fetch(`${config.baseUrl}${path}`, {
-      method: 'POST',
+      method,
       headers: {
         Authorization: `Bearer ${config.accessToken}`,
         'Content-Type': 'application/json',
         'Square-Version': SQUARE_API_VERSION,
       },
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
     });
     const json = await res.json();
     if (!res.ok) {
@@ -167,4 +168,57 @@ export async function chargeCardOnFile(
   });
   if (!result.ok) return { ok: false, error: result.error };
   return { ok: true, paymentId: result.data.payment.id, status: result.data.payment.status };
+}
+
+export interface SquareCardSummary {
+  id: string;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  /** Same physical card saved more than once (one copy per booking) shares a fingerprint */
+  fingerprint: string;
+}
+
+/**
+ * Lists a Square customer's active saved cards, for the Billing page (SEC-21).
+ */
+export async function listCustomerCards(
+  config: SquareConfig,
+  squareCustomerId: string
+): Promise<{ ok: true; cards: SquareCardSummary[] } | { ok: false; error: string }> {
+  const result = await squareRequest<{
+    cards?: Array<{
+      id: string;
+      card_brand?: string;
+      last_4?: string;
+      exp_month?: number;
+      exp_year?: number;
+      enabled?: boolean;
+      fingerprint?: string;
+    }>;
+  }>(config, `/cards?customer_id=${encodeURIComponent(squareCustomerId)}`, undefined, 'GET');
+  if (!result.ok) return { ok: false, error: result.error };
+  const cards = (result.data.cards || [])
+    .filter((card) => card.enabled !== false)
+    .map((card) => ({
+      id: card.id,
+      brand: (card.card_brand || 'card').toLowerCase(),
+      last4: card.last_4 || '••••',
+      exp_month: card.exp_month || 0,
+      exp_year: card.exp_year || 0,
+      fingerprint: card.fingerprint || `${card.card_brand}-${card.last_4}-${card.exp_month}-${card.exp_year}`,
+    }));
+  return { ok: true, cards };
+}
+
+/**
+ * Disables (removes) a saved card with Square (SEC-21).
+ */
+export async function disableCard(
+  config: SquareConfig,
+  cardId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const result = await squareRequest<{ card: { id: string } }>(config, `/cards/${encodeURIComponent(cardId)}/disable`, {});
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
