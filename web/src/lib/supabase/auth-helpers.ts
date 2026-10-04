@@ -47,16 +47,17 @@ export async function getAuthenticatedCustomer(request?: Request): Promise<AuthC
       }
     }
 
-    // 2. Fall back to cookie-based session (local JWT check, zero network egress)
+    // 2. Fall back to cookie-based session, verified with Supabase Auth (SEC-01).
+    // Never use getSession() here: it returns the cookie contents unverified, so a forged cookie would be trusted.
     if (!user) {
       const authClient = await createClient();
       const {
-        data: { session },
+        data: { user: verifiedUser },
         error: authError,
-      } = await authClient.auth.getSession();
+      } = await authClient.auth.getUser();
 
-      if (!authError && session?.user) {
-        user = session.user;
+      if (!authError && verifiedUser) {
+        user = verifiedUser;
       }
     }
 
