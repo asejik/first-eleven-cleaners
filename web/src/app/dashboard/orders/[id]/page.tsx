@@ -10,6 +10,8 @@ import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
 import { calculateOrderFinancials, ORDER_STATUSES, ROUTES } from '@/lib/constants';
+import { PROGRESS_STAGES, progressIndex } from '@/lib/order-progress';
+import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import styles from './page.module.css';
 
 export default function OrderDetailPage() {
@@ -38,7 +40,8 @@ export default function OrderDetailPage() {
   }
 
   const order = data.order;
-  const currentStageIndex = ORDER_STATUSES.findIndex((s) => s.key === order.status);
+  const currentStageIndex = progressIndex(order.status);
+  const isCancelled = order.status === 'cancelled';
   const orderClaims = claimsData?.claims || [];
   const financials = calculateOrderFinancials({
     subtotal: order.subtotal,
@@ -46,7 +49,7 @@ export default function OrderDetailPage() {
   });
 
   const isDelayed = (() => {
-    if (order.status === 'delivered') return false;
+    if (order.status === 'delivered' || order.status === 'cancelled') return false;
     if (!order.delivery_date) return false;
     const [year, month, day] = order.delivery_date.split('-').map(Number);
     if (!year || !month || !day) return false;
@@ -124,6 +127,8 @@ export default function OrderDetailPage() {
                   ? 'out_for_delivery'
                   : order.status === 'weighed_itemized'
                   ? 'weighed'
+                  : order.status === 'cancelled'
+                  ? 'error'
                   : 'booked'
               }
               size="md"
@@ -133,77 +138,86 @@ export default function OrderDetailPage() {
             </Badge>
           </div>
 
-          <div
-            className={styles.countdownBox}
-            style={
-              isDelayed
-                ? { border: '1px solid rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.05)' }
-                : undefined
-            }
-          >
-            <div className={styles.countdownLeft}>
-              <span
-                className={styles.clockIcon}
-                role="img"
-                aria-label={order.status === 'delivered' ? 'Order delivered' : isDelayed ? 'Delivery delayed' : 'Delivery schedule'}
-              >
-                {order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}
-              </span>
-              <div>
-                <strong>
-                  {order.status === 'delivered'
-                    ? 'Delivered on Schedule'
-                    : isDelayed
-                    ? '48-Hour Guarantee: Plant Rescheduling In Progress'
-                    : '48-Hour Match-Ready Guarantee'}
-                </strong>
-                <p>
-                  {order.status === 'delivered'
-                    ? 'Delivered on '
-                    : isDelayed
-                    ? 'Target delivery was '
-                    : 'Target delivery by '}
+          {/* A cancelled order shows what happened instead of a delivery estimate (P05 AR-04) */}
+          {isCancelled ? (
+            <CancelledOrderPanel pickupDate={order.pickup_date} />
+          ) : (
+            <div
+              className={styles.countdownBox}
+              style={
+                isDelayed
+                  ? { border: '1px solid rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.05)' }
+                  : undefined
+              }
+            >
+              <div className={styles.countdownLeft}>
+                <span
+                  className={styles.clockIcon}
+                  role="img"
+                  aria-label={order.status === 'delivered' ? 'Order delivered' : isDelayed ? 'Delivery delayed' : 'Delivery schedule'}
+                >
+                  {order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}
+                </span>
+                <div>
                   <strong>
-                    {order.delivery_date} ({order.delivery_window || 'evening'})
+                    {order.status === 'delivered'
+                      ? 'Delivered on Schedule'
+                      : isDelayed
+                      ? '48-Hour Guarantee: Plant Rescheduling In Progress'
+                      : '48-Hour Match-Ready Guarantee'}
                   </strong>
-                  {order.status === 'delivered'
-                    ? ' • 100% Make It Right Protected'
-                    : isDelayed
-                    ? ' • Concierge operations is actively prioritizing dispatch'
-                    : ''}
-                </p>
+                  <p>
+                    {order.status === 'delivered'
+                      ? 'Delivered on '
+                      : isDelayed
+                      ? 'Target delivery was '
+                      : 'Target delivery by '}
+                    <strong>
+                      {order.delivery_date} ({order.delivery_window || 'evening'})
+                    </strong>
+                    {order.status === 'delivered'
+                      ? ' • 100% Make It Right Protected'
+                      : isDelayed
+                      ? ' • Concierge operations is actively prioritizing dispatch'
+                      : ''}
+                  </p>
+                </div>
               </div>
+              <Badge variant={order.status === 'delivered' ? 'delivered' : isDelayed ? 'warning' : 'success'}>
+                {order.status === 'delivered' ? 'Completed' : isDelayed ? 'Delayed' : 'On Schedule'}
+              </Badge>
             </div>
-            <Badge variant={order.status === 'delivered' ? 'delivered' : isDelayed ? 'warning' : 'success'}>
-              {order.status === 'delivered' ? 'Completed' : isDelayed ? 'Delayed' : 'On Schedule'}
-            </Badge>
-          </div>
+          )}
         </Card>
 
-        {/* 6-Stage Timeline */}
-        <Card variant="bordered" padding="lg" className={styles.trackerWrapper}>
-          <div className={styles.trackerStages}>
-            {ORDER_STATUSES.map((stage, idx) => {
-              const isPassed = idx <= currentStageIndex;
-              const isCurrent = idx === currentStageIndex;
-              return (
-                <div
-                  key={stage.key}
-                  className={`${styles.stageCol} ${isPassed ? styles.passedStage : ''} ${isCurrent ? styles.currentStage : ''}`}
-                >
-                  <div
-                    className={styles.stageIconCircle}
-                    role="img"
-                    aria-label={`${stage.label} stage ${isCurrent ? 'active' : isPassed ? 'completed' : 'pending'}`}
-                  >
-                    {isPassed ? stage.icon : '○'}
-                  </div>
-                  <span className={styles.stageLabel}>{stage.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
+        {!isCancelled && (
+          <>
+            {/* 6-Stage Timeline (not shown for a cancelled order, P05 AR-04) */}
+            <Card variant="bordered" padding="lg" className={styles.trackerWrapper}>
+              <div className={styles.trackerStages}>
+                {PROGRESS_STAGES.map((stage, idx) => {
+                  const isPassed = idx <= currentStageIndex;
+                  const isCurrent = idx === currentStageIndex;
+                  return (
+                    <div
+                      key={stage.key}
+                      className={`${styles.stageCol} ${isPassed ? styles.passedStage : ''} ${isCurrent ? styles.currentStage : ''}`}
+                    >
+                      <div
+                        className={styles.stageIconCircle}
+                        role="img"
+                        aria-label={`${stage.label} stage ${isCurrent ? 'active' : isPassed ? 'completed' : 'pending'}`}
+                      >
+                        {isPassed ? stage.icon : '○'}
+                      </div>
+                      <span className={styles.stageLabel}>{stage.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </>
+        )}
 
         {/* Garment Passport Photo Inspection (Carvana Standard) */}
         <GarmentPassportTimeline order={order} />
