@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // PR-13: "today" on the server and staff screens is Dallas time, not UTC.
 // ---------------------------------------------------------------------------
 type Row = Record<string, unknown>;
-let ordersFixture: Row[] = [];
+const ordersFixture: Row[] = [];
 
 function builder(table: string) {
   const result = () => ({ data: table === 'orders' ? ordersFixture : [], count: ordersFixture.length, error: null });
