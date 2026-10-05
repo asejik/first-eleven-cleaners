@@ -9,9 +9,9 @@ export interface MessagePayload {
   customerEmail?: string;
   stage: OrderStatusKey;
   pickupDate?: string;
-  pickupWindow?: 'morning' | 'evening';
-  deliveryDate?: string;
-  deliveryWindow?: 'morning' | 'evening' | null;
+  pickupWindow?: string; // 'morning' | 'evening' (varchar column)
+  deliveryDate?: string | null;
+  deliveryWindow?: string | null;
   weightLbs?: number | null;
   itemCount?: number;
   total?: number;

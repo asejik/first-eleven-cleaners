@@ -1,5 +1,6 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { reportError } from '@/lib/error-reporting';
+import type { Json } from '@/types/database';
 
 /**
  * Append-only admin audit trail (P03 PR-24). Every admin action that changes an order's
@@ -28,7 +29,7 @@ export async function recordAdminAction(
     action: string;
     targetType: string;
     targetId: string;
-    details?: Record<string, unknown>;
+    details?: { [key: string]: Json | undefined };
     ip?: string | null;
   }
 ): Promise<void> {

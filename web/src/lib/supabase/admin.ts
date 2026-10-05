@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -7,7 +8,7 @@ export function createAdminClient() {
   if (!url || !serviceKey) {
     // Fallback to anon key only if service role key is absent in development
     const fallbackKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
-    return createClient(url || 'https://placeholder.supabase.co', serviceKey || fallbackKey, {
+    return createClient<Database>(url || 'https://placeholder.supabase.co', serviceKey || fallbackKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -15,7 +16,7 @@ export function createAdminClient() {
     });
   }
 
-  return createClient(url, serviceKey, {
+  return createClient<Database>(url, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

@@ -277,7 +277,7 @@ export function buildStageNotificationEmailHtml({
   messageBody: string;
   pickupDate?: string;
   pickupWindow?: string;
-  deliveryDate?: string;
+  deliveryDate?: string | null;
   deliveryWindow?: string | null;
   total?: number;
   trackingUrl: string;

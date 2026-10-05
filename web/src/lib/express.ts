@@ -68,6 +68,8 @@ export function expressRefundAmount(surcharge: number, orderTotal?: number | nul
  * then tell the customer. If the refund can't be made automatically, staff are told instead
  * and the customer is not promised a refund that didn't happen.
  */
+type ExpressCustomer = { id?: string; full_name?: string; phone?: string | null; email?: string | null };
+
 export async function handleExpressDeliverySLA(
   order: {
     id: string;
@@ -80,7 +82,8 @@ export async function handleExpressDeliverySLA(
     payment_status?: string | null;
     payment_id?: string | null;
     refunded_amount?: number | null;
-    customer?: { id?: string; full_name?: string; phone?: string; email?: string } | Array<{ id?: string; full_name?: string; phone?: string; email?: string }> | null;
+    // Matches the customers row (phone is nullable); embedded as an object or a one-item array
+    customer?: ExpressCustomer | ExpressCustomer[] | null;
     express_auto_refunded?: boolean | null;
   },
   deliveryTimestamp: Date = new Date()
@@ -182,7 +185,7 @@ export async function handleExpressDeliverySLA(
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customerObj?.full_name || 'Valued Customer',
         customerPhone,
-        customerEmail: customerObj?.email,
+        customerEmail: customerObj?.email ?? undefined,
         // No phone on file: send by email only
         ...(customerPhone ? {} : { smsConsent: false }),
         stage: 'delivered',
