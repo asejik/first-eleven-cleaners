@@ -15,7 +15,7 @@ const MISSION_CONTROL_TRANSITIONS: Partial<Record<OrderStatusKey, OrderStatusKey
 };
 
 /** Stages an order may only enter once its card has been charged. */
-export const PAYMENT_REQUIRED_STAGES: readonly OrderStatusKey[] = ['in_cleaning', 'out_for_delivery', 'delivered'];
+const PAYMENT_REQUIRED_STAGES: readonly OrderStatusKey[] = ['in_cleaning', 'out_for_delivery', 'delivered'];
 
 export const ORDER_STATUS_KEYS = [
   'booked',

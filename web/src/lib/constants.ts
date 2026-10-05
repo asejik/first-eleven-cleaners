@@ -5,7 +5,6 @@
 // --- Brand ---
 export const APP_NAME = 'First Eleven Cleaners';
 export const APP_TAGLINE = 'Every Garment Makes the Lineup.';
-export const APP_DESCRIPTION = 'Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex.';
 export const PROMO_CODE_LAUNCH = 'KICKOFF15';
 export const PROMO_DISCOUNT_PERCENT = 15;
 
@@ -245,33 +244,7 @@ export const ORDER_STATUS_MAP = Object.fromEntries(
 ) as Record<OrderStatusKey, (typeof ORDER_STATUSES)[number]>;
 
 // --- Service Types ---
-export const SERVICE_TYPES = [
-  { key: 'dry_clean', label: 'Dry Cleaning', description: 'Professional dry cleaning for suits, dresses, and delicates.' },
-  { key: 'wash_fold', label: 'Wash & Fold', description: 'Everyday laundry — washed, dried, and neatly folded.' },
-  { key: 'mixed', label: 'Both', description: 'Dry cleaning + wash & fold in one pickup.' },
-] as const;
-
-export type ServiceTypeKey = typeof SERVICE_TYPES[number]['key'];
-
-// --- Express Tiers (Single 24-Hour Express Program) ---
-export const EXPRESS_TIERS = [
-  {
-    key: 'standard',
-    label: '48-Hour Standard',
-    surcharge: 0,
-    minSurcharge: 0,
-    description: 'Match-ready in 48 hours (Included)',
-    enabled: true,
-  },
-  {
-    key: 'express_24hr',
-    label: '24-Hour Express',
-    surcharge: EXPRESS_SURCHARGE_PERCENT,
-    minSurcharge: EXPRESS_MINIMUM_SURCHARGE,
-    description: 'Match-Ready Tomorrow (+50%, min $15)',
-    enabled: EXPRESS_ENABLED,
-  },
-] as const;
+export type ServiceTypeKey = 'dry_clean' | 'wash_fold' | 'mixed';
 
 export const EXPRESS_EXCLUDED_GARMENTS = [
   'leather',
@@ -281,9 +254,6 @@ export const EXPRESS_EXCLUDED_GARMENTS = [
   'beaded_embellished',
   'stain_remediation',
 ] as const;
-
-export const EXPRESS_EXCLUSION_NOTE =
-  "Specialty items need our full care timeline — Express isn't available for this order.";
 
 // --- Routes ---
 export const ROUTES = {

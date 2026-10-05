@@ -1,1 +1,1 @@
-export { DriverStopCard, formatTimestamp, type DriverStopCardProps } from './DriverStopCard';
+export { DriverStopCard } from './DriverStopCard';

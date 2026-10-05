@@ -1,9 +1,9 @@
 import type { Customer, UserRole } from '@/types';
 
-export const MOCK_STORAGE_KEY = 'f11_mock_user';
-export const AUTH_CACHE_KEY = 'f11_auth_customer';
-export const AUTH_CACHE_TIME_KEY = 'f11_auth_timestamp';
-export const AUTH_TTL_MS = 4 * 60 * 1000; // 4-minute TTL cache
+const MOCK_STORAGE_KEY = 'f11_mock_user';
+const AUTH_CACHE_KEY = 'f11_auth_customer';
+const AUTH_CACHE_TIME_KEY = 'f11_auth_timestamp';
+const AUTH_TTL_MS = 4 * 60 * 1000; // 4-minute TTL cache
 
 /**
  * Resolves user role from the server-controlled customers.role column only (SEC-02).

@@ -45,7 +45,7 @@ function texasDateAndMinutes(instant: Date): { date: string; minutes: number; se
 }
 
 /** True when delivery happened after 10:00:00 AM Dallas time on the promised date (or any later day). */
-export function isExpressDeliveryLate(deliveryDate: string, deliveredAt: Date): boolean {
+function isExpressDeliveryLate(deliveryDate: string, deliveredAt: Date): boolean {
   const tx = texasDateAndMinutes(deliveredAt);
   if (tx.date !== deliveryDate) return tx.date > deliveryDate;
   return tx.minutes > SLA_DEADLINE_MINUTES || (tx.minutes === SLA_DEADLINE_MINUTES && tx.seconds > 0);

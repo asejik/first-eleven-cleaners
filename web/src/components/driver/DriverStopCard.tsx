@@ -14,7 +14,7 @@ export interface DriverStopCardProps {
   isActionPending?: boolean;
 }
 
-export function formatTimestamp(timestamp?: string | null) {
+function formatTimestamp(timestamp?: string | null) {
   if (!timestamp) return null;
   const dateObj = new Date(timestamp);
   if (isNaN(dateObj.getTime())) return null;

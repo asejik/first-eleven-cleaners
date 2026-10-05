@@ -71,33 +71,6 @@ export function useOrderDetail(orderId: string) {
 
 }
 
-// 3. Submit a "Make It Right" claim
-export function useSubmitClaim() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (payload: {
-      order_id: string;
-      issue_type: string;
-      description: string;
-      photo_urls?: string[];
-    }) => {
-      const res = await fetch('/api/claims', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to submit claim');
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['order', variables.order_id] });
-      queryClient.invalidateQueries({ queryKey: ['claims'] });
-      queryClient.invalidateQueries({ queryKey: ['claims', variables.order_id] });
-    },
-  });
-}
 
 // 4. Cancel a booked order before driver dispatch
 export function useCancelOrder() {

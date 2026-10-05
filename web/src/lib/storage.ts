@@ -157,7 +157,7 @@ export async function resolveAndUploadPhotoUrl(
 // ---------------------------------------------------------------------------
 const STORAGE_OBJECT_RE = /\/storage\/v1\/object\/(?:public|sign)\/([^/?#]+)\/([^?#]+)/;
 
-export const PHOTO_LINK_TTL_SECONDS = 60 * 60; // screens: 1 hour
+const PHOTO_LINK_TTL_SECONDS = 60 * 60; // screens: 1 hour
 export const MMS_PHOTO_LINK_TTL_SECONDS = 24 * 60 * 60; // Twilio fetches media after sending
 
 function parseStorageUrl(url: string): { bucket: string; path: string; origin: string } | null {
@@ -178,7 +178,7 @@ export function canonicalStorageUrl(url: string): string {
 }
 
 /** Signs storage URLs in bulk; non-storage URLs map to themselves. */
-export async function signStorageUrls(urls: string[], expiresIn = PHOTO_LINK_TTL_SECONDS): Promise<Map<string, string>> {
+async function signStorageUrls(urls: string[], expiresIn = PHOTO_LINK_TTL_SECONDS): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   const byBucket = new Map<string, { url: string; path: string }[]>();
   for (const url of new Set(urls)) {

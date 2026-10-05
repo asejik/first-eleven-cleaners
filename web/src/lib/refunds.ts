@@ -26,7 +26,7 @@ export type RefundResult =
 const round2 = (n: number) => Number(n.toFixed(2));
 
 /** What can still be refunded on an order's captured payment. */
-export function refundableRemaining(order: RefundableOrder): number {
+function refundableRemaining(order: RefundableOrder): number {
   return Math.max(0, round2((Number(order.total) || 0) - (Number(order.refunded_amount) || 0)));
 }
 

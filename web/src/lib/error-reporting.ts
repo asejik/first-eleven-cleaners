@@ -16,7 +16,7 @@ import { SUPPORT_EMAIL } from '@/lib/constants';
  */
 const ALERT_WINDOW_MS = 10 * 60 * 1000;
 
-export function scrubPersonalData(text: string): string {
+function scrubPersonalData(text: string): string {
   return text
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
     .replace(/\+?1?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, '[phone]');

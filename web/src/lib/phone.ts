@@ -22,7 +22,7 @@ export function toE164(raw: string | null | undefined): string | null {
   return null;
 }
 
-export const INVALID_PHONE_MESSAGE =
+const INVALID_PHONE_MESSAGE =
   'Please enter a valid mobile number, e.g. (214) 555-0100, or include the country code, e.g. +44 20 7946 0958.';
 
 /** Zod field: accepts any common format, stores E.164. */

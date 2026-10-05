@@ -78,19 +78,6 @@ export interface Address {
   zone?: ZoneConfig;
 }
 
-// --- Zone ---
-export interface Zone {
-  id: string;
-  name: string;
-  minimum_order?: number;
-  service_days: string[]; // e.g., ['Monday', 'Wednesday', 'Friday']
-  route_days?: string[];
-  express_eligible?: boolean;
-  zip_codes?: string[];
-  is_active: boolean;
-  created_at: string;
-}
-
 // --- Order ---
 export interface Order {
   id: string;
@@ -131,7 +118,7 @@ export interface Order {
 }
 
 // --- Order Item ---
-export interface OrderItem {
+interface OrderItem {
   id: string;
   order_id: string;
   garment_type: string;
@@ -143,7 +130,7 @@ export interface OrderItem {
 }
 
 // --- Order Event (Status Timeline) ---
-export interface OrderEvent {
+interface OrderEvent {
   id: string;
   order_id: string;
   status: OrderStatusKey;
@@ -164,53 +151,6 @@ export interface GarmentPhoto {
   captured_at: string;
 }
 
-// --- Time Slot ---
-export interface TimeSlot {
-  id: string;
-  date: string;
-  window: 'morning' | 'evening';
-  capacity: number;
-  booked_count: number;
-  is_available: boolean;
-  zone_id: string | null;
-}
-
-// --- Promo Code ---
-export interface PromoCode {
-  id: string;
-  code: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_value: number;
-  max_uses: number | null;
-  current_uses: number;
-  valid_from: string;
-  valid_until: string | null;
-  is_active: boolean;
-}
-
-// --- Commercial Account ---
-export interface CommercialAccount {
-  id: string;
-  business_name: string;
-  contact_name: string;
-  contact_email: string;
-  contact_phone: string;
-  billing_email: string;
-  rate_card_id: string | null;
-  payment_terms: string;
-  created_at: string;
-}
-
-// --- Staff ---
-export interface Staff {
-  id: string;
-  name: string;
-  role: 'admin' | 'driver' | 'intake_staff';
-  email: string;
-  phone: string | null;
-  is_active: boolean;
-}
-
 // --- Claim (Make It Right) ---
 export interface Claim {
   id: string;
@@ -226,31 +166,6 @@ export interface Claim {
   updated_at: string;
   order?: Order;
   customer?: Customer;
-}
-
-// --- Booking Form ---
-export interface BookingFormData {
-  address: {
-    street: string;
-    unit: string;
-    city: string;
-    state: string;
-    zip: string;
-    delivery_notes: string;
-    saved_address_id?: string;
-  };
-  services: {
-    type: ServiceTypeKey;
-    dry_clean_items: Array<{ garment_type: string; quantity: number }>;
-    estimated_weight_lbs: number;
-  };
-  schedule: {
-    pickup_date: string;
-    pickup_window: 'morning' | 'evening';
-    express_tier: 'standard' | 'express_24hr';
-  };
-  promo_code: string;
-  zone?: ZoneConfig;
 }
 
 // --- Price Calculation Result ---

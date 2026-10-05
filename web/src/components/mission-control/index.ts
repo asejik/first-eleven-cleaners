@@ -6,8 +6,6 @@ export { ClaimResolutionModal } from './ClaimResolutionModal';
 export { CommercialAndGrowth } from './CommercialAndGrowth';
 export { NotificationSimulator } from './NotificationSimulator';
 export { StaffRoster } from './StaffRoster';
-export { AddStaffModal } from './AddStaffModal';
-export { EditStaffModal } from './EditStaffModal';
 export { FinancialsLedger } from './FinancialsLedger';
 export { DeliveredArchive } from './DeliveredArchive';
 export { ExpressGovernance } from './ExpressGovernance';

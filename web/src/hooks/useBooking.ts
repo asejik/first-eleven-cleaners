@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { PriceCalculation, BookingSubmissionPayload, BookingSubmissionResult } from '@/types';
+import type { BookingSubmissionPayload, BookingSubmissionResult } from '@/types';
 
 // 1. Fetch available time slots for a given date
 export function useAvailableSlots(date: string) {
@@ -20,29 +20,6 @@ export function useAvailableSlots(date: string) {
   });
 }
 
-// 2. Server-side price calculation
-export function usePriceCalculation(params: {
-  dry_clean_items: Array<{ garment_type: string; quantity: number }>;
-  weight_lbs: number;
-  express_tier: string;
-  promo_discount: number;
-}) {
-  return useQuery<PriceCalculation>({
-    queryKey: ['pricing', params],
-    queryFn: async () => {
-      const res = await fetch('/api/pricing/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!res.ok) {
-        throw new Error('Failed to calculate price');
-      }
-      return res.json();
-    },
-    staleTime: 60 * 1000,
-  });
-}
 
 // 3. Validate Promo Code
 export function useValidatePromoCode() {
