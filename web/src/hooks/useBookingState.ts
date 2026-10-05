@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_PRICE_PER_LB,
@@ -114,6 +114,9 @@ export function useBookingState() {
 
   // Step 6: Confirmation result
   const [confirmedOrder, setConfirmedOrder] = useState<{ order_number: string; id: string } | null>(null);
+  // One key per checkout: resubmitting (double click, retry after a timeout) returns the
+  // order already created instead of booking twice (PR-11)
+  const checkoutKeyRef = useRef<string | null>(null);
 
   // TanStack Query Hooks
   const { data: slotData } = useAvailableSlots(pickupDate);
@@ -300,7 +303,11 @@ export function useBookingState() {
     last4: string = cardNumber ? cardNumber.slice(-4) : '4242'
   ) => {
     try {
+      if (!checkoutKeyRef.current && typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        checkoutKeyRef.current = crypto.randomUUID();
+      }
       const payload = {
+        idempotency_key: checkoutKeyRef.current ?? undefined,
         customer: { full_name: fullName, email, phone },
         address: { street, unit, city, state: 'TX', zip, delivery_notes: deliveryNotes },
         services: {
@@ -336,6 +343,7 @@ export function useBookingState() {
 
       const result = await submitBookingMutation.mutateAsync(payload);
       setConfirmedOrder({ order_number: result.order_number, id: result.order.id });
+      checkoutKeyRef.current = null; // the next booking is a new checkout
       try {
         sessionStorage.removeItem('f11_booking_draft');
       } catch {

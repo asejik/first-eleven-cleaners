@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fakeRpc } from './helpers/fake-create-booking';
 
 // ---------------------------------------------------------------------------
 // Fake Supabase client with per-table failure injection
@@ -48,7 +49,7 @@ function builder(table: string) {
 }
 
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({ from: (table: string) => builder(table) }),
+  createAdminClient: () => ({ from: (table: string) => builder(table), rpc: fakeRpc(builder) }),
 }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),

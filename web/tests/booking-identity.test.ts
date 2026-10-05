@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fakeRpc } from './helpers/fake-create-booking';
 
 type Row = Record<string, unknown>;
 const { state } = vi.hoisted(() => ({
@@ -45,7 +46,7 @@ function builder(table: string) {
   return b;
 }
 
-vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from: (t: string) => builder(t) }) }));
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from: (t: string) => builder(t), rpc: fakeRpc(builder) }) }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));

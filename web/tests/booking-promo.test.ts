@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fakeRpc } from './helpers/fake-create-booking';
 
 type Row = Record<string, unknown>;
 const { state } = vi.hoisted(() => ({
@@ -52,9 +53,9 @@ function builder(table: string) {
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: (t: string) => builder(t),
-    rpc: async (fn: string, args: Row) => {
+    rpc: (fn: string, args: Row) => {
       state.rpcCalls.push({ fn, args });
-      return { data: state.reserveResult, error: null };
+      return fakeRpc(builder, { reservePromo: () => state.reserveResult })(fn, args);
     },
   }),
 }));
@@ -118,10 +119,14 @@ describe('Promo codes: fixed amounts, one use per customer, atomic caps (SEC-15)
     expect(order).toMatchObject({ promo_code: 'WELCOME5', discount_amount: 5 });
   });
 
-  it('reserves a use atomically before creating the order', async () => {
+  it('reserves a use in the same transaction that creates the order (PR-10)', async () => {
     state.promoRow = { discount_type: 'percentage', discount_value: 10, max_uses: 5000, current_uses: 10, valid_from: null, valid_until: null };
     await POST(booking('MATCHREADY'));
-    expect(state.rpcCalls).toEqual([{ fn: 'reserve_promo_use', args: { p_code: 'MATCHREADY' } }]);
+    expect(state.rpcCalls).toHaveLength(1);
+    expect(state.rpcCalls[0].fn).toBe('create_booking');
+    const p = state.rpcCalls[0].args.p as Row;
+    expect(p.reserve_promo).toBe(true);
+    expect((p.order as Row).promo_code).toBe('MATCHREADY');
     expect(state.writes.some((w) => w.table === 'promo_codes')).toBe(false);
   });
 

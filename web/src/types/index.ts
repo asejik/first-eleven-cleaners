@@ -271,6 +271,8 @@ export interface PriceCalculation {
 
 // --- Booking Submission Payload & Result ---
 export interface BookingSubmissionPayload {
+  /** One per checkout; a resubmit returns the first order (PR-11) */
+  idempotency_key?: string;
   customer: {
     full_name: string;
     email: string;
