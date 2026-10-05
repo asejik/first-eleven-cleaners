@@ -1,5 +1,6 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { getSquareConfig, chargeCardOnFile, getPayment } from '@/lib/square';
+import { reportError } from '@/lib/error-reporting';
 
 /**
  * Recovering orders on Payment Hold (P03 PR-04). Intake marks an order `failed` when the
@@ -130,6 +131,7 @@ export async function chargeHeldOrder(
   if (saveErr) {
     // Money moved; make sure staff can reconcile it from the logs
     console.error(`[Payment recovery] Charged order ${order.id} (${paymentId}) but could not save it:`, saveErr);
+    reportError('payments/recovery', saveErr, { alert: true, details: `Order ${order.order_number || order.id} was charged (${paymentId}) but not marked paid` });
   }
   await supabase.from('order_events').insert({
     order_id: order.id,

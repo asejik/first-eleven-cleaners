@@ -19,6 +19,7 @@ import { apiError } from '@/lib/api-errors';
 import { checkIntakeAllowed } from '@/lib/order-lifecycle';
 import { texasDate } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
+import { reportError } from '@/lib/error-reporting';
 
 
 const IntakeSchema = z.object({
@@ -287,6 +288,7 @@ export async function POST(request: Request) {
           } else {
             failureReason = charge.ok ? `Square payment status ${charge.status}` : charge.error;
             console.error('Square card-on-file charge declined in intake:', failureReason);
+            reportError('intake/payment-hold', failureReason, { alert: true, details: `Order ${order.order_number || order.id} is on Payment Hold` });
             paymentStatus = 'failed';
           }
         } else {
@@ -356,6 +358,7 @@ export async function POST(request: Request) {
     if (updateErr || !updatedRows || updatedRows.length === 0) {
       // The card may already have been charged above; the Square payment ID is in the logs and events
       console.error(`[Intake] Order ${order.id} changed during intake or could not be saved (payment ${paymentStatus}, ${paymentId}):`, updateErr);
+      reportError('api/intake', updateErr || 'Order changed during intake', { alert: true, details: `Order ${order.order_number || order.id}: payment ${paymentStatus} ${paymentId || ''}; check Square before retrying` });
       return NextResponse.json(
         { error: 'This order changed while intake was running. Refresh the queue and check the order before retrying.' },
         { status: 409 }

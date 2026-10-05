@@ -1,5 +1,6 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { getSquareConfig, refundPayment, getPayment } from '@/lib/square';
+import { reportError } from '@/lib/error-reporting';
 
 /**
  * Refunds (P03 PR-05). Money goes back through Square's Refunds API, and the order's
@@ -91,6 +92,7 @@ export async function refundOrder(
     .eq('id', order.id);
   if (error) {
     console.error(`[Refunds] Square refund ${refundId} issued but order ${order.id} not updated:`, error);
+    reportError('refunds/record', error, { alert: true, details: `Square refund ${refundId} on order ${order.order_number || order.id} was issued but not saved` });
   }
 
   await supabase.from('order_events').insert({

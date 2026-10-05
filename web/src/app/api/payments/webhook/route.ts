@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppBaseUrl } from '@/lib/constants';
 import { apiError } from '@/lib/api-errors';
 import { syncOrderRefundStateFromSquare } from '@/lib/refunds';
+import { reportError } from '@/lib/error-reporting';
 
 /**
  * Validates the cryptographic Square HMAC-SHA256 signature using timing-safe comparison (SEC-007).
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
 
     if (isProduction && !hasValidKey) {
       console.error('[Square Webhook] SQUARE_WEBHOOK_SIGNATURE_KEY is missing in production');
+      reportError('payments/webhook', 'SQUARE_WEBHOOK_SIGNATURE_KEY is missing in production; Square events are being rejected', { alert: true });
       return NextResponse.json(
         { error: 'Square webhook configuration error: signature key missing' },
         { status: 500 }
@@ -229,6 +231,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (err: unknown) {
+    reportError('payments/webhook', err, { alert: true });
     return apiError('api/payments/webhook', err, 400);
   }
 }

@@ -8,6 +8,7 @@ import {
 } from '@/lib/constants';
 import { getSquareConfig, refundPayment } from '@/lib/square';
 import { runAfterResponse } from '@/lib/after-response';
+import { reportError } from '@/lib/error-reporting';
 
 export interface ExpressSLAResult {
   isExpress: boolean;
@@ -138,6 +139,7 @@ export async function handleExpressDeliverySLA(
 
   if (!refundId) {
     console.error(`[Express SLA] Automatic refund failed for order ${order.id}: ${failureReason}`);
+    reportError('express/refund-failed', failureReason, { alert: true, details: `Order ${order.order_number || order.id}: refund $${refundAmount.toFixed(2)} manually in Square` });
     await supabase.from('order_events').insert({
       order_id: order.id,
       status: 'express_refund_failed',

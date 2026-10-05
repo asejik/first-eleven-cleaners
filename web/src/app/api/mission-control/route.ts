@@ -12,6 +12,7 @@ import { refundOrder } from '@/lib/refunds';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 import { texasDate } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
+import { reportError } from '@/lib/error-reporting';
 
 
 export async function GET(request: Request) {
@@ -340,7 +341,10 @@ export async function POST(request: Request) {
         .single();
 
       if (claimErr) {
-        if (refundId) console.error(`[Claims] Refund ${refundId} issued but claim ${claim_id} not updated:`, claimErr);
+        if (refundId) {
+          console.error(`[Claims] Refund ${refundId} issued but claim ${claim_id} not updated:`, claimErr);
+          reportError('claims/refund', claimErr, { alert: true, details: `Square refund ${refundId} issued but claim ${claim_id} not updated` });
+        }
         return apiError('api/mission-control', claimErr, 500);
       }
 

@@ -21,6 +21,7 @@ import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
 import { validateSchedule } from '@/lib/schedule';
 import { runAfterResponse } from '@/lib/after-response';
+import { reportError } from '@/lib/error-reporting';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
       }
     } else if (process.env.NODE_ENV === 'production') {
       console.error('[Bookings] Square is not configured in production; refusing unpaid booking.');
+      reportError('api/bookings', 'Square is not configured in production: online booking is refusing all bookings', { alert: true });
       return NextResponse.json(
         { error: 'Online booking is temporarily unavailable. Please call us to schedule your pickup.' },
         { status: 503 }
@@ -535,7 +537,10 @@ export async function POST(request: Request) {
 
             if (itemsToInsert.length > 0) {
               const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert);
-              if (itemsErr) console.error('[Bookings] Order items insert failed:', itemsErr);
+              if (itemsErr) {
+                console.error('[Bookings] Order items insert failed:', itemsErr);
+                reportError('api/bookings', itemsErr, { alert: true, details: `Order ${orderNumber} saved without its items` });
+              }
             }
 
             // 5. Insert Initial Booking Event
@@ -594,6 +599,7 @@ export async function POST(request: Request) {
 
       // Reaching here means the booking was NOT saved (SEC-12). Never send a fake
       // confirmation: tell the customer, and send no SMS or email.
+      reportError('api/bookings', 'A customer booking could not be saved (see the [Bookings] log lines for the cause)', { alert: true });
       return NextResponse.json(
         {
           error:
