@@ -1,31 +1,39 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, skipCookieBanner } from './fixtures';
 
-test.describe('Order Tracking Live Smoke Test', () => {
-  test('navigates to tracking page and verifies live timeline structure', async ({ page }) => {
-    // 1. Visit tracking page for mock / test order
-    await page.goto('/track/demo-order-75201');
+// Journey 3: tracking link (P05 AR-04, AR-10, AR-13). Mock order ord-001 is In Cleaning.
+const STAGES = ['Booked', 'Picked Up', 'Weighed & Itemized', 'In Cleaning', 'Out for Delivery', 'Delivered'];
 
-    // 2. Expect either the live tracker layout or a graceful empty / not found boundary
-    const trackerContainer = page.locator('[class*="tracker"], [class*="container"], [class*="timeline"]');
-    await expect(trackerContainer.first()).toBeVisible();
-
-    // 3. Verify no unhandled page crash / 500 error heading
-    const errorHeading = page.locator('h1:has-text("500"), h1:has-text("Server Error")');
-    await expect(errorHeading).not.toBeVisible();
+test.describe('Order tracking', () => {
+  test.beforeEach(async ({ page }) => {
+    await skipCookieBanner(page);
   });
 
-  test('validates customer concierge trigger is accessible on mobile and desktop', async ({ page }) => {
-    await page.goto('/');
+  test('an active order shows the six stages and no Cancelled step', async ({ page }) => {
+    await page.goto('/track/ord-001');
+    await expect(page.getByRole('heading', { name: 'Live Garment Tracker' })).toBeVisible();
+    for (const stage of STAGES) await expect(page.getByText(stage, { exact: true }).first()).toBeVisible();
+    await expect(page.locator('[class*="stageTitle"]')).toHaveCount(6);
+    await expect(page.locator('[class*="stageTitle"]', { hasText: 'Cancelled' })).toHaveCount(0);
+  });
 
-    // Concierge floating button should be present
-    const conciergeTrigger = page.locator('button[aria-label*="Concierge" i]');
-    await expect(conciergeTrigger).toBeVisible();
+  test('a cancelled order shows the cancelled panel instead of a timeline', async ({ page }) => {
+    await page.route('**/api/orders/ord-001', async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      body.order.status = 'cancelled';
+      await route.fulfill({ response, json: body });
+    });
+    await page.goto('/track/ord-001');
+    await expect(page.getByText('This pickup was cancelled')).toBeVisible();
+    await expect(page.locator('[class*="stageTitle"]')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Book a New Pickup/ })).toBeVisible();
+  });
 
-    // Click concierge trigger to open drawer
-    await conciergeTrigger.click();
-
-    // Verify chat drawer opens with input field
-    const conciergeInput = page.locator('input[placeholder*="Ask Eleven" i]');
-    await expect(conciergeInput).toBeVisible();
+  test('a failed load offers Try Again, not "Order Not Found"', async ({ page }) => {
+    await page.route('**/api/orders/ord-001', (route) => route.fulfill({ status: 429, json: { error: 'Too many' } }));
+    await page.goto('/track/ord-001');
+    await expect(page.getByText(/We couldn.t load this order/)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('button', { name: 'Try Again' })).toBeVisible();
+    await expect(page.getByText('Order Not Found')).toHaveCount(0);
   });
 });
