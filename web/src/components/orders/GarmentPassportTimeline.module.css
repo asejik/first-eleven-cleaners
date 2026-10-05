@@ -20,7 +20,7 @@
 .badgeTag {
   font-size: var(--text-xs);
   text-transform: uppercase;
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-weight: var(--font-black);
   letter-spacing: var(--tracking-wider);
   display: block;
@@ -64,7 +64,7 @@
 .metricLabel {
   font-size: 10px;
   text-transform: uppercase;
-  color: var(--color-gray-500);
+  color: var(--color-text-secondary);
   font-weight: var(--font-bold);
   letter-spacing: var(--tracking-wide);
   display: block;
@@ -209,7 +209,7 @@
 
 .timestamp {
   font-size: var(--text-2xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
 }
 
 /* Pre-existing Flaw Log */

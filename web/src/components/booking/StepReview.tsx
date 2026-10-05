@@ -2,6 +2,12 @@ import Link from 'next/link';
 import { Card, Input, Button } from '@/components/ui';
 import { DRY_CLEAN_PRICES, ROUTES, type ZoneConfig } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
+import type { AppliedPromo } from '@/lib/promo';
+
+/** "15%" for percentage codes, "$5.00" for fixed-dollar codes (P05 AR-02) */
+function promoLabel(promo: AppliedPromo): string {
+  return promo.discount_type === 'fixed' ? `$${promo.discount_value.toFixed(2)}` : `${promo.discount_value}%`;
+}
 
 interface StepReviewProps {
   street: string;
@@ -22,8 +28,10 @@ interface StepReviewProps {
   expressSurcharge: number;
   promoCodeInput: string;
   setPromoCodeInput: (val: string) => void;
-  appliedPromo: { code: string; discount_value: number } | null;
+  appliedPromo: AppliedPromo | null;
   handleApplyPromo: () => void;
+  /** Why a pre-applied code was removed (e.g. a first-order code already used) */
+  promoNotice?: string | null;
   subtotal: number;
   discountAmount: number;
   discountPercent: number;
@@ -61,6 +69,7 @@ export function StepReview({
   setPromoCodeInput,
   appliedPromo,
   handleApplyPromo,
+  promoNotice = null,
   subtotal,
   discountAmount,
   discountPercent,
@@ -178,7 +187,12 @@ export function StepReview({
           </div>
           {appliedPromo && (
             <p className={styles.promoApplied}>
-              ✓ Code <strong>{appliedPromo.code}</strong> applied ({appliedPromo.discount_value}% OFF)
+              ✓ Code <strong>{appliedPromo.code}</strong> applied ({promoLabel(appliedPromo)} OFF)
+            </p>
+          )}
+          {!appliedPromo && promoNotice && (
+            <p className={styles.promoNotice} role="status">
+              {promoNotice}
             </p>
           )}
         </div>
@@ -222,7 +236,7 @@ export function StepReview({
           )}
           {promoDiscount > 0 && (
             <div className={styles.totalRowDiscount}>
-              <span>Promo Code ({appliedPromo?.code || 'Code'} - {discountPercent}%)</span>
+              <span>Promo Code ({appliedPromo?.code || 'Code'} - {appliedPromo ? promoLabel(appliedPromo) : `${discountPercent}%`})</span>
               <span>-${promoDiscount.toFixed(2)}</span>
             </div>
           )}

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMissionControl, useAdvanceOrderStage, useResolveClaim, usePaymentRecovery } from '@/hooks/useMissionControl';
-import { useNotifications, useDispatchNotification } from '@/hooks/useNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Loader } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
@@ -17,7 +17,6 @@ import {
   DeliveredArchive,
   ClaimsQueue,
   ClaimResolutionModal,
-  CommercialAndGrowth,
   NotificationSimulator,
   StaffRoster,
   FinancialsLedger,
@@ -36,7 +35,7 @@ const STAGES: OrderStatusKey[] = [
 ];
 
 export default function MissionControlPage() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'growth' | 'dispatch' | 'express' | 'zones'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'dispatch' | 'express' | 'zones'>('pipeline');
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
@@ -44,7 +43,6 @@ export default function MissionControlPage() {
   const router = useRouter();
   const resolveClaim = useResolveClaim();
   const { data: notifsData } = useNotifications();
-  const dispatchNotif = useDispatchNotification();
   const addToast = useUIStore((s) => s.addToast);
 
   // Claim resolution modal state
@@ -53,7 +51,6 @@ export default function MissionControlPage() {
   const [refundAmount, setRefundAmount] = useState<string>('');
 
   // Simulator test message state
-  const [testStage, setTestStage] = useState<OrderStatusKey>('booked');
   const [testEmailRecipient, setTestEmailRecipient] = useState('');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
 
@@ -196,26 +193,6 @@ export default function MissionControlPage() {
     }
   };
 
-  const handleManualTestNotification = async (orderId: string) => {
-    try {
-      await dispatchNotif.mutateAsync({
-        order_id: orderId,
-        stage: testStage,
-      });
-      addToast({
-        type: 'info',
-        title: 'Notification Dispatched',
-        message: `Dispatched test message for ${testStage} stage.`,
-      });
-    } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Dispatch Failed',
-        message: (err as Error).message,
-      });
-    }
-  };
-
   const handleSendTestEmail = async () => {
     if (!testEmailRecipient.trim()) {
       addToast({
@@ -289,7 +266,6 @@ export default function MissionControlPage() {
                   { id: 'zones', label: '🗺️ Zone Minimums' },
                   { id: 'roster', label: '🚐 Fleet & Staff Roster' },
                   { id: 'claims', label: '🛡️ Claims Queue', count: claims.length },
-                  { id: 'growth', label: '🏢 B2B Accounts' },
                   { id: 'dispatch', label: '📡 Messaging Dispatch' },
                 ].map((tab) => (
                   <button
@@ -449,23 +425,13 @@ export default function MissionControlPage() {
                 />
               )}
 
-              {activeTab === 'growth' && (
-                <CommercialAndGrowth />
-              )}
-
               {activeTab === 'dispatch' && (
                 <NotificationSimulator
-                  stages={STAGES}
-                  orders={orders}
                   notifications={notifications}
-                  testStage={testStage}
-                  setTestStage={setTestStage}
                   testEmailRecipient={testEmailRecipient}
                   setTestEmailRecipient={setTestEmailRecipient}
                   isSendingTestEmail={isSendingTestEmail}
                   onSendTestEmail={handleSendTestEmail}
-                  onManualTestNotification={handleManualTestNotification}
-                  isDispatchingNotif={dispatchNotif.isPending}
                 />
               )}
 

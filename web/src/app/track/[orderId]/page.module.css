@@ -113,7 +113,7 @@
   align-items: center;
   text-align: center;
   gap: 4px;
-  opacity: 0.35;
+  opacity: 0.65; /* AA contrast for upcoming stage labels (P05 AR-07) */
 }
 
 .passed {
@@ -233,7 +233,7 @@
 
 .photoTimestamp {
   font-size: var(--text-2xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
 }
 
 .actionsBox {

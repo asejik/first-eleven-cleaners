@@ -12,6 +12,7 @@ import { useCustomerProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Card, Badge, Input, Modal } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
+import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from './page.module.css';
 
 interface ProfileEditorFormProps {
@@ -231,11 +232,12 @@ function SecurityAndPrivacySection() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 8) {
+    const weak = passwordProblem(newPassword); // the project's Supabase password rule (P05 AR-11)
+    if (weak) {
       addToast({
         type: 'warning',
-        title: 'Password Too Short',
-        message: 'Password must be at least 8 characters long.',
+        title: 'Choose a Stronger Password',
+        message: weak,
       });
       return;
     }
@@ -355,7 +357,7 @@ function SecurityAndPrivacySection() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="At least 8 characters"
+              helperText={PASSWORD_HINT}
               autoComplete="new-password"
             />
             <Input
@@ -607,7 +609,7 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-gold-dark)', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-gold-text)', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>
                     <span>✨</span>
                     <span>All orders in good standing</span>
                   </div>

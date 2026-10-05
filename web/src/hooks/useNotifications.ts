@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { OrderStatusKey } from '@/lib/constants';
 
 export interface NotificationItem {
@@ -28,30 +28,5 @@ export function useNotifications(orderId?: string) {
     staleTime: 10 * 1000,
     refetchInterval: 15 * 1000, // 15s poll (egress-protected)
     refetchIntervalInBackground: false,
-  });
-}
-
-export function useDispatchNotification() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (payload: {
-      order_id: string;
-      stage: OrderStatusKey;
-      channel?: 'sms' | 'whatsapp';
-      photo_url?: string;
-    }) => {
-      const res = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to dispatch notification');
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
   });
 }

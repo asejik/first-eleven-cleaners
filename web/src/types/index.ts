@@ -18,6 +18,8 @@ export interface Customer {
   sms_consent?: boolean;
   sms_promotions_consent?: boolean;
   sms_consent_at?: string | null;
+  /** Staff screens only: the parts of the customer's Preferences that role needs (P05 AR-03) */
+  preferences?: Partial<Pick<CustomerPreferences, 'gate_code' | 'delivery_instructions' | 'starch_level' | 'fold_vs_hang' | 'detergent_sensitivity'>> | null;
   created_at: string;
   updated_at: string;
 }

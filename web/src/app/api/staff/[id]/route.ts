@@ -8,6 +8,7 @@ import { apiError } from '@/lib/api-errors';
 import { phoneSchema } from '@/lib/phone';
 import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
+import type { TablesUpdate } from '@/types/database';
 
 const UpdateStaffSchema = z.object({
   full_name: personNameSchema.optional(),
@@ -67,7 +68,7 @@ export async function PATCH(
     }
 
     // 2. Update customer table fields
-    const customerFieldsToUpdate: Record<string, unknown> = {
+    const customerFieldsToUpdate: TablesUpdate<'customers'> = {
       updated_at: new Date().toISOString(),
     };
     if (updates.full_name) customerFieldsToUpdate.full_name = updates.full_name;

@@ -113,7 +113,7 @@
   align-items: center;
   text-align: center;
   gap: var(--space-2);
-  opacity: 0.35;
+  opacity: 0.65; /* AA contrast for upcoming stage labels (P05 AR-07) */
   transition: all var(--transition-base);
 }
 
@@ -257,7 +257,7 @@
 
 .photoTimestamp {
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
 }
 
 /* --- Details Grid --- */
@@ -308,7 +308,7 @@
 
 .itemSubtext {
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
 }
 
 .itemTotal {
@@ -392,7 +392,7 @@
 
 .eventTime {
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
 }
 
 .errorContainer {
@@ -475,4 +475,11 @@
   display: block;
 }
 
-
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

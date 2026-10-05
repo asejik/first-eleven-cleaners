@@ -1,47 +1,33 @@
 import { Badge, Button } from '@/components/ui';
-import { ORDER_STATUS_MAP, type OrderStatusKey } from '@/lib/constants';
-import type { Order } from '@/types';
 import type { NotificationItem } from '@/hooks/useNotifications';
 import styles from '@/app/mission-control/page.module.css';
 
 interface NotificationSimulatorProps {
-  stages: OrderStatusKey[];
-  orders: Order[];
   notifications: NotificationItem[];
-  testStage: OrderStatusKey;
-  setTestStage: (val: OrderStatusKey) => void;
   testEmailRecipient: string;
   setTestEmailRecipient: (val: string) => void;
   isSendingTestEmail: boolean;
   onSendTestEmail: () => void;
-  onManualTestNotification: (orderId: string) => void;
-  isDispatchingNotif: boolean;
 }
 
 export function NotificationSimulator({
-  stages,
-  orders,
   notifications,
-  testStage,
-  setTestStage,
   testEmailRecipient,
   setTestEmailRecipient,
   isSendingTestEmail,
   onSendTestEmail,
-  onManualTestNotification,
-  isDispatchingNotif,
 }: NotificationSimulatorProps) {
   return (
     <div className={styles.sectionBlock}>
       <div className={styles.sectionHeader}>
         <h3 className={styles.sectionTitle}>
-          <span>📱</span> Real-Time SMS & WhatsApp Simulator HUD
+          <span>📱</span> Message Log
         </h3>
         <Badge variant="info">Plug & Play Ready</Badge>
       </div>
 
       <p style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', margin: 0 }}>
-        Audit log of outgoing status messages dispatched to customers via Simulated Provider or Live Twilio.
+        The latest SMS and WhatsApp messages sent to and received from customers. Status messages are sent automatically when an order moves stage.
       </p>
 
       {/* Live Resend Email Tester */}
@@ -69,32 +55,6 @@ export function NotificationSimulator({
           </Button>
         </div>
       </div>
-
-      {/* Quick Dispatch Test Trigger */}
-      {orders.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#131d35', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-          <span style={{ fontSize: 'var(--text-2xs)', color: '#cbd5e1' }}>Test SMS/WhatsApp:</span>
-          <select
-            value={testStage}
-            onChange={(e) => setTestStage(e.target.value as OrderStatusKey)}
-            style={{ background: '#1e293b', color: '#ffffff', border: '1px solid #475569', borderRadius: '4px', fontSize: 'var(--text-xs)', padding: '4px' }}
-          >
-            {stages.map((st) => (
-              <option key={st} value={st}>
-                {ORDER_STATUS_MAP[st]?.label}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="outlineLight"
-            size="sm"
-            onClick={() => onManualTestNotification(orders[0].id)}
-            disabled={isDispatchingNotif}
-          >
-            Send to Order #{orders[0].order_number || orders[0].id.slice(0, 8)}
-          </Button>
-        </div>
-      )}
 
       <div className={styles.messagesFeed}>
         {notifications.length === 0 ? (

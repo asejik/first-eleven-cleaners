@@ -227,7 +227,7 @@ export default function AddressesPage() {
             <Card variant="surface" padding="lg" className={styles.emptyCard}>
               <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>⚠️</span>
               <h3>Unable to Load Addresses</h3>
-              <p style={{ color: 'var(--color-gray-500)', marginTop: '4px', marginBottom: '16px' }}>
+              <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px', marginBottom: '16px' }}>
                 We could not retrieve your address book. Please check your connection and try again.
               </p>
               <Button variant="outline" onClick={() => refetch()}>
@@ -237,7 +237,7 @@ export default function AddressesPage() {
           ) : addresses.length === 0 ? (
             <Card variant="surface" padding="lg" className={styles.emptyCard}>
               <h3>No Saved Addresses Yet</h3>
-              <p style={{ color: 'var(--color-gray-500)', marginTop: '4px', marginBottom: '16px' }}>
+              <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px', marginBottom: '16px' }}>
                 Add your home or office address to make scheduling pickups seamless.
               </p>
               <Button variant="primary" onClick={() => setIsAdding(true)}>

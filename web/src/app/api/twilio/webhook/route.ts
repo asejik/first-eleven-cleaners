@@ -233,7 +233,7 @@ export async function POST(req: Request) {
           targetCustomerId = customer.id;
           context.customerId = customer.id;
           context.customerName = customer.full_name;
-          context.customerPhone = customer.phone;
+          context.customerPhone = customer.phone ?? undefined;
           context.customerEmail = customer.email;
 
           // Fetch Customer Preferences (Eleven's Memory)

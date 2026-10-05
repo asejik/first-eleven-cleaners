@@ -269,6 +269,7 @@ export function buildStageNotificationEmailHtml({
   deliveryWindow,
   total,
   trackingUrl,
+  signupUrl,
 }: {
   stageTitle: string;
   customerName: string;
@@ -276,10 +277,12 @@ export function buildStageNotificationEmailHtml({
   messageBody: string;
   pickupDate?: string;
   pickupWindow?: string;
-  deliveryDate?: string;
+  deliveryDate?: string | null;
   deliveryWindow?: string | null;
   total?: number;
   trackingUrl: string;
+  /** Guest bookings only: invitation to create an account (P05 AR-14) */
+  signupUrl?: string;
 }): string {
   const firstName = greetingFirstName(customerName);
   const pWindow = pickupWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : pickupWindow === 'evening' ? 'Evening (5:00–8:00 PM)' : (pickupWindow || '');
@@ -340,6 +343,13 @@ export function buildStageNotificationEmailHtml({
           Track Your Order Live &rarr;
         </a>
       </div>
+
+      ${signupUrl ? `
+      <!-- Account invitation for guest bookings (P05 AR-14) -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0 0; text-align: center;">
+        <p style="margin: 0 0 10px; color: #0f172a; font-size: 14px;">Create your account to track every order, save your addresses and rebook in seconds.</p>
+        <a href="${escapeHtml(signupUrl)}" style="color: #0B1F3A; font-weight: bold; font-size: 14px; text-decoration: underline;">Create your account &rarr;</a>
+      </div>` : ''}
 
       <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 16px 0 0;">
         Backed by our 100% Make It Right Guarantee.

@@ -19,7 +19,7 @@
   display: inline-block;
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
-  color: var(--color-gold);
+  color: #7a5a12;
   background-color: rgba(201, 161, 74, 0.12);
   padding: 4px var(--space-3);
   border-radius: var(--radius-full);
@@ -130,9 +130,14 @@
 }
 
 .contactLink {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
   text-decoration: underline;
   font-weight: var(--font-semibold);
+}
+
+/* On the navy contact block the bright gold reads well (6.9:1); the darker text gold doesn't */
+.contactBox .contactLink {
+  color: var(--color-gold);
 }
 
 @media (min-width: 640px) {

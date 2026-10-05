@@ -267,7 +267,7 @@
 .expressSurchargeText {
   font-size: var(--text-lg);
   font-weight: var(--font-black);
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
 }
 
 .expressMinText {
@@ -347,7 +347,7 @@
 }
 
 .weightValue {
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-size: var(--text-base);
 }
 
@@ -379,7 +379,7 @@
 
 .emptyNote {
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
@@ -523,4 +523,24 @@
   font-size: 11px;
   color: #92400e;
   font-weight: 600;
+}
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .qtyBtn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .expressOptionBtn {
+    min-height: 44px;
+  }
+
+  .zoneZipInput {
+    min-height: 44px;
+  }
+
+  .rangeSlider {
+    min-height: 44px;
+  }
 }

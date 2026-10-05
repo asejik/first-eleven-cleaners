@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
+import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from '../forgot-password/page.module.css';
 
 /**
@@ -28,8 +29,9 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    const weak = passwordProblem(password); // the project's Supabase password rule (P05 AR-11)
+    if (weak) {
+      setError(weak);
       return;
     }
     if (password !== confirmPassword) {
@@ -93,7 +95,7 @@ export default function ResetPasswordPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                helperText={PASSWORD_HINT}
                 required
                 autoComplete="new-password"
               />

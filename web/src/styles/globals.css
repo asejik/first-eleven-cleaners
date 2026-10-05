@@ -85,6 +85,13 @@ input, textarea, select {
   font-size: var(--text-base);
 }
 
+/* Checkboxes at least 24 px, WCAG 2.2 AA target size (P05 AR-08) */
+input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
 ul, ol {
   list-style: none;
 }
@@ -144,8 +151,9 @@ ul, ol {
 
 /* === Focus Styles (Accessibility) === */
 :focus-visible {
-  outline: 2px solid var(--color-gold);
+  outline: 2px solid var(--color-navy);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-white); /* halo keeps the ring visible on navy pages (P05 AR-09) */
   border-radius: var(--radius-sm);
 }
 

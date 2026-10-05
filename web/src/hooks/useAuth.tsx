@@ -14,6 +14,7 @@ import {
 } from '@/lib/mock-auth';
 import { ROUTES } from '@/lib/constants';
 import { toE164 } from '@/lib/phone';
+import { friendlyAuthError } from '@/lib/auth-messages';
 
 interface AuthState {
   user: Customer | null;
@@ -36,8 +37,10 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Customer | null>(getStoredCustomer);
-  const [isLoading, setIsLoading] = useState<boolean>(() => !hasFreshCachedSession());
+  // Start signed-out and loading on the server and in the browser alike, so the first
+  // render matches the server HTML; the cached login is restored right after (P05 AR-05)
+  const [user, setUser] = useState<Customer | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const updateCustomerState = useCallback((newCustomer: Customer | null) => {
     if (newCustomer && !newCustomer.role) {
@@ -135,9 +138,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Only make network call if cache was expired or missing
+    // Only make network call if cache was expired or missing; a fresh cache is restored
+    // here, after hydration, instead of during the first render (P05 AR-05)
+    let restoreTimer: ReturnType<typeof setTimeout> | null = null;
     if (!hasFresh) {
       initAuth();
+    } else {
+      restoreTimer = setTimeout(() => {
+        if (!isMounted) return;
+        loadLocalUser();
+        setIsLoading(false);
+      }, 0);
     }
 
     // Subscribe to auth state changes for real-time reactivity without polling
@@ -160,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isMounted = false;
+      if (restoreTimer) clearTimeout(restoreTimer);
       if (authSubscription) {
         authSubscription.unsubscribe();
       }
@@ -173,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const supabase = createClient();
           const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
           if (error) {
-            return { error: error.message };
+            return { error: friendlyAuthError(error) };
           }
 
           if (data.user) {
@@ -212,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         } catch (e: unknown) {
-          return { error: (e as Error).message };
+          return { error: friendlyAuthError(e) };
         }
       }
 
@@ -249,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               },
             },
           });
-          if (authError) return { error: authError.message };
+          if (authError) return { error: friendlyAuthError(authError) };
 
           // Email confirmation required: no session yet, so cache nothing (SEC-28)
           if (!authData.session) return { needsConfirmation: true };
@@ -318,7 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return {};
           }
         } catch (e: unknown) {
-          return { error: (e as Error).message };
+          return { error: friendlyAuthError(e) };
         }
       }
 
@@ -361,10 +373,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}${ROUTES.authConfirm}`,
           });
-          if (error) return { error: error.message };
+          if (error) return { error: friendlyAuthError(error) };
           return {};
         } catch (e: unknown) {
-          return { error: (e as Error).message };
+          return { error: friendlyAuthError(e) };
         }
       }
       return {};
@@ -378,10 +390,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const supabase = createClient();
           const { error } = await supabase.auth.updateUser({ password });
-          if (error) return { error: error.message };
+          if (error) return { error: friendlyAuthError(error) };
           return {};
         } catch (e: unknown) {
-          return { error: (e as Error).message };
+          return { error: friendlyAuthError(e) };
         }
       }
       return {};

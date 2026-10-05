@@ -37,7 +37,7 @@
   border: 1px solid rgba(201, 161, 74, 0.25);
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-weight: var(--font-semibold);
   margin-bottom: var(--space-2);
   text-transform: uppercase;

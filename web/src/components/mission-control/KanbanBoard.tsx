@@ -186,7 +186,7 @@ export function KanbanBoard({
 
               <div className={styles.orderList}>
                 {stageOrders.length === 0 ? (
-                  <p style={{ fontSize: 'var(--text-2xs)', color: '#64748b', textAlign: 'center', padding: '32px 0' }}>
+                  <p style={{ fontSize: 'var(--text-2xs)', color: '#94a3b8', textAlign: 'center', padding: '32px 0' }}>
                     No orders in this stage
                   </p>
                 ) : (
@@ -348,7 +348,7 @@ export function KanbanBoard({
               {/* Scrollable Order List (Bounded height) */}
               <div className={styles.orderList}>
                 {displayedDelivered.length === 0 ? (
-                  <p style={{ fontSize: 'var(--text-2xs)', color: '#64748b', textAlign: 'center', padding: '32px 0' }}>
+                  <p style={{ fontSize: 'var(--text-2xs)', color: '#94a3b8', textAlign: 'center', padding: '32px 0' }}>
                     {deliveredScope === 'today' ? 'No orders delivered today yet' : 'No delivered orders'}
                   </p>
                 ) : (

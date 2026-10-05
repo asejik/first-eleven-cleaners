@@ -126,3 +126,16 @@
   font-size: var(--text-sm);
   color: var(--color-gray-500);
 }
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .input {
+    min-height: 44px;
+  }
+
+  .passwordToggle {
+    min-width: 44px;
+    min-height: 44px;
+    right: 0;
+  }
+}

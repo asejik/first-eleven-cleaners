@@ -1,19 +1,31 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { Suspense, useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { ROUTES, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
+import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from './page.module.css';
+
+// The account link in a guest's confirmation email carries their email (P05 AR-14)
+function EmailFromLink({ onEmail }: { onEmail: (email: string) => void }) {
+  const searchParams = useSearchParams();
+  const linkedEmail = searchParams.get('email');
+  useEffect(() => {
+    if (linkedEmail) onEmail(linkedEmail);
+  }, [linkedEmail, onEmail]);
+  return null;
+}
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const prefillEmail = useCallback((linked: string) => setEmail((current) => current || linked), []);
   const [phone, setPhone] = useState('');
   const [smsConsent, setSmsConsent] = useState(false);
   const [smsPromotionsConsent, setSmsPromotionsConsent] = useState(false);
@@ -30,8 +42,9 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+    const weak = passwordProblem(password); // the project's Supabase password rule (P05 AR-11)
+    if (weak) {
+      setError(weak);
       return;
     }
 
@@ -120,6 +133,10 @@ export default function SignupPage() {
           </div>
         )}
 
+        <Suspense fallback={null}>
+          <EmailFromLink onEmail={prefillEmail} />
+        </Suspense>
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <Input
             label="Full Name"
@@ -165,7 +182,7 @@ export default function SignupPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            helperText={PASSWORD_HINT}
             required
             autoComplete="new-password"
           />

@@ -9,9 +9,9 @@ export interface MessagePayload {
   customerEmail?: string;
   stage: OrderStatusKey;
   pickupDate?: string;
-  pickupWindow?: 'morning' | 'evening';
-  deliveryDate?: string;
-  deliveryWindow?: 'morning' | 'evening' | null;
+  pickupWindow?: string; // 'morning' | 'evening' (varchar column)
+  deliveryDate?: string | null;
+  deliveryWindow?: string | null;
   weightLbs?: number | null;
   itemCount?: number;
   total?: number;
@@ -19,6 +19,8 @@ export interface MessagePayload {
   trackingUrl: string;
   customMessage?: string;
   smsConsent?: boolean;
+  /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
+  signupUrl?: string;
 }
 
 export interface FormattedMessage {

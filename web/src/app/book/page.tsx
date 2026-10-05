@@ -53,6 +53,9 @@ export default function BookingPage() {
                 textDecoration: 'underline',
                 marginLeft: '12px',
                 whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: '44px',
               }}
             >
               Sign In &rarr;
@@ -151,6 +154,7 @@ export default function BookingPage() {
             setPromoCodeInput={b.setPromoCodeInput}
             appliedPromo={b.appliedPromo}
             handleApplyPromo={b.handleApplyPromo}
+            promoNotice={b.promoNotice}
             subtotal={b.subtotal}
             discountAmount={b.discountAmount}
             discountPercent={b.discountPercent}

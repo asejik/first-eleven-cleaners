@@ -22,8 +22,9 @@
 }
 
 .button:focus-visible {
-  outline: 2px solid var(--color-gold);
+  outline: 2px solid var(--color-navy);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-white); /* halo keeps the ring visible on navy pages (P05 AR-09) */
 }
 
 /* --- Variants --- */
@@ -188,4 +189,12 @@
   display: inline-flex;
   align-items: center;
   font-size: 1.1em;
+}
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .sm,
+  .md {
+    min-height: 44px;
+  }
 }

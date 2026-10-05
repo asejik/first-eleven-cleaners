@@ -143,7 +143,7 @@
 
 .optionDesc {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--color-text-secondary);
   line-height: var(--leading-snug);
 }
 
@@ -176,4 +176,13 @@
 .textarea:focus {
   border-color: var(--color-gold);
   box-shadow: 0 0 0 3px rgba(201, 161, 74, 0.15);
+}
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }

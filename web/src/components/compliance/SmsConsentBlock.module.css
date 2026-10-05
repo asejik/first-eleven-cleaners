@@ -14,13 +14,14 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+  min-height: 44px; /* the whole row is the tap target (P05 AR-08) */
   cursor: pointer;
 }
 
 .checkboxInput {
-  margin-top: 3px;
-  width: 17px;
-  height: 17px;
+  margin-top: 0;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
   accent-color: var(--color-navy);
   border-radius: var(--radius-sm);

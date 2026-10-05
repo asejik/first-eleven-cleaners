@@ -352,3 +352,12 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

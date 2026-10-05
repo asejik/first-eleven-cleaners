@@ -128,7 +128,7 @@ export default function BillingPage() {
               <p style={{ color: '#f87171', marginBottom: '16px', fontWeight: '500' }}>
                 ⚠️ {(error as Error).message}
               </p>
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <Button variant="outlineLight" size="sm" onClick={() => refetch()}>
                 🔄 Retry Loading Billing Info
               </Button>
             </div>

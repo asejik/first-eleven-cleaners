@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants';
 import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
+import { withStaffPreferences } from '@/lib/care-preferences';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { checkIntakeAllowed } from '@/lib/order-lifecycle';
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
     // bags, the 50 most recently inspected orders, and today's inspection count.
     const intakeSelect = `
         *,
-        customer:customers(*),
+        customer:customers!customer_id(*, preferences:customer_preferences(starch_level, fold_vs_hang, detergent_sensitivity)),
         address:addresses(*),
         items:order_items(*),
         photos:garment_photos(*)
@@ -82,8 +83,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 });
     }
 
-    const queue = queueRes.data || [];
-    const intakeHistory = historyRes.data || [];
+    // Starch, fold/hang and detergent from the customer's Preferences (P05 AR-03)
+    const queue = (queueRes.data || []).map((o) => withStaffPreferences(o, 'intake'));
+    const intakeHistory = (historyRes.data || []).map((o) => withStaffPreferences(o, 'intake'));
     const todayIntakeCount = todayRes.count ?? 0;
 
     return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount }));
@@ -130,7 +132,7 @@ export async function POST(request: Request) {
         square_customer_id,
         square_card_id,
         notes,
-        customer:customers(id, full_name, phone, email)
+        customer:customers!customer_id(id, full_name, phone, email)
       `)
       .eq('id', order_id)
       .maybeSingle();

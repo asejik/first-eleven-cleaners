@@ -352,3 +352,16 @@
   font-size: var(--text-xs);
   color: #4ade80;
 }
+
+/* Customer care preferences on the intake ticket (P05 AR-03) */
+.careNotes {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: #ffffff;
+  line-height: var(--leading-normal);
+}
+
+.careNotes strong {
+  color: var(--color-gold);
+}
+

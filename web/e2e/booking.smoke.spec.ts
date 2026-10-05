@@ -1,41 +1,42 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, skipCookieBanner } from './fixtures';
 
-test.describe('Booking Wizard Smoke Test', () => {
-  test('navigates to booking page and verifies initial step', async ({ page }) => {
-    // 1. Visit booking page
-    await page.goto('/book');
-
-    // 2. Check title and main heading
-    await expect(page).toHaveTitle(/First Eleven Cleaners/i);
-    const heading = page.locator('h1');
-    await expect(heading).toBeVisible();
-
-    // 3. Verify step indicator exists
-    const stepContainer = page.locator('[class*="wizard"], [class*="step"]');
-    await expect(stepContainer.first()).toBeVisible();
-
-    // 4. Verify address input fields are present
-    const streetInput = page.locator('input[id*="street"], input[placeholder*="street" i], input[name*="street" i]').first();
-    const zipInput = page.locator('input[id*="zip"], input[placeholder*="zip" i], input[name*="zip" i]').first();
-
-    if (await streetInput.isVisible()) {
-      await expect(streetInput).toBeEnabled();
-    }
-    if (await zipInput.isVisible()) {
-      await expect(zipInput).toBeEnabled();
-    }
+// Journey 1: a guest books a pickup (P05 AR-13). Mock mode: no card form, nothing saved.
+test.describe('Guest booking', () => {
+  test.beforeEach(async ({ page }) => {
+    await skipCookieBanner(page);
   });
 
-  test('validates address entry step progression', async ({ page }) => {
+  test('reaches Review with the right subtotal, and Express is blocked for specialty items', async ({ page }) => {
     await page.goto('/book');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Where Should We Pick Up?');
 
-    // Look for ZIP code input
-    const zipInput = page.locator('input[placeholder*="752" i], input[id*="zip" i], input[name*="zip" i]').first();
-    if (await zipInput.isVisible()) {
-      await zipInput.fill('75201');
-      // Verify no invalid zone banner appears for valid 75201 Downtown Dallas ZIP
-      const errorAlert = page.locator('text=Outside Service Area');
-      await expect(errorAlert).not.toBeVisible();
-    }
+    await page.getByLabel('Full Name').fill('Smoke Guest');
+    await page.getByLabel('Email').fill('smoke.guest@example.com');
+    await page.getByLabel('Mobile Phone').fill('(214) 555-0100');
+    await page.getByLabel('Street Address').fill('100 Main St');
+    await page.getByLabel('ZIP Code').fill('75201');
+    await page.getByRole('button', { name: /Continue to Garments/ }).click();
+
+    await page.getByRole('button', { name: /Dry Cleaning Only/ }).click();
+    const addShirt = page.getByRole('button', { name: 'Increase Shirt / Blouse (dry clean) quantity' });
+    await addShirt.click();
+    await addShirt.click();
+    await page.getByRole('button', { name: 'Increase Formal Dress quantity' }).click();
+    await page.getByRole('button', { name: /Choose Pickup Time/ }).click();
+
+    // A formal dress is a specialty item: Express is unavailable, with the reason shown
+    await expect(page.getByRole('button', { name: /24-Hr Express/ })).toBeDisabled();
+    await expect(page.getByText(/Express isn.t available for this order/)).toBeVisible();
+    await page.getByRole('button', { name: /Review Order & Pricing/ }).click();
+
+    // 2 x $8.99 + $23.99
+    const subtotalRow = page.locator('div', { hasText: /^Garment Subtotal/ }).last();
+    await expect(subtotalRow).toContainText('$41.97');
+  });
+
+  test('the Eleven concierge opens', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Concierge/i }).click();
+    await expect(page.getByPlaceholder(/Ask Eleven/i)).toBeVisible();
   });
 });

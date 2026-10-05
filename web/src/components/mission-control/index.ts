@@ -3,7 +3,6 @@ export { KPIStrip } from './KPIStrip';
 export { KanbanBoard } from './KanbanBoard';
 export { ClaimsQueue } from './ClaimsQueue';
 export { ClaimResolutionModal } from './ClaimResolutionModal';
-export { CommercialAndGrowth } from './CommercialAndGrowth';
 export { NotificationSimulator } from './NotificationSimulator';
 export { StaffRoster } from './StaffRoster';
 export { FinancialsLedger } from './FinancialsLedger';
