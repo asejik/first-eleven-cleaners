@@ -229,3 +229,14 @@
     min-height: 44px;
   }
 }
+
+/* "How to change your email" note under the read-only email (P05 AR-21) */
+.helperNote {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.helperNote a {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
