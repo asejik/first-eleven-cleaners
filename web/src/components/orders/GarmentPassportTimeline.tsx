@@ -126,7 +126,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
               </p>
               {primaryIntake?.captured_at && (
                 <span className={styles.timestamp}>
-                  Captured {new Date(primaryIntake.captured_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {primaryIntake.captured_by || 'Elena (Intake)'}
+                  Captured {new Date(primaryIntake.captured_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {primaryIntake.captured_by || 'our intake team'}
                 </span>
               )}
             </div>
@@ -174,7 +174,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
               </p>
               {primaryReturn?.captured_at && (
                 <span className={styles.timestamp}>
-                  Logged {new Date(primaryReturn.captured_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {primaryReturn.captured_by || 'Marcus (Route Driver)'}
+                  Logged {new Date(primaryReturn.captured_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by {primaryReturn.captured_by || 'our driver'}
                 </span>
               )}
             </div>
