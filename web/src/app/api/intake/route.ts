@@ -17,7 +17,7 @@ import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { checkIntakeAllowed } from '@/lib/order-lifecycle';
-import { texasDate } from '@/lib/texas-time';
+import { texasDate, texasDayStartUtc } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
 
@@ -52,35 +52,41 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Fetch orders ready for intake inspection or recently in plant
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select(`
+    // Only what the station shows, filtered and capped in SQL (PR-14): the queue of picked-up
+    // bags, the 50 most recently inspected orders, and today's inspection count.
+    const intakeSelect = `
         *,
         customer:customers(*),
         address:addresses(*),
         items:order_items(*),
         photos:garment_photos(*)
-      `)
-      .order('created_at', { ascending: false });
+      `;
+    const todayStart = texasDayStartUtc(texasDate()); // Dallas calendar day (PR-13)
+    const [queueRes, historyRes, todayRes] = await Promise.all([
+      supabase.from('orders').select(intakeSelect).eq('status', 'picked_up').order('created_at', { ascending: true }),
+      supabase
+        .from('orders')
+        .select(intakeSelect)
+        .in('status', ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'])
+        .order('updated_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('order_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'weighed_itemized')
+        .gte('timestamp', todayStart),
+    ]);
 
-    if (error) {
-      console.error('Intake GET error:', error);
-      return NextResponse.json({ queue: [], allOrders: [] });
+    if (queueRes.error || historyRes.error) {
+      console.error('Intake GET error:', queueRes.error || historyRes.error);
+      return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 });
     }
 
-    // Queue of bags ready for intake at the plant (must have been picked up by a driver)
-    const queue = (orders || []).filter((o) => o.status === 'picked_up');
+    const queue = queueRes.data || [];
+    const intakeHistory = historyRes.data || [];
+    const todayIntakeCount = todayRes.count ?? 0;
 
-    // Orders that have completed intake inspection
-    const intakeHistory = (orders || []).filter(
-      (o) => o.status === 'weighed_itemized' || o.status === 'in_cleaning' || o.status === 'out_for_delivery' || o.status === 'delivered'
-    );
-
-    const todayStr = texasDate(); // Dallas calendar day (PR-13)
-    const todayIntakeCount = intakeHistory.filter((o) => o.updated_at && texasDate(o.updated_at) === todayStr).length;
-
-    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount, allOrders: orders || [] }));
+    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount }));
   } catch (err) {
     console.error('Intake API error:', err);
     return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 }, { status: 500 });

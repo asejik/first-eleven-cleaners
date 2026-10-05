@@ -20,8 +20,15 @@ function builder(table: string) {
   return b;
 }
 
+const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({ from: (table: string) => builder(table) }),
+  createAdminClient: () => ({
+    from: (table: string) => builder(table),
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      rpcCalls.push({ fn, args });
+      return { data: { today_sales: 80 }, error: null };
+    },
+  }),
 }));
 vi.mock('@/lib/supabase/auth-helpers', () => ({
   verifyApiAuth: async () => ({ customer: { id: 'admin-1', full_name: 'Ops Admin', role: 'admin' }, user: {} }),
@@ -59,12 +66,12 @@ describe('Dallas calendar helpers (PR-13)', () => {
 });
 
 describe("Mission Control's today figures use Dallas time (PR-13)", () => {
-  it("counts an order placed at 3 PM Dallas time in this evening's 'today' revenue", async () => {
-    ordersFixture = [
-      { id: 'o1', status: 'booked', total: 80, created_at: '2026-10-05T20:00:00Z', pickup_date: '2026-10-08', items: [] },
-    ];
+  it("asks for this evening's Dallas date, not tomorrow's UTC date", async () => {
+    // The day boundary itself is applied in SQL (mission_control_summary, PR-14)
+    rpcCalls.length = 0;
     const res = await missionControlGET(new Request('http://localhost/api/mission-control'));
     const body = await res.json();
+    expect(rpcCalls[0]).toEqual({ fn: 'mission_control_summary', args: { p_today: '2026-10-05' } });
     expect(body.stats.today_revenue).toBe(80);
   });
 });

@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { apiError } from '@/lib/api-errors';
+import { texasDate, texasDayStartUtc, addDaysToDate } from '@/lib/texas-time';
 
 export const dynamic = 'force-dynamic';
+
+const TRANSACTION_LIST_LIMIT = 500;
 
 export async function GET(request: Request) {
   try {
@@ -12,9 +15,17 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient();
 
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select(`
+    // Date range in Dallas calendar days (default: the last 90 days). Totals come from SQL over
+    // the whole range; the transaction list is capped at the 500 most recent (PR-14).
+    const { searchParams } = new URL(request.url);
+    const isDate = (v: string | null): v is string => Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+    const to = isDate(searchParams.get('to')) ? (searchParams.get('to') as string) : texasDate();
+    const from = isDate(searchParams.get('from')) ? (searchParams.get('from') as string) : addDaysToDate(to, -89);
+
+    const [listRes, summaryRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`
         id,
         order_number,
         status,
@@ -36,46 +47,24 @@ export async function GET(request: Request) {
         address:addresses(id, street, unit, city, state, zip),
         items:order_items(id, garment_type, service_type, quantity, unit_price, subtotal),
         events:order_events(id, status, triggered_by, timestamp, note)
-      `)
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' })
+        .gte('created_at', texasDayStartUtc(from))
+        .lt('created_at', texasDayStartUtc(addDaysToDate(to, 1)))
+        .order('created_at', { ascending: false })
+        .limit(TRANSACTION_LIST_LIMIT),
+      supabase.rpc('order_financial_summary', { p_from: from, p_to: to }),
+    ]);
 
-    if (error) {
-      console.error('Mission control financials error:', error);
-      return apiError('api/mission-control/financials', error, 500);
+    const { data: orders, error, count } = listRes;
+    if (error || summaryRes.error) {
+      console.error('Mission control financials error:', error || summaryRes.error);
+      return apiError('api/mission-control/financials', error || summaryRes.error, 500);
     }
 
     const allOrders = orders || [];
 
-    // Financial metrics (PR-15): revenue is money actually collected through Square, net of
-    // refunds; "in vault" is uncharged money still owed on live orders (not cancelled ones).
-    const cents = (n: unknown) => Math.round((Number(n) || 0) * 100);
-    let grossCents = 0;
-    let refundedCents = 0;
-    let inVaultCents = 0;
-    let taxCents = 0;
-    let feeCents = 0;
-    let chargedCount = 0;
-    let authorizedCount = 0;
-    let failedCount = 0;
-    let refundedCount = 0;
-
     const transactions = allOrders.map((o) => {
       const pStatus = (o.payment_status || 'pending').toLowerCase();
-      const collected = pStatus === 'charged' || pStatus === 'refunded';
-
-      if (collected) {
-        grossCents += cents(o.total);
-        refundedCents += cents(o.refunded_amount);
-        taxCents += cents(o.sales_tax);
-        feeCents += cents(o.environmental_fee);
-        if (pStatus === 'refunded') refundedCount += 1;
-        else chargedCount += 1;
-      } else if ((pStatus === 'authorized' || pStatus === 'pending') && o.status !== 'cancelled') {
-        inVaultCents += cents(o.total);
-        authorizedCount += 1;
-      } else if (pStatus === 'failed') {
-        failedCount += 1;
-      }
 
       // Find the specific charge event if recorded
       const chargeEvent = (o.events as Array<{ status: string; note: string; timestamp: string }> || [])
@@ -107,23 +96,27 @@ export async function GET(request: Request) {
       };
     });
 
-    const paidCount = chargedCount + refundedCount;
-    const aov = paidCount > 0 ? Number((grossCents / 100 / paidCount).toFixed(2)) : 0;
+    // Summary from SQL (order_financial_summary): money collected through Square net of
+    // refunds; "in vault" is uncharged money owed on live (not cancelled) orders (PR-15)
+    const raw = (summaryRes.data || {}) as Record<string, unknown>;
+    const num = (k: string) => Number(raw[k]) || 0;
 
     return NextResponse.json({
+      range: { from, to },
+      truncated: (count ?? transactions.length) > transactions.length,
       summary: {
-        gross_revenue: grossCents / 100,
-        refunded_total: refundedCents / 100,
-        net_revenue: (grossCents - refundedCents) / 100,
-        sales_tax_collected: taxCents / 100,
-        environmental_fees_collected: feeCents / 100,
-        in_vault: inVaultCents / 100,
-        aov,
-        total_transactions: transactions.length,
-        charged_count: chargedCount,
-        authorized_count: authorizedCount,
-        failed_count: failedCount,
-        refunded_count: refundedCount,
+        gross_revenue: num('gross_revenue'),
+        refunded_total: num('refunded_total'),
+        net_revenue: num('net_revenue'),
+        sales_tax_collected: num('sales_tax_collected'),
+        environmental_fees_collected: num('environmental_fees_collected'),
+        in_vault: num('in_vault'),
+        aov: num('aov'),
+        total_transactions: num('total_transactions'),
+        charged_count: num('charged_count'),
+        authorized_count: num('authorized_count'),
+        failed_count: num('failed_count'),
+        refunded_count: num('refunded_count'),
       },
       transactions,
     });

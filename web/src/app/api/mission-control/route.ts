@@ -87,19 +87,19 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    const revenueQuery = supabase
-      .from('orders')
-      .select('total');
+    // KPIs are aggregated in SQL (Dallas calendar day) instead of downloading every order (PR-14)
+    const summaryQuery = supabase.rpc('mission_control_summary', { p_today: texasDate() });
 
     const [
       { data: allOrders, count: totalOrdersCount, error: ordersErr },
       { data: claims },
-      { data: revenueRows }
+      { data: summary, error: summaryErr }
     ] = await Promise.all([
       ordersQuery.range(offset, offset + limit - 1),
       claimsQuery,
-      revenueQuery
+      summaryQuery
     ]);
+    if (summaryErr) console.error('Mission Control summary error:', summaryErr);
 
     if (ordersErr) {
       console.error('Mission Control GET error:', ordersErr);
@@ -108,20 +108,9 @@ export async function GET(request: Request) {
 
     const orders = allOrders || [];
 
-    // 3. Compute KPI Summary
-    const activeOrders = orders.filter((o) => o.status !== 'delivered');
-    // Dallas calendar day, not UTC (PR-13)
-    const todayStr = texasDate();
-
-    const todayOrders = orders.filter((o) => (o.created_at && texasDate(o.created_at) === todayStr) || o.pickup_date === todayStr);
-    const todayRevenue = todayOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-    const allTimeRevenue = (revenueRows || []).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-
-    const totalLbs = orders.reduce((acc, o) => acc + (Number(o.weight_lbs) || 0), 0);
-    const totalDryCleanPieces = orders.reduce((acc, o) => {
-      const pieces = (o.items || []).reduce((subAcc: number, i: { quantity?: number }) => subAcc + (Number(i.quantity) || 0), 0);
-      return acc + pieces;
-    }, 0);
+    // 3. KPI summary from mission_control_summary()
+    const kpi = (summary || {}) as Record<string, unknown>;
+    const kpiNum = (k: string) => Number(kpi[k]) || 0;
 
     return NextResponse.json(await withSignedPhotoUrls({
       orders,
@@ -130,12 +119,13 @@ export async function GET(request: Request) {
       limit,
       total_count: totalOrdersCount ?? orders.length,
       stats: {
-        active_count: activeOrders.length,
-        total_count: totalOrdersCount ?? orders.length,
-        today_revenue: todayRevenue,
-        all_time_revenue: allTimeRevenue,
-        total_lbs: totalLbs,
-        total_pieces: totalDryCleanPieces,
+        active_count: kpiNum('active_count'),
+        total_count: kpiNum('total_count') || (totalOrdersCount ?? orders.length),
+        today_revenue: kpiNum('today_sales'),
+        // Money actually collected, net of refunds (PR-15)
+        all_time_revenue: kpiNum('net_revenue'),
+        total_lbs: kpiNum('active_lbs'),
+        total_pieces: kpiNum('active_pieces'),
       },
     }));
   } catch (err) {

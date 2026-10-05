@@ -51,3 +51,13 @@ export function dayOfWeek(date: string): number {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
 }
+
+/** The UTC instant (ISO string) when a Dallas calendar day starts: 05:00Z in CDT, 06:00Z in CST. */
+export function texasDayStartUtc(date: string): string {
+  for (const hour of [5, 6]) {
+    const candidate = new Date(`${date}T0${hour}:00:00Z`);
+    const tx = texasDateTime(candidate);
+    if (tx.date === date && tx.minutes === 0) return candidate.toISOString();
+  }
+  return new Date(`${date}T06:00:00Z`).toISOString(); // unreachable for America/Chicago
+}

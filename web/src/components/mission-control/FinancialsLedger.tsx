@@ -60,6 +60,10 @@ interface FinancialsResponse {
     refunded_count: number;
   };
   transactions: FinancialTransaction[];
+  /** Dallas calendar range the totals cover (PR-14) */
+  range?: { from: string; to: string };
+  /** More transactions exist in the range than the list shows */
+  truncated?: boolean;
 }
 
 export function FinancialsLedger() {
@@ -132,6 +136,12 @@ export function FinancialsLedger() {
 
   return (
     <div className={styles.ledgerContainer}>
+      {data?.range && (
+        <p className={styles.kpiSubtext} style={{ margin: '0 0 8px' }}>
+          Totals cover {data.range.from} to {data.range.to} (Dallas time).
+          {data.truncated ? ' The list below shows the 500 most recent orders in that period.' : ''}
+        </p>
+      )}
       {/* KPI Overview Strip */}
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
