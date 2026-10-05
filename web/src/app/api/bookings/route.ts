@@ -22,12 +22,13 @@ import { texasDate } from '@/lib/texas-time';
 import { validateSchedule } from '@/lib/schedule';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
+import { phoneSchema } from '@/lib/phone';
 
 const BookingSchema = z.object({
   customer: z.object({
     full_name: personNameSchema,
     email: z.string().email(),
-    phone: z.string().min(7),
+    phone: phoneSchema, // stored as E.164 (PR-18)
   }),
   address: z.object({
     street: z.string().min(3),

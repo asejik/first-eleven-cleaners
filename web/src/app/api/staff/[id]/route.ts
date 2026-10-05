@@ -5,10 +5,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
 import { apiError } from '@/lib/api-errors';
+import { phoneSchema } from '@/lib/phone';
 
 const UpdateStaffSchema = z.object({
   full_name: personNameSchema.optional(),
-  phone: z.string().min(7).optional(),
+  phone: phoneSchema.optional(), // stored as E.164 (PR-18)
   role: z.enum(['driver', 'intake_staff']).optional(),
   is_active: z.boolean().optional(),
   password: z.string().min(8).optional(),

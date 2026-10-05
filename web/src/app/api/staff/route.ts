@@ -5,11 +5,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
 import { apiError } from '@/lib/api-errors';
+import { phoneSchema } from '@/lib/phone';
 
 const CreateStaffSchema = z.object({
   full_name: personNameSchema,
   email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(7, 'Please enter a valid phone number'),
+  phone: phoneSchema, // stored as E.164 (PR-18)
   role: z.enum(['driver', 'intake_staff']),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });

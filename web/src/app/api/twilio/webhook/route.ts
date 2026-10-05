@@ -6,6 +6,8 @@ import { getAIEngine } from '@/lib/ai';
 import { getAppBaseUrl } from '@/lib/constants';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import type { Address, Order, CustomerPreferences } from '@/types';
+import { toE164 } from '@/lib/phone';
+import { reportError } from '@/lib/error-reporting';
 
 // Helper to wrap message text in valid TwiML XML
 function createTwimlResponse(message: string): Response {
@@ -57,9 +59,6 @@ function verifyTwilioSignature(
 }
 
 // Clean phone string to numeric digits for matching
-function normalizeDigits(phone: string): string {
-  return phone.replace(/[^\d]/g, '');
-}
 
 export async function GET() {
   return NextResponse.json({
@@ -148,7 +147,8 @@ export async function POST(req: Request) {
 
     const isWhatsApp = from.startsWith('whatsapp:');
     const rawSenderPhone = from.replace(/^whatsapp:/, '');
-    const senderDigits = normalizeDigits(rawSenderPhone);
+    // Stored phones are E.164 (PR-18): match on the sender's E.164 form
+    const senderE164 = toE164(rawSenderPhone);
 
     const isSupabaseConfigured =
       Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
@@ -161,24 +161,18 @@ export async function POST(req: Request) {
 
     // STOP / UNSUBSCRIBE
     if (/^(STOP|UNSUBSCRIBE|CANCEL|QUIT|END)$/i.test(upperMsg)) {
-      if (adminSupabase && senderDigits) {
+      if (adminSupabase && senderE164) {
         try {
-          const { data: matchedCust } = await adminSupabase
+          // Every record with this number (e.g. a guest record and an account) is opted out
+          const { error: consentErr } = await adminSupabase
             .from('customers')
-            .select('id, phone')
-            .or(`phone.eq.${rawSenderPhone},phone.ilike.%${senderDigits.slice(-10)}%`)
-            .maybeSingle();
-
-          if (matchedCust) {
-            await adminSupabase
-              .from('customers')
-              .update({
-                sms_consent: false,
-                sms_promotions_consent: false,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', matchedCust.id);
-          }
+            .update({
+              sms_consent: false,
+              sms_promotions_consent: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('phone', senderE164);
+          if (consentErr) reportError('twilio/consent', consentErr, { alert: true, details: 'Could not record an SMS STOP opt-out' });
         } catch (dbErr) {
           console.warn('Error recording STOP opt-out:', dbErr);
         }
@@ -191,24 +185,17 @@ export async function POST(req: Request) {
 
     // START / UNSTOP
     if (/^(START|UNSTOP)$/i.test(upperMsg)) {
-      if (adminSupabase && senderDigits) {
+      if (adminSupabase && senderE164) {
         try {
-          const { data: matchedCust } = await adminSupabase
+          const { error: consentErr } = await adminSupabase
             .from('customers')
-            .select('id')
-            .or(`phone.eq.${rawSenderPhone},phone.ilike.%${senderDigits.slice(-10)}%`)
-            .maybeSingle();
-
-          if (matchedCust) {
-            await adminSupabase
-              .from('customers')
-              .update({
-                sms_consent: true,
-                sms_consent_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', matchedCust.id);
-          }
+            .update({
+              sms_consent: true,
+              sms_consent_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('phone', senderE164);
+          if (consentErr) reportError('twilio/consent', consentErr, { alert: true, details: 'Could not record an SMS START opt-in' });
         } catch (dbErr) {
           console.warn('Error recording START opt-in:', dbErr);
         }
@@ -230,13 +217,15 @@ export async function POST(req: Request) {
     let targetCustomerId: string | null = null;
     const context: ConciergeContext = {};
 
-    if (adminSupabase && senderDigits.length >= 7) {
+    if (adminSupabase && senderE164) {
       try {
-        const last10 = senderDigits.slice(-10);
+        // Several records can share a number; use the most recent (PR-18)
         const { data: customer } = await adminSupabase
           .from('customers')
           .select('id, full_name, email, phone')
-          .or(`phone.eq.${rawSenderPhone},phone.ilike.%${last10}%`)
+          .eq('phone', senderE164)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (customer) {

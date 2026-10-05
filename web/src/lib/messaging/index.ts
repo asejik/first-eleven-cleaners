@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatStageMessage, type MessagePayload, type FormattedMessage } from './templates';
 import { sendEmail, buildStageNotificationEmailHtml } from '@/lib/resend';
 import { signStorageUrl, MMS_PHOTO_LINK_TTL_SECONDS } from '@/lib/storage';
+import { toE164 } from '@/lib/phone';
 
 function maskEmail(email?: string | null): string {
   if (!email) return 'unknown';
@@ -211,10 +212,12 @@ export class TwilioMessageProvider implements IMessagingProvider {
     }
 
     // 2. Carrier Fallback Logic:
-    // Customers who didn't opt into SMS receive all 6 order-status updates by email instead of SMS
-    if (channel === 'sms' && hasSmsConsent === false) {
+    // Customers who didn't opt into SMS receive all 6 order-status updates by email instead of SMS.
+    // Consent must be known to be true: if it couldn't be confirmed, don't text (PR-18).
+    const toE164Number = toE164(payload.customerPhone);
+    if (channel === 'sms' && (hasSmsConsent !== true || !toE164Number)) {
       console.log(
-        `[Carrier Compliance] Customer has not opted into SMS for order #${payload.orderNumber || payload.orderId}. Dispatched ${payload.stage} status update via Resend Email fallback.`
+        `[Carrier Compliance] No confirmed SMS consent or valid number for order #${payload.orderNumber || payload.orderId}. Dispatched ${payload.stage} status update via Resend Email fallback.`
       );
       return this.fallbackSim.dispatchStageNotification(
         { ...payload, customerEmail: customerEmail || payload.customerEmail },
@@ -232,7 +235,13 @@ export class TwilioMessageProvider implements IMessagingProvider {
 
     const formatted = formatStageMessage(payload);
     const body = channel === 'whatsapp' ? formatted.whatsappBody : formatted.smsBody;
-    const toNumber = channel === 'whatsapp' ? `whatsapp:${payload.customerPhone}` : payload.customerPhone;
+    if (!toE164Number) {
+      return this.fallbackSim.dispatchStageNotification(
+        { ...payload, customerEmail: customerEmail || payload.customerEmail },
+        channel
+      );
+    }
+    const toNumber = channel === 'whatsapp' ? `whatsapp:${toE164Number}` : toE164Number;
 
     try {
       // Use Twilio REST API directly
