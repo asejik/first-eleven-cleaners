@@ -257,3 +257,36 @@ describe('Intake (PR-02)', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe('Intake pricing for wash & fold (PR-03)', () => {
+  beforeEach(() => {
+    authCustomer = { id: 'intake-1', full_name: 'Ivy Intake', role: 'intake_staff' };
+  });
+
+  const orderUpdate = () => writes.find((w) => w.table === 'orders' && w.op === 'update' && 'subtotal' in w.values);
+  const itemInserts = () => writes.filter((w) => w.table === 'order_items' && w.op === 'insert');
+
+  it('does not bill laundry on a "Both" order when no laundry was weighed', async () => {
+    orderFixture = order({ status: 'picked_up', order_type: 'mixed' });
+    const res = await intake({ weight_lbs: 0, dry_clean_items: [{ garment_type: 'shirt_blouse', quantity: 2 }] });
+    expect(res.status).toBe(200);
+    expect(orderUpdate()?.values.subtotal).toBe(17.98);
+  });
+
+  it('bills the 15 lb minimum when some laundry was weighed, and lists it on the receipt', async () => {
+    orderFixture = order({ status: 'picked_up', order_type: 'mixed' });
+    const res = await intake({ weight_lbs: 10, dry_clean_items: [{ garment_type: 'shirt_blouse', quantity: 2 }] });
+    expect(res.status).toBe(200);
+    expect(orderUpdate()?.values.subtotal).toBe(62.98);
+    const lines = itemInserts().flatMap((w) => (Array.isArray(w.values) ? w.values : [w.values])) as Row[];
+    const laundry = lines.find((l) => l.service_type === 'wash_fold');
+    expect(laundry).toMatchObject({ garment_type: 'wash_fold', subtotal: 45 });
+  });
+
+  it('rejects a negative or non-numeric weight', async () => {
+    orderFixture = order({ status: 'picked_up', order_type: 'wash_fold' });
+    expect((await intake({ weight_lbs: -5, dry_clean_items: [] })).status).toBe(400);
+    expect((await intake({ weight_lbs: 'heavy', dry_clean_items: [] })).status).toBe(400);
+    expect(orderUpdate()).toBeUndefined();
+  });
+});

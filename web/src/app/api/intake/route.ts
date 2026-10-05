@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
@@ -17,6 +18,26 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { checkIntakeAllowed } from '@/lib/order-lifecycle';
 
+
+const IntakeSchema = z.object({
+  order_id: z.guid('A valid order_id is required'),
+  weight_lbs: z.number({ message: 'Weight must be a number of pounds' }).min(0, 'Weight cannot be negative').max(500, 'Weight looks too high; please re-check the scale').default(0),
+  dry_clean_items: z
+    .array(
+      z.object({
+        garment_type: z.string().min(1).max(100),
+        quantity: z.number().int().min(0).max(500),
+        notes: z.string().max(500).optional(),
+      })
+    )
+    .max(100)
+    .default([]),
+  photos: z
+    .array(z.object({ photo_url: z.string().min(1), condition_notes: z.string().max(1000).optional() }))
+    .max(20)
+    .default([]),
+  intake_notes: z.string().max(2000).default(''),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -68,18 +89,14 @@ export async function POST(request: Request) {
     const auth = await verifyApiAuth(['intake_staff', 'admin'], request);
     if (auth.errorResponse) return auth.errorResponse;
 
-    const body = await request.json();
-    const {
-      order_id,
-      weight_lbs = 0,
-      dry_clean_items = [],
-      photos = [],
-      intake_notes = '',
-    } = body;
-
-    if (!order_id) {
-      return NextResponse.json({ error: 'order_id is required' }, { status: 400 });
+    const parsed = IntakeSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Please check the intake details.' },
+        { status: 400 }
+      );
     }
+    const { order_id, weight_lbs, dry_clean_items, photos, intake_notes } = parsed.data;
 
     const supabase = createAdminClient();
 
@@ -121,10 +138,12 @@ export async function POST(request: Request) {
     }
 
     // 2. Calculate Pricing
+    // Wash & fold is billed only when laundry was actually weighed (15 lb minimum applies then).
+    // A "Both" order that arrives with dry cleaning only is not charged for laundry (PR-03).
     let washFoldSubtotal = 0;
-    if (weight_lbs > 0 || order.order_type === 'wash_fold' || order.order_type === 'mixed') {
-      const billedWeight = Math.max(WASH_FOLD_MINIMUM_LBS, Number(weight_lbs) || 0);
-      washFoldSubtotal = billedWeight * WASH_FOLD_PRICE_PER_LB;
+    if (weight_lbs > 0) {
+      const billedWeight = Math.max(WASH_FOLD_MINIMUM_LBS, weight_lbs);
+      washFoldSubtotal = Number((billedWeight * WASH_FOLD_PRICE_PER_LB).toFixed(2));
     }
 
     let dryCleanSubtotal = 0;
@@ -138,9 +157,23 @@ export async function POST(request: Request) {
       notes?: string;
     }> = [];
 
+    if (washFoldSubtotal > 0) {
+      orderItemsToInsert.push({
+        order_id: order.id,
+        garment_type: 'wash_fold',
+        service_type: 'wash_fold',
+        quantity: 1,
+        unit_price: WASH_FOLD_PRICE_PER_LB,
+        subtotal: washFoldSubtotal,
+        notes: weight_lbs < WASH_FOLD_MINIMUM_LBS
+          ? `${weight_lbs} lbs wash & fold laundry (${WASH_FOLD_MINIMUM_LBS} lb minimum)`
+          : `${weight_lbs} lbs wash & fold laundry`,
+      });
+    }
+
     if (Array.isArray(dry_clean_items)) {
-      dry_clean_items.forEach((item: { garment_type: string; quantity: number; notes?: string }) => {
-        const qty = Number(item.quantity) || 0;
+      dry_clean_items.forEach((item) => {
+        const qty = item.quantity;
         if (qty > 0) {
           const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
           const unitPrice = priceMeta ? priceMeta.price : 8.99;
@@ -205,7 +238,7 @@ export async function POST(request: Request) {
     // 4. Insert Garment Photos (Resolving base64 to Supabase Storage CDN)
     if (Array.isArray(photos) && photos.length > 0) {
       const photosToInsert = await Promise.all(
-        photos.map(async (p: { photo_url: string; condition_notes?: string }) => {
+        photos.map(async (p) => {
           const resolvedUrl = await resolveAndUploadPhotoUrl(p.photo_url, order.id, 'intake');
           return {
             order_id: order.id,
@@ -295,7 +328,7 @@ export async function POST(request: Request) {
     const { data: updatedRows, error: updateErr } = await supabase
       .from('orders')
       .update({
-        weight_lbs: Number(weight_lbs) || null,
+        weight_lbs: weight_lbs || null,
         subtotal,
         express_surcharge: financials.expressSurcharge,
         discount_amount: financials.discountAmount,
@@ -324,8 +357,8 @@ export async function POST(request: Request) {
       order_id: order.id,
       status: 'weighed_itemized',
       note: isPaymentFailed
-        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized ($${subtotal.toFixed(2)}). ORDER ON PAYMENT HOLD: Card declined.`
-        : `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
+        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized ($${subtotal.toFixed(2)}). ORDER ON PAYMENT HOLD: Card declined.`
+        : `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
       triggered_by: intakeAuthor,
     });
 
@@ -353,8 +386,8 @@ export async function POST(request: Request) {
         pickupWindow: order.pickup_window,
         deliveryDate: order.delivery_date,
         deliveryWindow: order.delivery_window,
-        weightLbs: Number(weight_lbs) || null,
-        itemCount: orderItemsToInsert.reduce((acc, i) => acc + i.quantity, 0),
+        weightLbs: weight_lbs || null,
+        itemCount: orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').reduce((acc, i) => acc + i.quantity, 0),
         total: finalTotal,
         photoUrl: primaryPhotoUrl,
         trackingUrl: isPaymentFailed ? `${origin}/dashboard/billing` : `${origin}/track/${order.id}`,

@@ -125,7 +125,8 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
   };
 
   // Calculations
-  const isWashFold = order.order_type === 'wash_fold' || order.order_type === 'mixed' || weightLbs > 0;
+  // Same rule as the server: laundry is billed only when it was weighed (15 lb minimum then)
+  const isWashFold = Number(weightLbs) > 0;
   const billedWeight = isWashFold ? Math.max(WASH_FOLD_MINIMUM_LBS, Number(weightLbs) || 0) : 0;
   const washFoldSubtotal = isWashFold ? billedWeight * WASH_FOLD_PRICE_PER_LB : 0;
 
