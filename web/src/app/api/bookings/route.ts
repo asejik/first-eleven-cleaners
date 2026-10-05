@@ -507,6 +507,10 @@ export async function POST(request: Request) {
               express_tier: validated.schedule.express_tier,
               promo_code: verifiedPromoCode,
               discount_amount: computed.financials.discountAmount,
+              // What the quote was made of, for tax filing and reconciliation (PR-15)
+              express_surcharge: computed.financials.expressSurcharge,
+              environmental_fee: computed.financials.environmentalFee,
+              sales_tax: computed.financials.salesTax,
               total: computed.financials.finalTotal,
               // Never 'charged' at booking (SEC-05): the saved card is charged at intake.
               // payment_id is filled with the Square payment ID once intake charges it.

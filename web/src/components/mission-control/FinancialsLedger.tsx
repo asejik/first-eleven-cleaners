@@ -35,7 +35,7 @@ interface FinancialTransaction {
   subtotal: number;
   discount_amount: number;
   total: number;
-  payment_id: string;
+  payment_id: string | null;
   payment_status: 'pending' | 'authorized' | 'charged' | 'failed' | 'refunded';
   payment_date: string;
   charge_note?: string | null;
@@ -47,6 +47,10 @@ interface FinancialTransaction {
 interface FinancialsResponse {
   summary: {
     gross_revenue: number;
+    refunded_total?: number;
+    net_revenue?: number;
+    sales_tax_collected?: number;
+    environmental_fees_collected?: number;
     in_vault: number;
     aov: number;
     total_transactions: number;
@@ -136,7 +140,10 @@ export function FinancialsLedger() {
             ${summary.gross_revenue.toFixed(2)}
           </span>
           <span className={styles.kpiSubtext}>
-            ✓ {summary.charged_count} settled transactions
+            ✓ {summary.charged_count + summary.refunded_count} paid orders · refunds ${(summary.refunded_total ?? 0).toFixed(2)} · net ${(summary.net_revenue ?? summary.gross_revenue).toFixed(2)}
+          </span>
+          <span className={styles.kpiSubtext}>
+            Sales tax collected ${(summary.sales_tax_collected ?? 0).toFixed(2)} · environmental fees ${(summary.environmental_fees_collected ?? 0).toFixed(2)}
           </span>
         </div>
 
@@ -277,7 +284,7 @@ export function FinancialsLedger() {
                     </td>
                     <td>
                       <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#cbd5e1' }}>
-                        {tx.payment_id}
+                        {tx.payment_id || 'Not charged yet'}
                       </span>
                     </td>
                     <td>
@@ -380,7 +387,7 @@ export function FinancialsLedger() {
             {/* Payment Gateway Audit Metadata */}
             <div className={styles.receiptMeta}>
               <span><strong>Gateway:</strong> Square Payments (PCI-DSS Level 1)</span>
-              <span><strong>Transaction Ref:</strong> {selectedReceipt.payment_id}</span>
+              <span><strong>Transaction Ref:</strong> {selectedReceipt.payment_id || 'Not charged yet'}</span>
               <span><strong>Payment Status:</strong> {selectedReceipt.payment_status.toUpperCase()}</span>
               {selectedReceipt.charge_note && (
                 <span><strong>Audit Note:</strong> {selectedReceipt.charge_note}</span>

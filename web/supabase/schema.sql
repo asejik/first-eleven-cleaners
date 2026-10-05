@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS orders (
   square_card_id VARCHAR(255),
   refunded_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (refunded_amount >= 0), -- synced with Square (PR-05)
   assigned_driver_id UUID REFERENCES customers(id) ON DELETE SET NULL, -- van holding the order (PR-19)
+  environmental_fee NUMERIC(10, 2), -- charged on this order (PR-15)
+  sales_tax NUMERIC(10, 2),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

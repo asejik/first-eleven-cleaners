@@ -344,6 +344,8 @@ export async function POST(request: Request) {
         subtotal,
         express_surcharge: financials.expressSurcharge,
         discount_amount: financials.discountAmount,
+        environmental_fee: financials.environmentalFee, // PR-15
+        sales_tax: financials.salesTax,
         total: finalTotal,
         status: 'weighed_itemized',
         payment_status: paymentStatus,
