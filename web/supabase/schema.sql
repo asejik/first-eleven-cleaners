@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS orders (
   express_refund_reason TEXT,
   square_customer_id VARCHAR(255), -- card on file charged at intake (SEC-06)
   square_card_id VARCHAR(255),
+  refunded_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (refunded_amount >= 0), -- synced with Square (PR-05)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -214,6 +215,8 @@ CREATE TABLE IF NOT EXISTS claims (
     status IN ('open', 'investigating', 'resolved', 'refunded')
   ),
   resolution_notes TEXT,
+  refund_amount NUMERIC(10, 2), -- PR-05
+  square_refund_id VARCHAR(255),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

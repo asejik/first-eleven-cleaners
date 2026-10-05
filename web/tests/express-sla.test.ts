@@ -139,6 +139,7 @@ describe('Express SLA refund goes through Square before the customer is told (PR
     expect(result.refundAmount).toBe(22.3);
 
     expect(refundWrites()).toHaveLength(1);
+    expect(refundWrites()[0].values.refunded_amount).toBe(22.3); // counts toward the order's refunded total (PR-05)
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(String(dispatch.mock.calls[0][0].customMessage)).toMatch(/refunded/i);
   });

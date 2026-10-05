@@ -179,7 +179,9 @@ export default function MissionControlPage() {
       addToast({
         type: 'success',
         title: 'Claim Resolved',
-        message: `Claim #${selectedClaim.id.slice(0, 8)} updated with Executive Resolution.`,
+        message: refundAmount
+          ? `Claim #${selectedClaim.id.slice(0, 8)} resolved; $${parseFloat(refundAmount).toFixed(2)} refunded to the customer's card via Square.`
+          : `Claim #${selectedClaim.id.slice(0, 8)} updated with Executive Resolution.`,
       });
 
       setSelectedClaim(null);

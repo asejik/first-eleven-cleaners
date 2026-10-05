@@ -8,6 +8,7 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
 import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
+import { refundOrder } from '@/lib/refunds';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 
 
@@ -265,24 +266,68 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, order_id: order.id, new_status: new_stage, express_sla: expressSLAResult });
     }
 
-    // 2. Resolve Claim Action
+    // 2. Resolve Claim Action. A money-back resolution refunds the customer's card through
+    // Square first; the claim is marked refunded only once Square accepts it (PR-05).
     if (action === 'resolve_claim') {
       if (!claim_id) {
         return NextResponse.json({ error: 'claim_id is required' }, { status: 400 });
       }
 
       const refundNum = refund_amount ? Number(refund_amount) : 0;
+      if (!Number.isFinite(refundNum) || refundNum < 0) {
+        return NextResponse.json({ error: 'Refund amount must be a positive number.' }, { status: 400 });
+      }
+
+      const { data: claim } = await supabase
+        .from('claims')
+        .select('id, order_id, status, refund_amount, square_refund_id')
+        .eq('id', claim_id)
+        .maybeSingle();
+      if (!claim) {
+        return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
+      }
+
+      const actorLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
+      let refundId: string | null = null;
+
+      if (refundNum > 0) {
+        if (claim.square_refund_id || claim.status === 'refunded') {
+          return NextResponse.json({ error: 'This claim has already been refunded.' }, { status: 409 });
+        }
+        const { data: claimOrder } = await supabase
+          .from('orders')
+          .select('id, order_number, total, payment_status, payment_id, refunded_amount')
+          .eq('id', claim.order_id)
+          .maybeSingle();
+        if (!claimOrder) {
+          return NextResponse.json({ error: 'The order for this claim was not found.' }, { status: 404 });
+        }
+
+        const refund = await refundOrder(supabase, claimOrder, {
+          amount: refundNum,
+          // One refund per claim, ever (Square limits keys to 45 characters)
+          idempotencyKey: `clm_${String(claim.id).replace(/-/g, '')}`.slice(0, 45),
+          reason: `Make It Right claim (Order #${claimOrder.order_number || claimOrder.id.slice(0, 8)})`,
+          actorLabel,
+        });
+        if (!refund.ok) {
+          return NextResponse.json({ error: refund.error }, { status: refund.status });
+        }
+        refundId = refund.refundId;
+      }
+
       const formattedNotes = refundNum > 0
-        ? `[Refund of $${refundNum.toFixed(2)} Approved] ${resolution_notes || 'Resolved under Make It Right guarantee.'}`
+        ? `[Refund of $${refundNum.toFixed(2)} issued, Square Refund ${refundId}] ${resolution_notes || 'Resolved under Make It Right guarantee.'}`
         : (resolution_notes || 'Resolved under 100% Make It Right guarantee.');
 
-      const finalStatus = refundNum > 0 ? 'refunded' : (claim_status || 'resolved');
+      const finalStatus = refundNum > 0 ? 'refunded' : (claim_status === 'refunded' ? 'resolved' : (claim_status || 'resolved'));
 
       const { data: updatedClaim, error: claimErr } = await supabase
         .from('claims')
         .update({
           status: finalStatus,
           resolution_notes: formattedNotes,
+          ...(refundNum > 0 ? { refund_amount: Number(refundNum.toFixed(2)), square_refund_id: refundId } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', claim_id)
@@ -290,10 +335,11 @@ export async function POST(request: Request) {
         .single();
 
       if (claimErr) {
+        if (refundId) console.error(`[Claims] Refund ${refundId} issued but claim ${claim_id} not updated:`, claimErr);
         return apiError('api/mission-control', claimErr, 500);
       }
 
-      return NextResponse.json({ success: true, claim: updatedClaim });
+      return NextResponse.json({ success: true, claim: updatedClaim, refund_id: refundId });
     }
 
     // 3. Payment Hold recovery (PR-04): retry the saved card, or record a payment taken in

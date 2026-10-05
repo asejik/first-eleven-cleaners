@@ -346,6 +346,7 @@ export async function POST(request: Request) {
         express_auto_refunded,
         payment_status,
         payment_id,
+        refunded_amount,
         subtotal,
         pickup_date,
         pickup_window,

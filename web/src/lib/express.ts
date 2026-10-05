@@ -79,6 +79,7 @@ export async function handleExpressDeliverySLA(
     express_surcharge?: number | null;
     payment_status?: string | null;
     payment_id?: string | null;
+    refunded_amount?: number | null;
     customer?: { id?: string; full_name?: string; phone?: string; email?: string } | Array<{ id?: string; full_name?: string; phone?: string; email?: string }> | null;
     express_auto_refunded?: boolean | null;
   },
@@ -151,6 +152,7 @@ export async function handleExpressDeliverySLA(
     .update({
       express_auto_refunded: true,
       express_refund_amount: refundAmount,
+      refunded_amount: Number(((Number(order.refunded_amount) || 0) + refundAmount).toFixed(2)),
       express_refund_reason: `Delivered ${deliveredAtTx} on ${deliveryDateStr}, past the 10:00 AM window. Refunded $${refundAmount.toFixed(2)} (Square refund ${refundId}).`,
       updated_at: new Date().toISOString(),
     })
