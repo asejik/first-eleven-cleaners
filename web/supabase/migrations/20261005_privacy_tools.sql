@@ -45,7 +45,9 @@ BEGIN
     'claims', coalesce((SELECT jsonb_agg(to_jsonb(cl) ORDER BY cl.created_at)
                         FROM claims cl WHERE cl.customer_id = p_customer_id), '[]'::jsonb),
     'conversations', coalesce((SELECT jsonb_agg(to_jsonb(cv) ORDER BY cv.created_at)
-                               FROM conversations cv WHERE cv.customer_id = p_customer_id), '[]'::jsonb)
+                               FROM conversations cv WHERE cv.customer_id = p_customer_id), '[]'::jsonb),
+    'messages', coalesce((SELECT jsonb_agg(to_jsonb(ms) ORDER BY ms.created_at)
+                          FROM messages ms WHERE ms.customer_id = p_customer_id), '[]'::jsonb)
   ) INTO v_result;
 
   RETURN v_result;
@@ -84,6 +86,7 @@ BEGIN
   UPDATE claims SET description = '[removed at customer request]', photo_urls = '{}', updated_at = now()
   WHERE customer_id = p_customer_id;
   DELETE FROM conversations WHERE customer_id = p_customer_id;
+  DELETE FROM messages WHERE customer_id = p_customer_id;
   DELETE FROM customer_preferences WHERE customer_id = p_customer_id;
 
   -- City, state and ZIP stay: they decide which tax and zone applied to past orders

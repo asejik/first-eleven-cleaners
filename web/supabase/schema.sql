@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS staff (
 );
 
 -- 13. CONVERSATIONS (Eleven Memory)
+-- NO LONGER WRITTEN: messages are stored one per row in the messages table (PR-26).
 CREATE TABLE IF NOT EXISTS conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
@@ -751,6 +752,36 @@ $function$;
 REVOKE EXECUTE ON FUNCTION public.create_booking(JSONB) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_booking(JSONB) TO service_role;
 
+-- One row per message; replaces the conversations.messages array
+-- (20261005_messages_table.sql, PR-26). conversations is no longer written.
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  channel VARCHAR(20) NOT NULL CHECK (channel IN ('web', 'sms', 'whatsapp')),
+  direction VARCHAR(10) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+  body TEXT NOT NULL DEFAULT '',
+  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+  stage VARCHAR(50),
+  media_url TEXT,
+  mode VARCHAR(50), -- simulated, live, ai_reply, ai_escalation, growth_winback ...
+  external_id VARCHAR(100), -- Twilio message SID, or the id from the old array
+  from_address VARCHAR(100),
+  to_address VARCHAR(100),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_customer_channel ON messages(customer_id, channel, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_order_id ON messages(order_id) WHERE order_id IS NOT NULL;
+
+-- Server writes only; a signed-in customer may read their own messages
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS messages_customer_read ON messages;
+CREATE POLICY messages_customer_read ON messages
+  FOR SELECT USING (customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid()));
+REVOKE ALL ON messages FROM anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON messages FROM authenticated;
+
 -- Privacy request tools: export and anonymize a customer (20261005_privacy_tools.sql, PR-25).
 -- How to use them: supabase/runbooks/privacy-requests.md
 CREATE OR REPLACE FUNCTION public.export_customer_data(p_customer_id UUID)
@@ -782,7 +813,9 @@ BEGIN
     'claims', coalesce((SELECT jsonb_agg(to_jsonb(cl) ORDER BY cl.created_at)
                         FROM claims cl WHERE cl.customer_id = p_customer_id), '[]'::jsonb),
     'conversations', coalesce((SELECT jsonb_agg(to_jsonb(cv) ORDER BY cv.created_at)
-                               FROM conversations cv WHERE cv.customer_id = p_customer_id), '[]'::jsonb)
+                               FROM conversations cv WHERE cv.customer_id = p_customer_id), '[]'::jsonb),
+    'messages', coalesce((SELECT jsonb_agg(to_jsonb(ms) ORDER BY ms.created_at)
+                          FROM messages ms WHERE ms.customer_id = p_customer_id), '[]'::jsonb)
   ) INTO v_result;
 
   RETURN v_result;
@@ -821,6 +854,7 @@ BEGIN
   UPDATE claims SET description = '[removed at customer request]', photo_urls = '{}', updated_at = now()
   WHERE customer_id = p_customer_id;
   DELETE FROM conversations WHERE customer_id = p_customer_id;
+  DELETE FROM messages WHERE customer_id = p_customer_id;
   DELETE FROM customer_preferences WHERE customer_id = p_customer_id;
 
   -- City, state and ZIP stay: they decide which tax and zone applied to past orders

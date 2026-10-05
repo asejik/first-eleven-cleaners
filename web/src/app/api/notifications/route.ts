@@ -8,6 +8,8 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 
 export async function GET(request: Request) {
   const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff'], request);
@@ -19,28 +21,35 @@ export async function GET(request: Request) {
   try {
     const supabase = createAdminClient();
 
-    const query = supabase
-      .from('conversations')
+    // Latest messages, one row each (PR-26)
+    if (orderId && !UUID_RE.test(orderId)) {
+      return NextResponse.json({ notifications: [] });
+    }
+    let query = supabase
+      .from('messages')
       .select(`
         id,
-        customer_id,
+        order_id,
         channel,
-        messages,
+        stage,
+        body,
+        media_url,
+        mode,
         created_at,
-        updated_at,
-        customer:customers(id, full_name, phone, email)
+        customer:customers(full_name, phone)
       `)
-      .order('updated_at', { ascending: false })
-      .limit(50);
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (orderId) query = query.eq('order_id', orderId);
 
-    const { data: conversations, error } = await query;
+    const { data: messages, error } = await query;
 
     if (error) {
       console.warn('Notifications GET error:', error);
       return NextResponse.json({ notifications: [] });
     }
 
-    // Flatten all message entries into a clean chronological list for the simulator HUD
+    // Newest first, in the shape the simulator HUD expects
     const allNotifications: Array<{
       id: string;
       order_id?: string;
@@ -52,39 +61,23 @@ export async function GET(request: Request) {
       media_url: string | null;
       mode: string;
       created_at: string;
-    }> = [];
-
-    conversations?.forEach((conv) => {
-      const customerData = conv.customer as { full_name?: string; phone?: string } | null;
-      const msgs = Array.isArray(conv.messages) ? conv.messages : [];
-      msgs.forEach((m: {
-        id?: string;
-        order_id?: string;
-        stage?: OrderStatusKey;
-        text?: string;
-        media_url?: string | null;
-        mode?: string;
-        created_at?: string;
-      }) => {
-        if (!orderId || m.order_id === orderId) {
-          allNotifications.push({
-            id: m.id || crypto.randomUUID(),
-            order_id: m.order_id,
-            customer_name: customerData?.full_name || 'Customer',
-            customer_phone: customerData?.phone || '',
-            channel: conv.channel as 'sms' | 'whatsapp',
-            stage: m.stage || 'booked',
-            text: m.text || '',
-            media_url: m.media_url || null,
-            mode: m.mode || 'simulated',
-            created_at: m.created_at || conv.updated_at,
-          });
-        }
-      });
+    }> = (messages || []).map((m) => {
+      const customerData = (Array.isArray(m.customer) ? m.customer[0] : m.customer) as
+        | { full_name?: string; phone?: string }
+        | null;
+      return {
+        id: m.id,
+        order_id: m.order_id || undefined,
+        customer_name: customerData?.full_name || 'Customer',
+        customer_phone: customerData?.phone || '',
+        channel: m.channel as 'sms' | 'whatsapp',
+        stage: (m.stage || 'booked') as OrderStatusKey,
+        text: m.body || '',
+        media_url: m.media_url || null,
+        mode: m.mode || 'simulated',
+        created_at: m.created_at,
+      };
     });
-
-    // Sort newest first
-    allNotifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return NextResponse.json(await withSignedPhotoUrls({ notifications: allNotifications }));
   } catch (err) {

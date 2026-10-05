@@ -8,6 +8,7 @@ import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import type { Address, Order, CustomerPreferences } from '@/types';
 import { toE164 } from '@/lib/phone';
 import { reportError } from '@/lib/error-reporting';
+import { logMessages, recentMessages } from '@/lib/message-log';
 
 // Helper to wrap message text in valid TwiML XML
 function createTwimlResponse(message: string): Response {
@@ -269,27 +270,15 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. Fetch recent conversation history from conversations table
+    // 5. Fetch recent message history
     const history: AIConversationMessage[] = [];
     if (adminSupabase && targetCustomerId) {
       try {
         const channelName = isWhatsApp ? 'whatsapp' : 'sms';
-        const { data: conv } = await adminSupabase
-          .from('conversations')
-          .select('id, messages')
-          .eq('customer_id', targetCustomerId)
-          .eq('channel', channelName)
-          .maybeSingle();
-
-        if (conv && Array.isArray(conv.messages)) {
-          const recent = conv.messages.slice(-6);
-          for (const m of recent) {
-            if (m.direction === 'inbound' && m.text) {
-              history.push({ role: 'user', content: m.text });
-            } else if (m.direction === 'outbound' && m.text) {
-              history.push({ role: 'assistant', content: m.text });
-            }
-          }
+        const recent = await recentMessages(adminSupabase, targetCustomerId, channelName, 6);
+        for (const m of recent) {
+          if (!m.body) continue;
+          history.push({ role: m.direction === 'inbound' ? 'user' : 'assistant', content: m.body });
         }
       } catch (convErr) {
         console.warn('Conversation history fetch error:', convErr);
@@ -307,56 +296,35 @@ export async function POST(req: Request) {
       replyText = "First Eleven Cleaners: Thank you for reaching out! How can our master cleaning team assist you today?";
     }
 
-    // 7. Store incoming message and outgoing reply in conversations table
+    // 7. Store incoming message and outgoing reply
     if (adminSupabase && targetCustomerId) {
       try {
         const channelName = isWhatsApp ? 'whatsapp' : 'sms';
         const nowIso = new Date().toISOString();
 
-        const inboundMsg = {
-          id: messageSid || `inbound_${crypto.randomUUID().slice(0, 8)}`,
-          text: trimmedBody,
-          direction: 'inbound',
-          from,
-          to,
-          created_at: nowIso,
-        };
-
-        const outboundMsg = {
-          id: `reply_${crypto.randomUUID().slice(0, 8)}`,
-          text: replyText,
-          direction: 'outbound',
-          from: to,
-          to: from,
-          created_at: new Date(Date.now() + 500).toISOString(),
-        };
-
-        const { data: existingConv } = await adminSupabase
-          .from('conversations')
-          .select('id, messages')
-          .eq('customer_id', targetCustomerId)
-          .eq('channel', channelName)
-          .maybeSingle();
-
-        if (existingConv) {
-          const updatedMessages = Array.isArray(existingConv.messages)
-            ? [...existingConv.messages, inboundMsg, outboundMsg]
-            : [inboundMsg, outboundMsg];
-
-          await adminSupabase
-            .from('conversations')
-            .update({
-              messages: updatedMessages,
-              updated_at: nowIso,
-            })
-            .eq('id', existingConv.id);
-        } else {
-          await adminSupabase.from('conversations').insert({
-            customer_id: targetCustomerId,
+        // One row per message (PR-26)
+        await logMessages(adminSupabase, [
+          {
+            customerId: targetCustomerId,
             channel: channelName,
-            messages: [inboundMsg, outboundMsg],
-          });
-        }
+            direction: 'inbound',
+            body: trimmedBody,
+            externalId: messageSid || null,
+            from,
+            to,
+            createdAt: nowIso,
+          },
+          {
+            customerId: targetCustomerId,
+            channel: channelName,
+            direction: 'outbound',
+            body: replyText,
+            mode: 'ai_reply',
+            from: to,
+            to: from,
+            createdAt: new Date(Date.now() + 500).toISOString(),
+          },
+        ]);
       } catch (saveErr) {
         console.warn('Error saving inbound/reply conversation messages:', saveErr);
       }

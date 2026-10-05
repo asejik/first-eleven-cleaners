@@ -6,6 +6,7 @@ import { getAIEngine } from '@/lib/ai';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import type { Address, Order, CustomerPreferences } from '@/types';
 import { apiError } from '@/lib/api-errors';
+import { logMessages } from '@/lib/message-log';
 
 // Request size and cost limits (SEC-10): every message calls the paid AI API
 const MAX_MESSAGE_CHARS = 1000;
@@ -127,49 +128,20 @@ export async function POST(req: Request) {
     // "Review & Confirm Pickup Slot" action, which opens /book, where pricing, zone,
     // capacity and card-on-file rules apply.
 
-    // 5. If Escalated to Human, append into conversations JSON messages array for Mission Control HUD
+    // 5. If Escalated to Human, log it for the Mission Control HUD (one row per message, PR-26)
     if (response.escalateToHuman && targetCustomerId) {
       try {
-        const { data: existingConv } = await adminSupabase
-          .from('conversations')
-          .select('id, messages')
-          .eq('customer_id', targetCustomerId)
-          .eq('channel', 'sms')
-          .maybeSingle();
-
-        const timestamp = new Date().toISOString();
-        const escalationEntry = {
-          id: crypto.randomUUID(),
-          order_id: context.recentOrders?.[0]?.id || undefined,
-          stage: 'booked',
-          text: `[AI CONCIERGE ESCALATION]: Customer ${context.customerName || 'User'} requested human intervention: "${message}"`,
-          media_url: null,
+        await logMessages(adminSupabase, [{
+          customerId: targetCustomerId,
+          channel: 'sms',
           direction: 'inbound',
+          body: `[AI CONCIERGE ESCALATION]: Customer ${context.customerName || 'User'} requested human intervention: "${message}"`,
+          orderId: context.recentOrders?.[0]?.id || null,
+          stage: 'booked',
           mode: 'ai_escalation',
-          created_at: timestamp,
-        };
-
-        if (existingConv) {
-          const updatedMessages = Array.isArray(existingConv.messages)
-            ? [...existingConv.messages, escalationEntry]
-            : [escalationEntry];
-
-          await adminSupabase
-            .from('conversations')
-            .update({
-              messages: updatedMessages,
-              updated_at: timestamp,
-            })
-            .eq('id', existingConv.id);
-        } else {
-          await adminSupabase.from('conversations').insert({
-            customer_id: targetCustomerId,
-            channel: 'sms',
-            messages: [escalationEntry],
-          });
-        }
+        }]);
       } catch (logErr) {
-        console.warn('Failed to log escalation event to conversations table:', logErr);
+        console.warn('Failed to log escalation event:', logErr);
       }
     }
 

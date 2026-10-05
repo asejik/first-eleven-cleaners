@@ -3,6 +3,7 @@ import { formatStageMessage, type MessagePayload, type FormattedMessage } from '
 import { sendEmail, buildStageNotificationEmailHtml } from '@/lib/resend';
 import { signStorageUrl, MMS_PHOTO_LINK_TTL_SECONDS } from '@/lib/storage';
 import { toE164 } from '@/lib/phone';
+import { logMessages } from '@/lib/message-log';
 
 function maskEmail(email?: string | null): string {
   if (!email) return 'unknown';
@@ -73,44 +74,19 @@ export class SimulatedMessageProvider implements IMessagingProvider {
       }
 
       if (customerId) {
-        // Record in conversations table
-        const { data: existingConv } = await supabase
-          .from('conversations')
-          .select('id, messages')
-          .eq('customer_id', customerId)
-          .eq('channel', channel)
-          .maybeSingle();
-
-        const newMsgEntry = {
-          id: messageId,
-          order_id: payload.orderId,
-          stage: payload.stage,
-          text: content,
-          media_url: formatted.mediaUrl || null,
+        // One row per message (PR-26)
+        await logMessages(supabase, [{
+          customerId,
+          channel,
           direction: 'outbound',
+          body: content,
+          orderId: payload.orderId,
+          stage: payload.stage,
+          mediaUrl: formatted.mediaUrl || null,
           mode: 'simulated',
-          created_at: timestamp,
-        };
-
-        if (existingConv) {
-          const updatedMessages = Array.isArray(existingConv.messages)
-            ? [...existingConv.messages, newMsgEntry]
-            : [newMsgEntry];
-
-          await supabase
-            .from('conversations')
-            .update({
-              messages: updatedMessages,
-              updated_at: timestamp,
-            })
-            .eq('id', existingConv.id);
-        } else {
-          await supabase.from('conversations').insert({
-            customer_id: customerId,
-            channel,
-            messages: [newMsgEntry],
-          });
-        }
+          externalId: messageId,
+          createdAt: timestamp,
+        }]);
       }
     } catch (err) {
       console.warn('Simulated message DB logging notice:', err);
