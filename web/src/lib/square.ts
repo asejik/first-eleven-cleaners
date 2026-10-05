@@ -170,6 +170,39 @@ export async function chargeCardOnFile(
   return { ok: true, paymentId: result.data.payment.id, status: result.data.payment.status };
 }
 
+/**
+ * Refunds part or all of a completed payment. The caller supplies a stable idempotency key
+ * (max 45 characters) so a repeated request can never refund twice. Square accepts refunds
+ * as PENDING and completes them asynchronously; REJECTED or FAILED means no money moved.
+ */
+export async function refundPayment(
+  config: SquareConfig,
+  {
+    paymentId,
+    amount,
+    idempotencyKey,
+    reason,
+  }: {
+    paymentId: string;
+    amount: number;
+    idempotencyKey: string;
+    reason: string;
+  }
+): Promise<{ ok: true; refundId: string; status: string } | { ok: false; error: string }> {
+  const result = await squareRequest<{ refund: { id: string; status: string } }>(config, '/refunds', {
+    idempotency_key: idempotencyKey,
+    payment_id: paymentId,
+    amount_money: { amount: Math.round(amount * 100), currency: 'USD' },
+    reason,
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  const { id, status } = result.data.refund;
+  if (status === 'REJECTED' || status === 'FAILED') {
+    return { ok: false, error: `Square refund status ${status}` };
+  }
+  return { ok: true, refundId: id, status };
+}
+
 export interface SquareCardSummary {
   id: string;
   brand: string;
