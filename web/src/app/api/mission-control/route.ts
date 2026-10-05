@@ -247,7 +247,9 @@ export async function POST(request: Request) {
         orderId: order.id,
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customer?.full_name || 'Valued Customer',
-        customerPhone: customer?.phone || '+12145550199',
+        customerPhone: customer?.phone || '',
+        // No phone on file: email only, never a placeholder number (PR-22)
+        ...(customer?.phone ? {} : { smsConsent: false }),
         customerEmail: customer?.email,
         stage: new_stage as OrderStatusKey,
         pickupDate: order.pickup_date,

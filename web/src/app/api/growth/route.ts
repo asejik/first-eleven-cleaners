@@ -29,7 +29,7 @@ export async function GET(req: Request) {
         o.id,
         o.order_number || o.id.slice(0, 8),
         customer?.full_name || 'Customer',
-        customer?.phone || '+12145550199'
+        customer?.phone || ''
       );
     });
 

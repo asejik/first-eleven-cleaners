@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { escapeHtml, greetingFirstName } from '@/lib/sanitize';
+import { SUPPORT_PHONE } from '@/lib/constants';
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -245,7 +246,7 @@ export function buildWelcomeEmailHtml({
     <!-- Footer -->
     <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
       <p style="margin: 0; font-weight: 600; color: #0B1F3A;">Every Garment Makes the Lineup.</p>
-      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • Phone: (214) 555-0111</p>
+      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • Phone: ${SUPPORT_PHONE}</p>
       <p style="margin: 4px 0 0;">Questions? Reply directly to this email or reach us at <a href="mailto:support@firstelevencleaners.com" style="color: #C9A14A; text-decoration: none;">support@firstelevencleaners.com</a></p>
     </div>
   </div>
@@ -348,7 +349,7 @@ export function buildStageNotificationEmailHtml({
     <!-- Footer -->
     <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
       <p style="margin: 0; font-weight: 600; color: #0B1F3A;">Every Garment Makes the Lineup.</p>
-      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • Phone: (214) 555-0111</p>
+      <p style="margin: 4px 0 0;">First Eleven Cleaners • Dallas-Fort Worth, TX • Phone: ${SUPPORT_PHONE}</p>
       <p style="margin: 4px 0 0;">Support: <a href="mailto:support@firstelevencleaners.com" style="color: #C9A14A; text-decoration: none;">support@firstelevencleaners.com</a></p>
     </div>
   </div>

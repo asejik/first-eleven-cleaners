@@ -4,6 +4,7 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/resend';
 import { apiError } from '@/lib/api-errors';
+import { LEGAL_CONFIG } from '@/lib/constants';
 
 export async function POST(request: Request) {
   try {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     // Send compliance alert to privacy officer (F008 Fix)
     try {
       await sendEmail({
-        to: 'concierge@firstelevencleaners.com',
+        to: LEGAL_CONFIG.privacyEmail,
         subject: `🔒 Action Required: TDPSA Personal Data Request (${String(request_type).toUpperCase()}) - ${customer.email}`,
         html: `
           <h2>Texas Data Privacy and Security Act (TDPSA) Request</h2>
