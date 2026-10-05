@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMissionControl, useAdvanceOrderStage, useResolveClaim } from '@/hooks/useMissionControl';
 import { useNotifications, useDispatchNotification } from '@/hooks/useNotifications';
 import { Loader } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
-import { ORDER_STATUS_MAP, type OrderStatusKey } from '@/lib/constants';
+import { ORDER_STATUS_MAP, ROUTES, type OrderStatusKey } from '@/lib/constants';
+import { requiresCapturedPayment } from '@/lib/order-lifecycle';
 import type { Claim } from '@/types';
 import {
   OpsHeader,
@@ -38,6 +40,7 @@ export default function MissionControlPage() {
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
+  const router = useRouter();
   const resolveClaim = useResolveClaim();
   const { data: notifsData } = useNotifications();
   const dispatchNotif = useDispatchNotification();
@@ -64,15 +67,26 @@ export default function MissionControlPage() {
       const nextStage = STAGES[currentIndex + 1];
       const targetOrder = orders.find((o) => o.id === orderId);
 
-      // Payment Guard: Check if payment failed and advancing to cleaning/delivery
+      // Weighing and itemizing happens at the Intake Station, which also charges the card
+      if (nextStage === 'weighed_itemized') {
+        addToast({
+          type: 'info',
+          title: 'Use the Intake Station',
+          message: 'Weigh and itemize this bag at Intake; that step charges the card on file.',
+        });
+        router.push(ROUTES.intake);
+        return;
+      }
+
+      // Payment Guard: an uncharged order needs a Manager Override to enter cleaning/delivery
       if (
         targetOrder &&
-        targetOrder.payment_status === 'failed' &&
-        ['in_cleaning', 'out_for_delivery', 'delivered'].includes(nextStage)
+        targetOrder.payment_status !== 'charged' &&
+        requiresCapturedPayment(nextStage)
       ) {
         const orderNum = targetOrder.order_number || targetOrder.id.slice(0, 8);
         const confirmOverride = window.confirm(
-          `⚠️ PAYMENT ALERT: Order #${orderNum} has a FAILED payment status ($${Number(targetOrder.total || 0).toFixed(2)}).\n\nAdvancing to ${ORDER_STATUS_MAP[nextStage]?.label || nextStage} without customer payment requires Manager Override.\n\nDo you want to authorize Manager Override to advance this order anyway?`
+          `⚠️ PAYMENT ALERT: Order #${orderNum} is not paid (payment status: ${String(targetOrder.payment_status || 'unknown').toUpperCase()}, $${Number(targetOrder.total || 0).toFixed(2)}).\n\nAdvancing to ${ORDER_STATUS_MAP[nextStage]?.label || nextStage} without customer payment requires Manager Override.\n\nDo you want to authorize Manager Override to advance this order anyway?`
         );
 
         if (!confirmOverride) {

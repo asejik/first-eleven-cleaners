@@ -15,6 +15,7 @@ import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
+import { checkIntakeAllowed } from '@/lib/order-lifecycle';
 
 
 export const dynamic = 'force-dynamic';
@@ -112,12 +113,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Business rule: Intake inspection requires driver to have picked up the bag
-    if (order.status === 'booked') {
-      return NextResponse.json(
-        { error: 'Cannot process intake: Bag has not been picked up yet. Driver must complete pickup first.' },
-        { status: 400 }
-      );
+    // Business rule: intake runs on a picked-up bag, or re-weighs a weighed order that
+    // hasn't been charged yet. Never on paid, cancelled or delivered orders (PR-02).
+    const intakeCheck = checkIntakeAllowed(order.status, order.payment_status);
+    if (!intakeCheck.ok) {
+      return NextResponse.json({ error: intakeCheck.error }, { status: order.status === 'booked' ? 400 : 409 });
     }
 
     // 2. Calculate Pricing
@@ -292,7 +292,7 @@ export async function POST(request: Request) {
       ? `[PAYMENT HOLD: Card authorization declined for $${finalTotal.toFixed(2)}] ${intake_notes || order.notes || ''}`.trim()
       : (intake_notes || order.notes);
 
-    await supabase
+    const { data: updatedRows, error: updateErr } = await supabase
       .from('orders')
       .update({
         weight_lbs: Number(weight_lbs) || null,
@@ -306,7 +306,18 @@ export async function POST(request: Request) {
         notes: effectiveNotes,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .eq('status', order.status)
+      .select('id');
+
+    if (updateErr || !updatedRows || updatedRows.length === 0) {
+      // The card may already have been charged above; the Square payment ID is in the logs and events
+      console.error(`[Intake] Order ${order.id} changed during intake or could not be saved (payment ${paymentStatus}, ${paymentId}):`, updateErr);
+      return NextResponse.json(
+        { error: 'This order changed while intake was running. Refresh the queue and check the order before retrying.' },
+        { status: 409 }
+      );
+    }
 
     // 7. Log Timeline Events
     await supabase.from('order_events').insert({

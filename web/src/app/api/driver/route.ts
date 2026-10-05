@@ -61,6 +61,29 @@ function getDriverContext(auth: {
   return { isDriverRole, isAdminRole, driverLabel, matchesDriver };
 }
 
+/** Conditional status change: applies only if the order is still in `expected` (PR-02). */
+async function moveOrderStatus(
+  supabase: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  expected: string,
+  next: string
+): Promise<NextResponse | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ status: next, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .eq('status', expected)
+    .select('id');
+  if (error) {
+    console.error('Driver status update error:', error);
+    return NextResponse.json({ error: 'Could not update this order. Please try again.' }, { status: 500 });
+  }
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'This order was already updated. Refresh your manifest.' }, { status: 409 });
+  }
+  return null;
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
@@ -379,10 +402,8 @@ export async function POST(request: Request) {
       }
 
       // 1. Update order to picked_up
-      await supabase
-        .from('orders')
-        .update({ status: 'picked_up', updated_at: new Date().toISOString() })
-        .eq('id', order.id);
+      const pickupBlocked = await moveOrderStatus(supabase, order.id, 'booked', 'picked_up');
+      if (pickupBlocked) return pickupBlocked;
 
       // 2. Insert event
       await supabase.from('order_events').insert({
@@ -413,6 +434,14 @@ export async function POST(request: Request) {
 
     // Step: Driver loads fresh garments from plant/office into delivery van
     if (action === 'load_for_delivery' || action === 'out_for_delivery') {
+      // Only cleaned orders released by the plant (Out for Delivery) can be loaded (PR-02)
+      if (order.status !== 'out_for_delivery') {
+        return NextResponse.json(
+          { error: 'This order is not ready for delivery yet. Only orders released from the plant can be loaded.' },
+          { status: 409 }
+        );
+      }
+
       // Business rule: Check if order is already claimed/loaded into another driver's van
       const existingEvents = (order.events as Array<{ status?: string; triggered_by?: string }>) || [];
       const existingPhotos = (order.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
@@ -435,11 +464,9 @@ export async function POST(request: Request) {
         }
       }
 
-      // 1. Update order to out_for_delivery
-      await supabase
-        .from('orders')
-        .update({ status: 'out_for_delivery', updated_at: new Date().toISOString() })
-        .eq('id', order.id);
+      // 1. Confirm the order is still out for delivery (touches updated_at)
+      const loadBlocked = await moveOrderStatus(supabase, order.id, 'out_for_delivery', 'out_for_delivery');
+      if (loadBlocked) return loadBlocked;
 
       // 2. Insert event recording who loaded it from office
       await supabase.from('order_events').insert({
@@ -471,6 +498,13 @@ export async function POST(request: Request) {
     }
 
     if (action === 'delivery_complete') {
+      if (order.status !== 'out_for_delivery') {
+        return NextResponse.json(
+          { error: 'Only orders that are out for delivery can be marked delivered.' },
+          { status: 409 }
+        );
+      }
+
       // Business rule: Only the driver whose van the order was loaded into (or admin) can confirm delivery
       if (isDriverRole && !isAdminRole) {
         const existingEvents = (order.events as Array<{ status?: string; triggered_by?: string }>) || [];
@@ -494,10 +528,8 @@ export async function POST(request: Request) {
       }
 
       // 1. Update order to delivered
-      await supabase
-        .from('orders')
-        .update({ status: 'delivered', updated_at: new Date().toISOString() })
-        .eq('id', order.id);
+      const deliveryBlocked = await moveOrderStatus(supabase, order.id, 'out_for_delivery', 'delivered');
+      if (deliveryBlocked) return deliveryBlocked;
 
       // 2. Insert event
       await supabase.from('order_events').insert({

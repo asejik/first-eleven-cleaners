@@ -7,6 +7,7 @@ import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
+import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 
 
 export async function GET(request: Request) {
@@ -171,6 +172,9 @@ export async function POST(request: Request) {
       if (!order_id || !new_stage) {
         return NextResponse.json({ error: 'order_id and new_stage are required' }, { status: 400 });
       }
+      if (!(ORDER_STATUS_KEYS as readonly string[]).includes(new_stage)) {
+        return NextResponse.json({ error: 'Unknown order stage.' }, { status: 400 });
+      }
 
       // Fetch order
       const { data: order, error: orderErr } = await supabase
@@ -183,41 +187,61 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
 
-      // Enforce Payment Guard: Block advancing orders into cleaning or delivery if payment failed
-      const restrictedStages = ['in_cleaning', 'out_for_delivery', 'delivered'];
-      if (restrictedStages.includes(new_stage) && order.payment_status === 'failed') {
-        if (!manager_override) {
-          return NextResponse.json(
-            {
-              error: `Cannot advance Order #${order.order_number || order.id.slice(0, 8)} to ${new_stage.replace('_', ' ')}: Payment authorization failed ($${Number(order.total || 0).toFixed(2)}). Settle payment or authorize Manager Override to proceed.`,
-              payment_failed: true,
-              requires_override: true,
-            },
-            { status: 400 }
-          );
-        }
+      // Only allowed moves (PR-02): intake is the only way to Weighed & Itemized
+      const transition = checkMissionControlTransition(order.status, new_stage);
+      if (!transition.ok) {
+        return NextResponse.json({ error: transition.error }, { status: 409 });
+      }
 
-        // Log manager override event
+      // Keep "Mission Control" in the label: the driver manifest uses it to tell board moves from driver van loads
+      const adminLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
+
+      // Payment Guard: an order enters cleaning or delivery only once its card is charged
+      const needsOverride = requiresCapturedPayment(new_stage) && order.payment_status !== 'charged';
+      if (needsOverride && !manager_override) {
+        return NextResponse.json(
+          {
+            error: `Cannot advance Order #${order.order_number || order.id.slice(0, 8)} to ${new_stage.replace(/_/g, ' ')}: payment is ${order.payment_status || 'not captured'} ($${Number(order.total || 0).toFixed(2)}). Settle payment or authorize Manager Override to proceed.`,
+            payment_failed: true,
+            requires_override: true,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Conditional update: only applies if the order is still in the stage the board saw
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from('orders')
+        .update({ status: new_stage, updated_at: new Date().toISOString() })
+        .eq('id', order.id)
+        .eq('status', order.status)
+        .select('id');
+
+      if (updateErr) {
+        return apiError('api/mission-control', updateErr, 500);
+      }
+      if (!updatedRows || updatedRows.length === 0) {
+        return NextResponse.json(
+          { error: 'This order was updated by someone else. Refresh the board and try again.' },
+          { status: 409 }
+        );
+      }
+
+      if (needsOverride) {
         await supabase.from('order_events').insert({
           order_id: order.id,
           status: new_stage,
-          note: `[MANAGER OVERRIDE] Operator authorized advancement of unpaid order to ${new_stage}. Reason: ${override_reason || 'Managerial discretion / corporate invoice'}.`,
-          triggered_by: auth.customer?.full_name ? `Admin (${auth.customer.full_name})` : 'Mission Control Admin',
+          note: `[MANAGER OVERRIDE] Operator authorized advancement of unpaid order (payment ${order.payment_status || 'unknown'}) to ${new_stage}. Reason: ${override_reason || 'Managerial discretion / corporate invoice'}.`,
+          triggered_by: adminLabel,
         });
       }
-
-      // Update status
-      await supabase
-        .from('orders')
-        .update({ status: new_stage, updated_at: new Date().toISOString() })
-        .eq('id', order.id);
 
       // Log event
       await supabase.from('order_events').insert({
         order_id: order.id,
         status: new_stage,
         note: `Stage advanced to ${new_stage} via Mission Control Ops Board.`,
-        triggered_by: 'Mission Control Operator',
+        triggered_by: adminLabel,
       });
 
       // Dispatch Notification
