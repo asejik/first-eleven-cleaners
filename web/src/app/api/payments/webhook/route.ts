@@ -216,9 +216,16 @@ export async function POST(request: Request) {
               await supabase.from('order_events').insert({
                 order_id: matchedOrder.id,
                 status: matchedOrder.status,
-                note: `Square Dispute ${disputeId} (${disputeState})${disputeAmount ? `: $${disputeAmount.toFixed(2)} under review` : ''}.`,
+                note: `⚠️ CARD DISPUTE: Square Dispute ${disputeId} (${disputeState})${disputeAmount ? `: $${disputeAmount.toFixed(2)} under review` : ''}. Respond in the Square Dashboard before the deadline.`,
                 triggered_by: 'Square Dispute Gateway',
               });
+              // Chargebacks have short response deadlines: alert an admin for every new dispute
+              // state (one alert source per dispute so one can't silence another) (PR-30)
+              reportError(
+                `payments/dispute/${disputeId}`,
+                `Card dispute ${disputeId} (${disputeState}) on Order #${matchedOrder.order_number || matchedOrder.id}${disputeAmount ? ` for $${disputeAmount.toFixed(2)}` : ''}. Respond in Square Dashboard → Disputes.`,
+                { alert: true }
+              );
             }
           }
         }
