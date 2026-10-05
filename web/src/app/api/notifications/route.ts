@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
-import { getAppBaseUrl, type OrderStatusKey } from '@/lib/constants';
+import { getAppBaseUrl, ORDER_STATUSES, type OrderStatusKey } from '@/lib/constants';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
@@ -94,7 +94,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Too many dispatch requests.' }, { status: 429 });
     }
 
-    const auth = await verifyApiAuth(['admin', 'driver', 'intake_staff'], request);
+    // Manual re-send is an admin tool (P05 AR-01). Drivers, intake and the board send
+    // their own stage messages server-side when an order actually moves.
+    const auth = await verifyApiAuth(['admin'], request);
     if (auth.errorResponse) return auth.errorResponse;
 
     const body = await request.json();
@@ -103,18 +105,30 @@ export async function POST(request: Request) {
     if (!order_id || !stage) {
       return NextResponse.json({ error: 'order_id and stage are required' }, { status: 400 });
     }
+    if (!ORDER_STATUSES.some((s) => s.key === stage)) {
+      return NextResponse.json({ error: 'Unknown order stage.' }, { status: 400 });
+    }
 
     const supabase = createAdminClient();
 
     // Fetch order with customer (explicit columns only)
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id);
-    const orderCols = 'id, order_number, pickup_date, pickup_window, delivery_date, delivery_window, weight_lbs, total, customer:customers(id, full_name, phone)';
+    const orderCols = 'id, order_number, status, pickup_date, pickup_window, delivery_date, delivery_window, weight_lbs, total, customer:customers(id, full_name, phone)';
     const { data: order, error: orderErr } = isUUID
       ? await supabase.from('orders').select(orderCols).eq('id', order_id).maybeSingle()
       : await supabase.from('orders').select(orderCols).eq('order_number', order_id).maybeSingle();
 
     if (orderErr || !order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Only the order's current status can be re-sent, so a customer is never told
+    // something that hasn't happened (P05 AR-01)
+    if (order.status !== stage) {
+      return NextResponse.json(
+        { error: `This order is "${order.status}". Only its current status message can be re-sent.` },
+        { status: 409 }
+      );
     }
 
     const customer = order.customer as { full_name?: string; phone?: string } | null;

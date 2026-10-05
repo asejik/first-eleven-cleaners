@@ -3,6 +3,7 @@ import { sendEmail } from '@/lib/resend';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
+import { getAppBaseUrl } from '@/lib/constants';
 
 export async function POST(request: Request) {
   try {
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       </div>
 
       <div style="text-align: center; margin: 28px 0 10px;">
-        <a href="http://localhost:3000/dashboard" style="background-color: #C9A14A; color: #0B1F3A; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
+        <a href="${getAppBaseUrl()}/dashboard" style="background-color: #C9A14A; color: #0B1F3A; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">
           Open Customer Portal →
         </a>
       </div>

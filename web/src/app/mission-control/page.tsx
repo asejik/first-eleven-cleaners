@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMissionControl, useAdvanceOrderStage, useResolveClaim, usePaymentRecovery } from '@/hooks/useMissionControl';
-import { useNotifications, useDispatchNotification } from '@/hooks/useNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Loader } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
@@ -44,7 +44,6 @@ export default function MissionControlPage() {
   const router = useRouter();
   const resolveClaim = useResolveClaim();
   const { data: notifsData } = useNotifications();
-  const dispatchNotif = useDispatchNotification();
   const addToast = useUIStore((s) => s.addToast);
 
   // Claim resolution modal state
@@ -53,7 +52,6 @@ export default function MissionControlPage() {
   const [refundAmount, setRefundAmount] = useState<string>('');
 
   // Simulator test message state
-  const [testStage, setTestStage] = useState<OrderStatusKey>('booked');
   const [testEmailRecipient, setTestEmailRecipient] = useState('');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
 
@@ -191,26 +189,6 @@ export default function MissionControlPage() {
       addToast({
         type: 'error',
         title: 'Resolution Failed',
-        message: (err as Error).message,
-      });
-    }
-  };
-
-  const handleManualTestNotification = async (orderId: string) => {
-    try {
-      await dispatchNotif.mutateAsync({
-        order_id: orderId,
-        stage: testStage,
-      });
-      addToast({
-        type: 'info',
-        title: 'Notification Dispatched',
-        message: `Dispatched test message for ${testStage} stage.`,
-      });
-    } catch (err: unknown) {
-      addToast({
-        type: 'error',
-        title: 'Dispatch Failed',
         message: (err as Error).message,
       });
     }
@@ -455,17 +433,11 @@ export default function MissionControlPage() {
 
               {activeTab === 'dispatch' && (
                 <NotificationSimulator
-                  stages={STAGES}
-                  orders={orders}
                   notifications={notifications}
-                  testStage={testStage}
-                  setTestStage={setTestStage}
                   testEmailRecipient={testEmailRecipient}
                   setTestEmailRecipient={setTestEmailRecipient}
                   isSendingTestEmail={isSendingTestEmail}
                   onSendTestEmail={handleSendTestEmail}
-                  onManualTestNotification={handleManualTestNotification}
-                  isDispatchingNotif={dispatchNotif.isPending}
                 />
               )}
 
