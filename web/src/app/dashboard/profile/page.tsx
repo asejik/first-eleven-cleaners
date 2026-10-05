@@ -11,7 +11,7 @@ import { useCustomerClaims } from '@/hooks/useClaims';
 import { useCustomerProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Card, Badge, Input, Modal } from '@/components/ui';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, SUPPORT_EMAIL } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from './page.module.css';
 
@@ -77,6 +77,9 @@ function ProfileEditorForm({
           <span className={styles.infoLabel}>Email Address (Primary Auth)</span>
           <span className={styles.infoValue} style={{ color: 'var(--color-gray-600)', background: 'var(--color-gray-100)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
             {email}
+          </span>
+          <span className={styles.helperNote}>
+            To change your email, contact us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
           </span>
         </div>
         <Input

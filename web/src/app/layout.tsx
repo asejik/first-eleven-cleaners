@@ -3,6 +3,7 @@ import { Inter, Archivo } from 'next/font/google';
 import { QueryProvider } from '@/providers/query-provider';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { CustomerOnly } from '@/components/layout/CustomerOnly';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { ToastContainer } from '@/components/ui/Toast';
 import { CookieConsent } from '@/components/ui/CookieConsent';
@@ -217,10 +218,14 @@ export default function RootLayout({
           <AuthProvider>
             <Header />
             <main id="main-content">{children}</main>
-            <Footer />
+            <CustomerOnly>
+              <Footer />
+            </CustomerOnly>
             <MobileNav />
             <ToastContainer />
-            <DynamicConcierge />
+            <CustomerOnly>
+              <DynamicConcierge />
+            </CustomerOnly>
             <CookieConsent />
             <ServiceWorkerRegister />
           </AuthProvider>

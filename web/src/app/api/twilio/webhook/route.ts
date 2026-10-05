@@ -3,9 +3,9 @@ import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
+import { loadConciergeContext } from '@/lib/ai/context';
 import { getAppBaseUrl } from '@/lib/constants';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
-import type { Address, Order, CustomerPreferences } from '@/types';
 import { toE164 } from '@/lib/phone';
 import { reportError } from '@/lib/error-reporting';
 import { logMessages, recentMessages } from '@/lib/message-log';
@@ -231,39 +231,8 @@ export async function POST(req: Request) {
 
         if (customer) {
           targetCustomerId = customer.id;
-          context.customerId = customer.id;
-          context.customerName = customer.full_name;
-          context.customerPhone = customer.phone ?? undefined;
-          context.customerEmail = customer.email;
-
-          // Fetch Customer Preferences (Eleven's Memory)
-          const { data: prefs } = await adminSupabase
-            .from('customer_preferences')
-            .select('customer_id, starch_level, fold_vs_hang, detergent_sensitivity, gate_code, delivery_instructions, special_notes')
-            .eq('customer_id', targetCustomerId)
-            .maybeSingle();
-
-          context.customerPreferences = (prefs as unknown as CustomerPreferences) || null;
-
-          // Fetch Default Address
-          const { data: address } = await adminSupabase
-            .from('addresses')
-            .select('id, street, unit, city, state, zip, delivery_notes')
-            .eq('customer_id', targetCustomerId)
-            .eq('is_default', true)
-            .maybeSingle();
-
-          context.defaultAddress = (address as unknown as Address) || null;
-
-          // Fetch Recent Orders
-          const { data: orders } = await adminSupabase
-            .from('orders')
-            .select('id, order_number, status, order_type, pickup_date, total')
-            .eq('customer_id', targetCustomerId)
-            .order('created_at', { ascending: false })
-            .limit(3);
-
-          context.recentOrders = (orders as unknown as Order[]) || [];
+          // Eleven's Memory: preferences, default address, recent orders (P05 AR-19)
+          Object.assign(context, await loadConciergeContext(adminSupabase, customer));
         }
       } catch (lookupErr) {
         console.warn('Customer lookup error for SMS sender:', lookupErr);

@@ -32,18 +32,20 @@ graph TD
 * **Server-Checked Schedule (Dallas time):** Standard pickups need 2 days' notice, never on Sunday, up to 60 days ahead. **24-Hour Express** is Mon-Fri, morning window only, with 7 AM (same-day) and 9 PM (next-day) cutoffs, a +50% surcharge ($15 minimum), and specialty items excluded. Window and Express capacity are enforced.
 * **Safe Checkout:** Prices are recomputed on the server in whole cents. Each booking (order, items, promo use) is saved in one database transaction, and a double-click or retry returns the first order instead of booking twice.
 * **Card on File, Charged After Weighing:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and charged the final, itemized, taxed total after intake inspection.
-* **Live Order Tracker:** Visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*. Tracking links are private to the customer.
+* **Live Order Tracker:** Visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*, with readable dates and a Dallas-time "delayed" check. Cancelled pickups show a clear cancelled panel, and a failed load offers *Try Again* instead of "not found". Tracking links are private to the customer.
 * **Garment Passport™ Photo Timeline:** Intake inspection photos (with pre-existing flaw notes) alongside pickup and delivery proof photos.
 * **Billing & Receipts (`/dashboard/billing`):** Saved Square cards, itemized receipts, and a pay link for any order whose card was declined.
 * **100% Make It Right Claims (`/claim/[orderId]`):** Claim filing for any garment care or delivery issue.
+* **Accounts:** Guests are invited to create an account on the confirmation screen and in the confirmation email (email pre-filled). Plain-language sign-in and password messages, with the password rule stated up front.
+* **Accessible by design:** WCAG AA text contrast (automated axe scan: 0 failures), visible keyboard focus, and 44 px tap targets on touch screens.
 
 ### 2. 🎛️ Mission Control Central Operations (`/mission-control`, `/mission-control/intake`)
 * **Active WIP Pipeline:** Kanban of work-in-progress stages with enforced stage order (intake, the charge step, can't be skipped) and customer notifications on each advance.
 * **Delivered & Completed Archive:** Searchable ledger with date filters, revenue and volume metrics, proof-of-delivery photos, and printable receipts.
-* **Central Intake Station:** Weight recording, dry-cleaning itemization, camera capture and photo upload (resized on device), flaw notes, and automatic charge of the card on file.
+* **Central Intake Station:** Weight recording, dry-cleaning itemization, camera capture and photo upload (resized on device), flaw notes, the customer's care preferences (starch, fold or hang, detergent), and automatic charge of the card on file.
 * **Payments & Financials:** Per-order tax and fee records, collected-revenue ledger, held-payment recovery (retry, pay link, mark paid), and Square refunds for claims and late Express deliveries.
 * **Make It Right Claims Center:** Resolution presets for *🔄 Free Re-Clean*, *💰 Refund (through Square)*, or *💬 Care Explanation*.
-* **Messaging HUD:** Feed of the latest 200 SMS/WhatsApp messages (one database row per message) with **`🚨 AI Escalations`**.
+* **Message Log:** Feed of the latest 200 SMS/WhatsApp messages (one database row per message) with **`🚨 AI Escalations`**. Status messages go out automatically when an order moves stage; only an admin can re-send the current status.
 * **Staff Roster & Roles:** Driver and intake specialist accounts; roles are managed here and enforced server-side.
 * **Audit Log:** Append-only record of admin order, money and staff actions.
 
@@ -51,12 +53,13 @@ graph TD
 * **Van Route Isolation:** Loading an order into a van claims it atomically for that driver; it disappears from every other driver's manifest.
 * **Server-Side Route Protection:** Double-claims and duplicate pickups return `409 Conflict`; cross-driver delivery completion returns `403 Forbidden`.
 * **Dual-Stream Manifest:** **Inbound to Plant** (*To Pick Up*, *In My Van*, *Picked Up*) and **Outbound to Customers** (*Ready at Plant*, *Active Drops*, *Delivered*).
-* **Route Actions:** Tap-to-call, turn-by-turn navigation, and mandatory doorstep photo proof.
+* **Route Actions:** Tap-to-call, turn-by-turn navigation, the customer's gate code and delivery instructions on each stop, and mandatory doorstep photo proof.
+* **Built for phones:** Staff screens drop the customer footer and chat bubble.
 
 ### 4. ✨ "Eleven" AI Concierge (`/api/concierge`, floating widget, inbound SMS)
 * **Provider Pattern (`IAIEngineProvider`):** Built-in heuristic engine ($0 cost) or Claude via `ANTHROPIC_API_KEY` (model set by `ANTHROPIC_MODEL`).
 * **Accurate Prices:** Eleven's price list is generated from the same catalog the booking page charges.
-* **Eleven's Memory:** Uses the signed-in customer's preferences (starch, fold vs. hang, detergent).
+* **Eleven's Memory:** Uses the signed-in customer's preferences (starch, fold vs. hang, detergent). Gate codes are never sent to the AI.
 * **Booking Hand-off:** Booking requests get a **Book a Pickup** button to the secure booking page; Eleven never creates or confirms orders itself.
 * **English & Spanish**, and **Human Escalation** into Mission Control.
 * **Cost Controls:** Message size limits and per-network / per-customer daily caps.
@@ -64,8 +67,8 @@ graph TD
 ### 5. 🏢 Commercial B2B Portal (`/portal`, `/commercial`) — *switched off for launch*
 The portal still runs on sample data, so `/portal` and `/api/portal*` return 404 until it is built on real commercial account data (`COMMERCIAL_PORTAL_ENABLED` in `web/src/lib/features.ts`). The `/commercial` page remains available for business inquiries.
 
-### 6. 📈 Growth, Compliance & Promotions
-* **Promo Codes (`/api/promo/validate`):** Date windows, usage caps reserved atomically, fixed-dollar or percentage discounts, and one use per customer per code.
+### 6. 📈 Compliance & Promotions
+* **Promo Codes (`/api/promo/validate`):** Date windows, usage caps reserved atomically, fixed-dollar or percentage discounts, and one use per customer per code, checked before the card step (a first-order code already used is removed on the Review step with a clear message).
 * **Texas Data Privacy (TDPSA):** Customer data requests (`/api/customer/data-deletion`) with admin export and anonymize tools; see the [privacy request runbook](web/supabase/runbooks/privacy-requests.md).
 * **SMS Compliance:** E.164 phone storage, STOP/START handling across all records, and consent that fails closed.
 * **Local SEO:** Dynamic `/robots.txt`, `/sitemap.xml`, JSON-LD `DryCleaningOrLaundryService` schema, and a maskable PWA manifest.
@@ -87,7 +90,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 | **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
 | **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
 | **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
-| **Testing** | [Vitest](https://vitest.dev/) | 310 tests across 52 files |
+| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 419 unit tests across 72 files; 5 end-to-end smoke journeys (desktop + phone) |
 
 ---
 
@@ -96,7 +99,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 ```
 first-eleven-cleaners/
 ├── README.md
-├── .github/workflows/ci.yml    # Lint, test and build on every push / PR to main
+├── .github/workflows/ci.yml    # Lint, unit tests, build + end-to-end smoke tests on pushes / PRs to main
 └── web/                        # Next.js 16 application (Vercel root directory)
     ├── public/                 # Static assets, logos, PWA manifest and icons
     ├── src/
@@ -119,13 +122,15 @@ first-eleven-cleaners/
     │   │   ├── square.ts       # Card on file, charges, card management
     │   │   ├── storage.ts      # Photo upload, validation and signed-link helpers
     │   │   └── ...             # express, refunds, schedule, texas-time, rate-limiter, sanitize, ...
-    │   └── types/              # TypeScript interfaces
+    │   ├── proxy.ts            # Session refresh for pages (Next 16 proxy; API routes check auth themselves)
+    │   └── types/              # TypeScript interfaces; database.ts = typed Supabase schema
     ├── supabase/
     │   ├── schema.sql          # Full schema for a new database (17 tables, RLS, functions)
     │   ├── seed.sql            # DFW zones, promo codes, time slots
     │   ├── migrations/         # Dated changes for existing databases, each with a rollback
     │   ├── runbooks/           # Operator procedures (privacy requests)
     │   └── tests/              # SQL self-checks for database functions (dev databases only)
+    ├── e2e/                    # Playwright smoke tests (mock mode)
     └── tests/                  # Vitest suites
 ```
 
@@ -222,14 +227,17 @@ Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` w
 
 ### 8. Testing & Verification
 ```bash
-npm test                                   # 310 Vitest tests
+npm test                                   # 419 Vitest tests
 npx vitest run tests/pricing.test.ts       # a single test file
 npx vitest run -t "test name"              # a single test by name
 npx tsc --noEmit                           # type check
 npm run lint                               # ESLint
 npm run build                              # production build
+npm run test:e2e                           # Playwright smoke tests (starts the dev server in mock mode)
 ```
-CI runs lint, tests and build on every push and pull request to `main`.
+CI runs lint, unit tests and the build, plus the Playwright smoke tests in mock mode, on every push to `main` and every pull request into `main`. Every smoke test fails on a page error or a React hydration error.
+
+**Database types:** all Supabase clients use `web/src/types/database.ts`. After a migration that changes columns or functions, update it (`npx supabase gen types typescript --project-id <ref> --schema public`, which needs the Developer role on the project).
 
 ---
 
@@ -266,7 +274,7 @@ In Vercel **Settings → Domains**, add `firstelevencleaners.com` and `www.first
 
 ## 🔒 Security & Compliance
 
-The platform went through an independent security audit and a production-readiness audit in October 2026. All findings from the security audit, and all code findings from the production-readiness audit, were fixed, each with regression tests. The remaining production-readiness items are owner actions: a separate development database, a Supabase plan with tested restorable backups, and a photo retention period. The detailed reports are kept private.
+The platform went through an independent security audit, a production-readiness audit and an architecture & product-quality review in October 2026. All findings from the security audit and the architecture review, and all code findings from the production-readiness audit, were fixed, each with regression tests. The remaining production-readiness items are owner actions: a separate development database, a Supabase plan with tested restorable backups, and a photo retention period. The detailed reports are kept private.
 
 * **Verified sessions:** every server request verifies the login token with Supabase; roles come only from the server-controlled `customers.role` column, never from email addresses or user-editable metadata.
 * **Email-verified accounts:** a guest's order history joins an account only after the email is confirmed.
