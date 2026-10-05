@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Script from 'next/script';
 import { Card, Input, Button } from '@/components/ui';
+import { SUPPORT_PHONE } from '@/lib/constants';
 import styles from './StepPayment.module.css';
 
 interface SquareCardTokenResult {
@@ -175,6 +176,9 @@ export function StepPayment({
   };
 
   const hasSquareConfig = Boolean(appId && locationId);
+  // Without Square's keys in production, never offer plain card fields (P05 AR-18); the
+  // server refuses such bookings anyway. Local development keeps the test fields.
+  const bookingUnavailable = !hasSquareConfig && process.env.NODE_ENV === 'production';
 
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
@@ -274,8 +278,12 @@ export function StepPayment({
               </div>
             )}
           </div>
+        ) : bookingUnavailable ? (
+          <div className={styles.errorMessage} role="alert">
+            Online booking is temporarily unavailable. Please call us at {SUPPORT_PHONE} to schedule your pickup.
+          </div>
         ) : (
-          /* Graceful Fallback if Square credentials are not configured */
+          /* Local development without Square credentials: test card fields */
           <div>
             <Input
               label="Card Number"
@@ -310,7 +318,7 @@ export function StepPayment({
           size="lg"
           onClick={handleSubmit}
           isLoading={isLoading || isTokenizing}
-          disabled={hasSquareConfig && !isSquareReady && !squareError}
+          disabled={bookingUnavailable || (hasSquareConfig && !isSquareReady && !squareError)}
         >
           Confirm Pickup (${total.toFixed(2)})
         </Button>
