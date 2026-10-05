@@ -8,6 +8,7 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { messagingService } from '@/lib/messaging';
 import {
   getAppBaseUrl,
+  ROUTES,
   resolveZoneByZip,
   getZoneMinimumGap,
   EXPRESS_EXCLUDED_GARMENTS,
@@ -610,6 +611,8 @@ export async function POST(request: Request) {
                   weightLbs: validated.services.estimated_weight_lbs,
                   total: computed.financials.finalTotal,
                   trackingUrl: `${origin}/track/${insertedOrder.id}`,
+                  // Guests get an account invitation in the email (CLAUDE.md 5A, P05 AR-14)
+                  signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
               }),
               'booking confirmation'
             );
@@ -701,6 +704,7 @@ export async function POST(request: Request) {
           weightLbs: validated.services.estimated_weight_lbs,
           total: computed.financials.finalTotal,
           trackingUrl: `${origin}/track/${createdOrder.id}`,
+          signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
       }),
       'booking confirmation'
     );

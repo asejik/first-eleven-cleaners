@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { Suspense, useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card } from '@/components/ui';
@@ -12,9 +12,20 @@ import { ROUTES, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constan
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from './page.module.css';
 
+// The account link in a guest's confirmation email carries their email (P05 AR-14)
+function EmailFromLink({ onEmail }: { onEmail: (email: string) => void }) {
+  const searchParams = useSearchParams();
+  const linkedEmail = searchParams.get('email');
+  useEffect(() => {
+    if (linkedEmail) onEmail(linkedEmail);
+  }, [linkedEmail, onEmail]);
+  return null;
+}
+
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const prefillEmail = useCallback((linked: string) => setEmail((current) => current || linked), []);
   const [phone, setPhone] = useState('');
   const [smsConsent, setSmsConsent] = useState(false);
   const [smsPromotionsConsent, setSmsPromotionsConsent] = useState(false);
@@ -121,6 +132,10 @@ export default function SignupPage() {
             {error}
           </div>
         )}
+
+        <Suspense fallback={null}>
+          <EmailFromLink onEmail={prefillEmail} />
+        </Suspense>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <Input

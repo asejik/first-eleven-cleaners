@@ -106,6 +106,7 @@ export class SimulatedMessageProvider implements IMessagingProvider {
           deliveryWindow: payload.deliveryWindow,
           total: payload.total,
           trackingUrl: payload.trackingUrl,
+          signupUrl: payload.signupUrl,
         });
 
         const emailResult = await sendEmail({

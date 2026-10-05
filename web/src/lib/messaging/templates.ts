@@ -19,6 +19,8 @@ export interface MessagePayload {
   trackingUrl: string;
   customMessage?: string;
   smsConsent?: boolean;
+  /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
+  signupUrl?: string;
 }
 
 export interface FormattedMessage {
