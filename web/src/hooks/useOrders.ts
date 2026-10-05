@@ -42,26 +42,40 @@ export function useCustomerOrders(options?: { page?: number; limit?: number }) {
   });
 }
 
+/** A failed order load that keeps its HTTP status, so pages can tell "not found" from "try again" (P05 AR-10). */
+export class OrderLoadError extends Error {
+  constructor(public status: number) {
+    super('Failed to load order details');
+  }
+}
+
+/** True when the order doesn't exist, or the link belongs to another account. */
+export function isNotFoundError(error: unknown): boolean {
+  return error instanceof OrderLoadError && (error.status === 404 || error.status === 403);
+}
+
+export async function fetchOrderDetail(orderId: string): Promise<{ order: Order }> {
+  const headers: Record<string, string> = {};
+  try {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      headers['Authorization'] = `Bearer ${data.session.access_token}`;
+    }
+  } catch (e) {
+    console.warn('Could not get session token for order detail:', e);
+  }
+
+  const res = await fetch(`/api/orders/${orderId}`, { headers });
+  if (!res.ok) throw new OrderLoadError(res.status);
+  return res.json();
+}
+
 // 2. Fetch single order detail with real-time 20s polling
 export function useOrderDetail(orderId: string) {
   return useQuery<{ order: Order }>({
     queryKey: ['order', orderId],
-    queryFn: async () => {
-      const headers: Record<string, string> = {};
-      try {
-        const supabase = createClient();
-        const { data } = await supabase.auth.getSession();
-        if (data?.session?.access_token) {
-          headers['Authorization'] = `Bearer ${data.session.access_token}`;
-        }
-      } catch (e) {
-        console.warn('Could not get session token for order detail:', e);
-      }
-
-      const res = await fetch(`/api/orders/${orderId}`, { headers });
-      if (!res.ok) throw new Error('Failed to load order details');
-      return res.json();
-    },
+    queryFn: () => fetchOrderDetail(orderId),
     enabled: Boolean(orderId),
     staleTime: 10 * 1000,
     refetchInterval: 20 * 1000, // 20s quiet tracker updates

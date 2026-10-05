@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useOrderDetail } from '@/hooks/useOrders';
+import { useOrderDetail, isNotFoundError } from '@/hooks/useOrders';
 import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
-import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
-import { PROGRESS_STAGES, progressIndex } from '@/lib/order-progress';
+import { ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
+import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import { PayNowCard } from '@/components/orders/PayNowCard';
 import styles from './page.module.css';
@@ -15,7 +15,7 @@ import styles from './page.module.css';
 export default function PublicTrackingPage() {
   const routeParams = useParams();
   const orderId = (routeParams?.orderId as string) || '';
-  const { data, isLoading } = useOrderDetail(orderId);
+  const { data, isLoading, isError, error, refetch } = useOrderDetail(orderId);
   const [zoomPhoto, setZoomPhoto] = useState<{ url: string; title: string; notes?: string | null } | null>(null);
 
   if (isLoading) {
@@ -26,14 +26,8 @@ export default function PublicTrackingPage() {
   const currentStageIndex = order ? progressIndex(order.status) : 0;
   const isCancelled = order?.status === 'cancelled';
 
-  const isDelayed = (() => {
-    if (!order || order.status === 'delivered' || order.status === 'cancelled' || !order.delivery_date) return false;
-    const [year, month, day] = order.delivery_date.split('-').map(Number);
-    if (!year || !month || !day) return false;
-    const endHour = order.delivery_window === 'morning' ? 12 : 20;
-    const targetDeadline = new Date(year, month - 1, day, endHour, 0, 0);
-    return new Date() > targetDeadline;
-  })();
+  // Judged in Dallas time, not on the phone's clock (P05 AR-10)
+  const isDelayed = order ? isDeliveryLate(order) : false;
 
   return (
     <div className={styles.page}>
@@ -113,7 +107,7 @@ export default function PublicTrackingPage() {
                     <div>
                       <strong>
                         {order.status === 'delivered'
-                          ? 'Delivered on Schedule'
+                          ? 'Delivered'
                           : isDelayed
                           ? 'Delivery Delayed — Expediting Under Guarantee'
                           : 'Estimated Delivery'}
@@ -125,7 +119,9 @@ export default function PublicTrackingPage() {
                           ? 'Target delivery was '
                           : 'Target delivery by '}
                         <strong>
-                          {order.delivery_date} ({order.delivery_window || 'Evening'})
+                          {order.status === 'delivered'
+                            ? formatDeliveryDate(deliveredOnDate(order))
+                            : formatDeliveryDate(order.delivery_date, order.delivery_window)}
                         </strong>
                         {order.status === 'delivered'
                           ? ' • 100% Match-Ready'
@@ -227,6 +223,17 @@ export default function PublicTrackingPage() {
                 </Button>
               </Link>
             </div>
+          </Card>
+        ) : isError && !isNotFoundError(error) ? (
+          /* A failed load (rate limit, outage, no signal) is not a missing order (P05 AR-10) */
+          <Card variant="surface" padding="lg" className={styles.notFoundCard}>
+            <h3>We couldn&apos;t load this order</h3>
+            <p>
+              Please check your connection and try again. If it keeps happening, call us at {SUPPORT_PHONE}.
+            </p>
+            <Button variant="primary" onClick={() => refetch()}>
+              Try Again
+            </Button>
           </Card>
         ) : (
           <Card variant="surface" padding="lg" className={styles.notFoundCard}>

@@ -3,21 +3,21 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useOrderDetail, useCancelOrder } from '@/hooks/useOrders';
+import { useOrderDetail, useCancelOrder, isNotFoundError } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
-import { calculateOrderFinancials, ORDER_STATUSES, ROUTES } from '@/lib/constants';
-import { PROGRESS_STAGES, progressIndex } from '@/lib/order-progress';
+import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
+import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import styles from './page.module.css';
 
 export default function OrderDetailPage() {
   const routeParams = useParams();
   const id = (routeParams?.id as string) || '';
-  const { data, isLoading, error } = useOrderDetail(id);
+  const { data, isLoading, error, refetch } = useOrderDetail(id);
   const { data: claimsData } = useOrderClaims(id);
   const cancelOrderMutation = useCancelOrder();
   const addToast = useUIStore((s) => s.addToast);
@@ -25,6 +25,19 @@ export default function OrderDetailPage() {
 
   if (isLoading) {
     return <Loader fullScreen text="Loading live garment status..." />;
+  }
+
+  if (error && !isNotFoundError(error)) {
+    // A failed load (rate limit, outage, no signal) is not a missing order (P05 AR-10)
+    return (
+      <div className={styles.errorContainer}>
+        <h2>We couldn&apos;t load this order</h2>
+        <p>Please check your connection and try again. If it keeps happening, call us at {SUPPORT_PHONE}.</p>
+        <Button variant="primary" onClick={() => refetch()}>
+          Try Again
+        </Button>
+      </div>
+    );
   }
 
   if (error || !data?.order) {
@@ -48,15 +61,8 @@ export default function OrderDetailPage() {
     discountAmount: order.discount_amount || 0,
   });
 
-  const isDelayed = (() => {
-    if (order.status === 'delivered' || order.status === 'cancelled') return false;
-    if (!order.delivery_date) return false;
-    const [year, month, day] = order.delivery_date.split('-').map(Number);
-    if (!year || !month || !day) return false;
-    const endHour = order.delivery_window === 'morning' ? 12 : 20;
-    const targetDeadline = new Date(year, month - 1, day, endHour, 0, 0);
-    return new Date() > targetDeadline;
-  })();
+  // Judged in Dallas time, not on the phone's clock (P05 AR-10)
+  const isDelayed = isDeliveryLate(order);
 
   const handleConfirmCancel = async () => {
     try {
@@ -161,7 +167,7 @@ export default function OrderDetailPage() {
                 <div>
                   <strong>
                     {order.status === 'delivered'
-                      ? 'Delivered on Schedule'
+                      ? 'Delivered'
                       : isDelayed
                       ? '48-Hour Guarantee: Plant Rescheduling In Progress'
                       : '48-Hour Match-Ready Guarantee'}
@@ -173,7 +179,9 @@ export default function OrderDetailPage() {
                       ? 'Target delivery was '
                       : 'Target delivery by '}
                     <strong>
-                      {order.delivery_date} ({order.delivery_window || 'evening'})
+                      {order.status === 'delivered'
+                        ? formatDeliveryDate(deliveredOnDate(order))
+                        : formatDeliveryDate(order.delivery_date, order.delivery_window)}
                     </strong>
                     {order.status === 'delivered'
                       ? ' • 100% Make It Right Protected'
