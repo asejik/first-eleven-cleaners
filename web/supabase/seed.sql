@@ -15,7 +15,6 @@ ON CONFLICT (id) DO NOTHING;
 -- 2. SEED PROMO CODES
 INSERT INTO promo_codes (code, discount_type, discount_value, max_uses, is_active) VALUES
   ('KICKOFF15', 'percentage', 15.00, 10000, true),
-  ('MATCHREADY', 'percentage', 10.00, 5000, true),
   ('WELCOME5', 'fixed', 5.00, 2000, true)
 ON CONFLICT (code) DO NOTHING;
 

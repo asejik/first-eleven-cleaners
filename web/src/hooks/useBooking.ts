@@ -24,11 +24,12 @@ export function useAvailableSlots(date: string) {
 // 3. Validate Promo Code
 export function useValidatePromoCode() {
   return useMutation({
-    mutationFn: async (code: string) => {
+    mutationFn: async ({ code, email }: { code: string; email?: string }) => {
+      // The email lets the server apply the one-use-per-customer rule up front (P05 AR-02)
       const res = await fetch('/api/promo/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, email }),
       });
       const data = await res.json();
       if (!res.ok || !data.valid) {

@@ -16,6 +16,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
 import { earliestPickupDate } from '@/lib/schedule';
+import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
 
 // Helper to format local date to YYYY-MM-DD (avoiding UTC timezone shift)
 export function formatLocalDate(d: Date): string {
@@ -102,10 +103,13 @@ export function useBookingState() {
 
   // Step 4: Promo & Payment
   const [promoCodeInput, setPromoCodeInput] = useState(PROMO_CODE_LAUNCH);
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount_value: number } | null>({
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>({
     code: PROMO_CODE_LAUNCH,
+    discount_type: 'percentage',
     discount_value: 15,
   });
+  // Why a pre-applied code was removed (e.g. a first-order code already used), shown on Review
+  const [promoNotice, setPromoNotice] = useState<string | null>(null);
 
   // Step 5: Card Simulator
   const [cardNumber, setCardNumber] = useState('•••• •••• •••• 4242');
@@ -121,6 +125,7 @@ export function useBookingState() {
   // TanStack Query Hooks
   const { data: slotData } = useAvailableSlots(pickupDate);
   const validatePromoMutation = useValidatePromoCode();
+  const validatePromo = validatePromoMutation.mutateAsync;
   const submitBookingMutation = useSubmitBooking();
 
   // Load draft from sessionStorage on mount
@@ -262,12 +267,14 @@ export function useBookingState() {
   const isExpressActive = expressTier === 'express_24hr' && isExpressEligible;
   const effectiveExpressTier: 'standard' | 'express_24hr' = isExpressActive ? 'express_24hr' : 'standard';
 
-  const discountPercent = appliedPromo?.discount_value || 0;
+  // Fixed-dollar codes are dollars off, as the server applies them (SEC-15, P05 AR-02)
+  const { discountPercent, discountAmount: promoDiscountAmount } = promoFinancialInputs(appliedPromo);
 
   const financials = calculateOrderFinancials({
     subtotal,
     isExpress: isExpressActive,
     discountPercent,
+    discountAmount: promoDiscountAmount,
     frequency,
   });
 
@@ -286,15 +293,37 @@ export function useBookingState() {
   // Handle Promo Validation
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
+    setPromoNotice(null);
     try {
-      const result = await validatePromoMutation.mutateAsync(promoCodeInput.trim());
-      setAppliedPromo({ code: result.code, discount_value: result.discount_value });
+      const result = await validatePromoMutation.mutateAsync({ code: promoCodeInput.trim(), email });
+      setAppliedPromo({ code: result.code, discount_type: result.discount_type, discount_value: result.discount_value });
       addToast({ type: 'success', title: 'Promo Applied!', message: result.message });
     } catch (err: unknown) {
       setAppliedPromo(null);
       addToast({ type: 'error', title: 'Invalid Code', message: (err as Error).message });
     }
   };
+
+  // On reaching Review, re-check the applied code against this customer, so a code they
+  // have already used (e.g. first-order KICKOFF15) is removed before the card step instead
+  // of failing at Confirm (P05 AR-02)
+  const recheckPromoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (step !== 4 || !appliedPromo || !email) return;
+    const key = `${appliedPromo.code}|${email.trim().toLowerCase()}`;
+    if (recheckPromoRef.current === key) return;
+    recheckPromoRef.current = key;
+    const recheckPromo = async () => {
+      try {
+        await validatePromo({ code: appliedPromo.code, email });
+      } catch (err: unknown) {
+        setAppliedPromo(null);
+        setPromoCodeInput('');
+        setPromoNotice((err as Error).message);
+      }
+    };
+    recheckPromo();
+  }, [step, appliedPromo, email, validatePromo]);
 
   // Handle Final Booking Submission
   const handleCompleteBooking = async (
@@ -409,6 +438,7 @@ export function useBookingState() {
     setPromoCodeInput,
     appliedPromo,
     handleApplyPromo,
+    promoNotice,
     cardNumber,
     setCardNumber,
     cardExpiry,

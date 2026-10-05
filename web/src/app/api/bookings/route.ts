@@ -23,6 +23,7 @@ import { validateSchedule } from '@/lib/schedule';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
 import { phoneSchema } from '@/lib/phone';
+import { hasUsedPromo, promoUsedMessage } from '@/lib/promo';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -90,7 +91,7 @@ function bookingRefusal(
     case 'express_full':
       return { status: 400, error: `24-Hour Express capacity for ${schedule.pickup_date} has reached its daily limit of ${EXPRESS_DAILY_SLOT_CAP} orders. Please select 48-Hour Standard pickup.` };
     case 'promo_used':
-      return { status: 400, error: `Promo code ${promoCode} has already been used on this account. Please remove it and try again.` };
+      return { status: 400, error: `${promoUsedMessage(promoCode ?? '')} Please remove it and try again.` };
     case 'promo_exhausted':
       return { status: 409, error: `Promo code ${promoCode} has reached its usage limit. Please remove it and try again.` };
     default:
@@ -429,13 +430,7 @@ export async function POST(request: Request) {
         if (customerId) {
           // 1a. One use per customer per promo code (SEC-15)
           if (verifiedPromoCode) {
-            const { count: priorUses } = await supabase
-              .from('orders')
-              .select('id', { count: 'exact', head: true })
-              .eq('customer_id', customerId)
-              .eq('promo_code', verifiedPromoCode)
-              .neq('status', 'cancelled');
-            if ((priorUses ?? 0) > 0) {
+            if (await hasUsedPromo(supabase, customerId, verifiedPromoCode)) {
               const refusal = bookingRefusal('promo_used', validated.schedule, verifiedPromoCode);
               return NextResponse.json({ error: refusal.error }, { status: refusal.status });
             }

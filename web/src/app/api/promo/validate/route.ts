@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { apiError } from '@/lib/api-errors';
+import { hasUsedPromo, promoUsedMessage } from '@/lib/promo';
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { code } = await request.json();
+    const { code, email } = await request.json();
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ valid: false, message: 'Please provide a valid code.' }, { status: 400 });
     }
@@ -53,6 +55,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ valid: false, message: 'This promo code has reached its maximum usage limit.' });
           }
 
+          // One use per customer (SEC-15), checked here so the customer hears it before the
+          // card step instead of at Confirm (P05 AR-02). Signed in: their account. Signed out:
+          // a returning guest's record for this email (a registered email must log in to book).
+          const customerId = await resolveCustomerId(supabase, typeof email === 'string' ? email : null);
+          if (customerId && (await hasUsedPromo(supabase, customerId, cleanCode))) {
+            return NextResponse.json({ valid: false, already_used: true, message: promoUsedMessage(cleanCode) });
+          }
+
           const discountValue = Number(promo.discount_value);
           const discountMsg =
             promo.discount_type === 'percentage'
@@ -74,22 +84,19 @@ export async function POST(request: Request) {
 
     // 2. Fallback to hardcoded launch promo constants
     if (cleanCode === PROMO_CODE_LAUNCH) {
+      if (isSupabaseConfigured) {
+        const supabase = createAdminClient();
+        const customerId = await resolveCustomerId(supabase, typeof email === 'string' ? email : null);
+        if (customerId && (await hasUsedPromo(supabase, customerId, cleanCode))) {
+          return NextResponse.json({ valid: false, already_used: true, message: promoUsedMessage(cleanCode) });
+        }
+      }
       return NextResponse.json({
         valid: true,
         code: cleanCode,
         discount_type: 'percentage',
         discount_value: PROMO_DISCOUNT_PERCENT,
         message: `${PROMO_DISCOUNT_PERCENT}% first-order discount applied!`,
-      });
-    }
-
-    if (cleanCode === 'MATCHREADY') {
-      return NextResponse.json({
-        valid: true,
-        code: cleanCode,
-        discount_type: 'percentage',
-        discount_value: 10,
-        message: '10% match-ready discount applied!',
       });
     }
 
@@ -100,4 +107,25 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     return apiError('api/promo/validate', err, 400);
   }
+}
+
+async function resolveCustomerId(
+  supabase: ReturnType<typeof createAdminClient>,
+  email: string | null
+): Promise<string | null> {
+  try {
+    const authClient = await createClient();
+    const { data: { user } } = await authClient.auth.getUser();
+    if (user) {
+      const { data } = await supabase.from('customers').select('id').eq('auth_id', user.id).maybeSingle();
+      if (data?.id) return data.id;
+    }
+  } catch {
+    // No session: fall through to the guest lookup
+  }
+
+  const cleanEmail = email?.trim();
+  if (!cleanEmail) return null;
+  const { data: guest } = await supabase.from('customers').select('id, auth_id').eq('email', cleanEmail).maybeSingle();
+  return guest && !guest.auth_id ? guest.id : null;
 }
