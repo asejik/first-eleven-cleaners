@@ -73,7 +73,8 @@ import { calculateOrderFinancials } from '@/lib/constants';
 function booking(promo: string) {
   const todayTx = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
   const d = new Date(`${todayTx}T12:00:00`);
-  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  d.setDate(d.getDate() + 2); // first Monday at least 2 days ahead (standard minimum, PR-12)
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
   return new Request('http://localhost/api/bookings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

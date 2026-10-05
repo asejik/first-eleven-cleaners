@@ -67,7 +67,8 @@ import { POST } from '@/app/api/bookings/route';
 function nextMonday(): string {
   const todayTx = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
   const d = new Date(`${todayTx}T12:00:00`);
-  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  d.setDate(d.getDate() + 2); // first Monday at least 2 days ahead (standard minimum, PR-12)
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
   return d.toISOString().split('T')[0];
 }
 

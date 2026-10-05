@@ -19,6 +19,7 @@ import {
 import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
+import { validateSchedule } from '@/lib/schedule';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -234,24 +235,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5b. Server-Side Pickup Date Validation (F005 Fix)
+    // 5b. Server-side schedule rules in Dallas time: notice period, Sunday closure, Express
+    // weekdays / morning window / 7 AM & 9 PM cutoffs, 60-day horizon (PR-12)
     const todayTexasStr = texasDate();
-
-    if (validated.schedule.pickup_date < todayTexasStr) {
-      return NextResponse.json(
-        { error: 'Pickup date cannot be in the past. Please select an upcoming service date.' },
-        { status: 400 }
-      );
+    const scheduleCheck = validateSchedule({
+      pickupDate: validated.schedule.pickup_date,
+      pickupWindow: validated.schedule.pickup_window,
+      tier: validated.schedule.express_tier,
+    });
+    if (!scheduleCheck.ok) {
+      return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
     }
 
     const pickup = new Date(validated.schedule.pickup_date + 'T12:00:00');
     const dayOfWeek = pickup.getDay();
-    if (dayOfWeek === 0) {
-      return NextResponse.json(
-        { error: 'Our processing hub is closed on Sundays for maintenance. Please choose Monday through Saturday.' },
-        { status: 400 }
-      );
-    }
 
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
     const selectedDayName = dayNames[dayOfWeek];
