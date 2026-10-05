@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui';
 import styles from '@/app/mission-control/page.module.css';
 
 interface KPIStripProps {
@@ -8,22 +7,10 @@ interface KPIStripProps {
     today_revenue?: number;
     total_lbs?: number;
     total_pieces?: number;
-    labor?: {
-      status?: string;
-      current_pct?: number;
-      target_max_pct?: number;
-      estimated_cost?: number;
-    };
   } | null;
 }
 
 export function KPIStrip({ stats }: KPIStripProps) {
-  const labor = stats?.labor;
-  const isOptimal = labor?.status === 'optimal';
-  const currentPct = labor?.current_pct ?? 0;
-  const targetMaxPct = labor?.target_max_pct ?? 32;
-  const estimatedCost = labor?.estimated_cost ?? 0;
-
   return (
     <div className={styles.kpiGrid}>
       <div className={styles.kpiCard}>
@@ -44,26 +31,6 @@ export function KPIStrip({ stats }: KPIStripProps) {
         <span className={styles.kpiSub}>Inspected & hand-pressed</span>
       </div>
 
-      {/* Real-Time Labor Benchmark */}
-      <div className={styles.laborBarCard}>
-        <div className={styles.laborBarHeader}>
-          <span className={styles.kpiLabel}>Labor Benchmark Target</span>
-          <Badge variant={isOptimal ? 'success' : 'error'}>
-            {currentPct}% (Max: {targetMaxPct}%)
-          </Badge>
-        </div>
-        <div className={styles.laborTrack}>
-          <div
-            className={`${styles.laborFill} ${
-              isOptimal ? styles.laborFillOptimal : styles.laborFillAlert
-            }`}
-            style={{ width: `${Math.min(100, (currentPct || 28) * 2)}%` }}
-          />
-        </div>
-        <span className={styles.kpiSub}>
-          Est. Labor: ${estimatedCost.toFixed(2)} • Labor ≤ 32% of net sales
-        </span>
-      </div>
     </div>
   );
 }

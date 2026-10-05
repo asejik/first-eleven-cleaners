@@ -4,6 +4,8 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAppBaseUrl } from '@/lib/constants';
 import { apiError } from '@/lib/api-errors';
+import { syncOrderRefundStateFromSquare } from '@/lib/refunds';
+import { reportError } from '@/lib/error-reporting';
 
 /**
  * Validates the cryptographic Square HMAC-SHA256 signature using timing-safe comparison (SEC-007).
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
 
     if (isProduction && !hasValidKey) {
       console.error('[Square Webhook] SQUARE_WEBHOOK_SIGNATURE_KEY is missing in production');
+      reportError('payments/webhook', 'SQUARE_WEBHOOK_SIGNATURE_KEY is missing in production; Square events are being rejected', { alert: true });
       return NextResponse.json(
         { error: 'Square webhook configuration error: signature key missing' },
         { status: 500 }
@@ -91,13 +94,18 @@ export async function POST(request: Request) {
         const paymentStatus = paymentObj?.status;
 
         if (paymentId && paymentStatus === 'COMPLETED') {
+          // Square sends payment.updated when a refund changes refunded_money, sometimes after
+          // the refund event. Read the payment itself so the order mirrors Square (PR-05).
+          if (await syncOrderRefundStateFromSquare(supabase, paymentId)) break;
+
           const { data: matchedOrder } = await supabase
             .from('orders')
             .select('id, payment_status')
             .eq('payment_id', paymentId)
             .maybeSingle();
 
-          if (matchedOrder && matchedOrder.payment_status !== 'charged') {
+          // Never turn a refunded order back into charged
+          if (matchedOrder && matchedOrder.payment_status !== 'charged' && matchedOrder.payment_status !== 'refunded') {
             await supabase
               .from('orders')
               .update({
@@ -151,15 +159,10 @@ export async function POST(request: Request) {
             .maybeSingle();
 
           if (matchedOrder) {
-            // Update order payment status to refunded if completed or in-progress
-            if (refundStatus === 'COMPLETED' || !refundStatus) {
-              await supabase
-                .from('orders')
-                .update({
-                  payment_status: 'refunded',
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', matchedOrder.id);
+            // Refunded total and status come from Square itself: a partial refund keeps the
+            // order charged, a full refund marks it refunded (PR-05)
+            if (refundStatus === 'COMPLETED' || refundStatus === 'PENDING' || !refundStatus) {
+              await syncOrderRefundStateFromSquare(supabase, paymentId);
             }
 
             // Deduplication: Check if this specific refund ID has already been logged (F007 Fix)
@@ -213,9 +216,16 @@ export async function POST(request: Request) {
               await supabase.from('order_events').insert({
                 order_id: matchedOrder.id,
                 status: matchedOrder.status,
-                note: `Square Dispute ${disputeId} (${disputeState})${disputeAmount ? `: $${disputeAmount.toFixed(2)} under review` : ''}.`,
+                note: `⚠️ CARD DISPUTE: Square Dispute ${disputeId} (${disputeState})${disputeAmount ? `: $${disputeAmount.toFixed(2)} under review` : ''}. Respond in the Square Dashboard before the deadline.`,
                 triggered_by: 'Square Dispute Gateway',
               });
+              // Chargebacks have short response deadlines: alert an admin for every new dispute
+              // state (one alert source per dispute so one can't silence another) (PR-30)
+              reportError(
+                `payments/dispute/${disputeId}`,
+                `Card dispute ${disputeId} (${disputeState}) on Order #${matchedOrder.order_number || matchedOrder.id}${disputeAmount ? ` for $${disputeAmount.toFixed(2)}` : ''}. Respond in Square Dashboard → Disputes.`,
+                { alert: true }
+              );
             }
           }
         }
@@ -228,6 +238,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (err: unknown) {
+    reportError('payments/webhook', err, { alert: true });
     return apiError('api/payments/webhook', err, 400);
   }
 }

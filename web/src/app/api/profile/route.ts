@@ -5,10 +5,11 @@ import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
+import { phoneSchema } from '@/lib/phone';
 
 const ProfileUpdateSchema = z.object({
   full_name: personNameSchema,
-  phone: z.string().trim().min(7, 'Please enter a valid phone number').max(30),
+  phone: phoneSchema, // stored as E.164 (PR-18)
   preferred_channel: z.enum(['sms', 'whatsapp', 'email']).optional().default('sms'),
   promo_opt_in: z.boolean().optional().default(true),
 });

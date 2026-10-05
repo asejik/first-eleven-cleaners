@@ -62,23 +62,3 @@ export function useUpdateStaff() {
     },
   });
 }
-
-export function useDeleteStaff() {
-  const queryClient = useQueryClient();
-
-  return useMutation<{ success: boolean; message: string }, Error, string>({
-    mutationFn: async (id) => {
-      const res = await fetch(`/api/staff/${id}`, {
-        method: 'DELETE',
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Failed to remove staff member');
-      }
-      return json;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff', 'roster'] });
-    },
-  });
-}

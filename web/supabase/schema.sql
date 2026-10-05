@@ -1,11 +1,19 @@
 -- =================================================================
 -- FIRST ELEVEN CLEANERS — DATABASE SCHEMA (SUPABASE / POSTGRESQL)
 -- =================================================================
+-- Reference snapshot for building a NEW database from scratch (e.g. a dev
+-- project). The live database is changed only through the dated files in
+-- supabase/migrations/, which are the source of truth; keep this file in step
+-- with them. Verified 2026-10-05 (P03 PR-23): this file, followed by every
+-- migration in order, runs cleanly on a fresh Postgres 16 database.
+-- =================================================================
 
 -- Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. ZONES (DFW Service Coverage)
+-- NOT USED by the app: zone rules live in ZONE_CONFIG (src/lib/constants.ts).
+-- Only /api/health reads this table. Kept for a future admin-editable version.
 CREATE TABLE IF NOT EXISTS zones (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(100) NOT NULL,
@@ -102,6 +110,11 @@ CREATE TABLE IF NOT EXISTS orders (
   express_refund_reason TEXT,
   square_customer_id VARCHAR(255), -- card on file charged at intake (SEC-06)
   square_card_id VARCHAR(255),
+  refunded_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (refunded_amount >= 0), -- synced with Square (PR-05)
+  assigned_driver_id UUID REFERENCES customers(id) ON DELETE SET NULL, -- van holding the order (PR-19)
+  environmental_fee NUMERIC(10, 2), -- charged on this order (PR-15)
+  sales_tax NUMERIC(10, 2),
+  idempotency_key UUID, -- one per checkout; a resubmit returns the first order (PR-11)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -143,6 +156,7 @@ CREATE TABLE IF NOT EXISTS garment_photos (
 );
 
 -- 9. TIME SLOTS
+-- NOT USED by the app: capacity is counted from orders (src/app/api/bookings).
 CREATE TABLE IF NOT EXISTS time_slots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE NOT NULL,
@@ -181,6 +195,7 @@ CREATE TABLE IF NOT EXISTS commercial_accounts (
 );
 
 -- 12. STAFF
+-- NOT USED for access control: roles come from customers.role (SEC-02).
 CREATE TABLE IF NOT EXISTS staff (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
@@ -191,6 +206,7 @@ CREATE TABLE IF NOT EXISTS staff (
 );
 
 -- 13. CONVERSATIONS (Eleven Memory)
+-- NO LONGER WRITTEN: messages are stored one per row in the messages table (PR-26).
 CREATE TABLE IF NOT EXISTS conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
@@ -214,6 +230,8 @@ CREATE TABLE IF NOT EXISTS claims (
     status IN ('open', 'investigating', 'resolved', 'refunded')
   ),
   resolution_notes TEXT,
+  refund_amount NUMERIC(10, 2), -- PR-05
+  square_refund_id VARCHAR(255),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -248,7 +266,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 ALTER FUNCTION update_timestamp_column() SET search_path = public, pg_temp; -- SEC-17
 
 CREATE TRIGGER update_customers_modtime
@@ -445,3 +463,436 @@ $function$;
 
 REVOKE EXECUTE ON FUNCTION public.reserve_promo_use(TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.reserve_promo_use(TEXT) TO service_role;
+
+
+-- =================================================================
+-- OBJECTS ADDED BY MIGRATIONS (kept here so a new database matches live)
+-- =================================================================
+-- From 20260922_production_readiness_hardening.sql
+ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE commercial_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE time_slots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY zones_public_read ON zones FOR SELECT USING (is_active = true);
+CREATE POLICY promo_codes_public_read ON promo_codes FOR SELECT USING (is_active = true);
+CREATE POLICY conversations_customer_access ON conversations
+  FOR ALL USING (customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid()));
+CREATE POLICY staff_admin_read ON staff
+  FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
+CREATE POLICY commercial_accounts_staff_access ON commercial_accounts
+  FOR ALL USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role IN ('admin', 'staff')));
+CREATE POLICY error_logs_admin_read ON error_logs
+  FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
+
+CREATE INDEX IF NOT EXISTS idx_addresses_customer_id ON addresses(customer_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_claims_order_id ON claims(order_id);
+CREATE INDEX IF NOT EXISTS idx_claims_customer_id ON claims(customer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_customer_id ON conversations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_pickup_composite ON orders(pickup_date, pickup_window, status);
+CREATE INDEX IF NOT EXISTS idx_orders_express_lookup ON orders(pickup_date, express_tier, status);
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+  admin_email VARCHAR(255) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id VARCHAR(100) NOT NULL,
+  details JSONB DEFAULT '{}'::jsonb,
+  ip_address VARCHAR(50),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_target ON admin_audit_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
+ALTER TABLE admin_audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY admin_audit_logs_admin_view ON admin_audit_logs
+  FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
+
+-- Photo buckets: private, 10 MB images only
+-- (20261004_lock_storage_uploads.sql, 20261005_private_photo_buckets.sql)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    VALUES
+      ('garment-photos', 'garment-photos', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
+      ('claims-photos', 'claims-photos', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
+    ON CONFLICT (id) DO UPDATE
+      SET public = false, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
+  END IF;
+END $$;
+
+-- Browser roles keep only what they use (20261005_tighten_table_grants.sql)
+REVOKE TRUNCATE, TRIGGER, REFERENCES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE INSERT, UPDATE, DELETE ON TABLES FROM anon;
+GRANT UPDATE (full_name, phone, sms_consent, sms_promotions_consent, sms_consent_at) ON customers TO authenticated;
+
+-- Customer phones are stored in E.164 (20261005_normalize_customer_phones.sql, PR-18)
+CREATE OR REPLACE FUNCTION public.normalize_phone_e164(raw TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+  digits TEXT := regexp_replace(coalesce(raw, ''), '\D', '', 'g');
+BEGIN
+  IF btrim(coalesce(raw, '')) LIKE '+%' THEN
+    IF digits LIKE '1%' THEN
+      RETURN CASE WHEN length(digits) = 11 THEN '+' || digits END;
+    END IF;
+    RETURN CASE WHEN length(digits) BETWEEN 8 AND 15 THEN '+' || digits END;
+  END IF;
+  IF length(digits) = 10 THEN RETURN '+1' || digits; END IF;
+  IF length(digits) = 11 AND digits LIKE '1%' THEN RETURN '+' || digits; END IF;
+  RETURN NULL;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.customers_normalize_phone()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $function$
+BEGIN
+  NEW.phone := coalesce(public.normalize_phone_e164(NEW.phone), NEW.phone);
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS customers_normalize_phone ON customers;
+CREATE TRIGGER customers_normalize_phone
+  BEFORE INSERT OR UPDATE OF phone ON customers
+  FOR EACH ROW EXECUTE FUNCTION public.customers_normalize_phone();
+
+REVOKE EXECUTE ON FUNCTION public.customers_normalize_phone() FROM PUBLIC, anon, authenticated;
+
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+CREATE INDEX IF NOT EXISTS idx_orders_assigned_driver ON orders(assigned_driver_id) WHERE assigned_driver_id IS NOT NULL;
+
+-- admin_audit_logs is append-only (20261005_admin_audit_immutable.sql, PR-24)
+CREATE OR REPLACE FUNCTION public.admin_audit_logs_block_changes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $function$
+BEGIN
+  RAISE EXCEPTION 'admin_audit_logs is append-only: % is not allowed', TG_OP
+    USING ERRCODE = 'insufficient_privilege';
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_audit_logs_block_changes() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS admin_audit_logs_no_update_delete ON admin_audit_logs;
+CREATE TRIGGER admin_audit_logs_no_update_delete
+  BEFORE UPDATE OR DELETE ON admin_audit_logs
+  FOR EACH ROW EXECUTE FUNCTION public.admin_audit_logs_block_changes();
+
+DROP TRIGGER IF EXISTS admin_audit_logs_no_truncate ON admin_audit_logs;
+CREATE TRIGGER admin_audit_logs_no_truncate
+  BEFORE TRUNCATE ON admin_audit_logs
+  FOR EACH STATEMENT EXECUTE FUNCTION public.admin_audit_logs_block_changes();
+
+
+-- Dashboard aggregates (20261005_dashboard_summaries.sql, PR-14)
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
+
+CREATE OR REPLACE FUNCTION public.mission_control_summary(p_today DATE)
+RETURNS JSON
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $function$
+  SELECT json_build_object(
+    'active_count', (SELECT count(*) FROM orders WHERE status NOT IN ('delivered', 'cancelled')),
+    'total_count', (SELECT count(*) FROM orders),
+    'today_sales', (
+      SELECT coalesce(sum(total), 0) FROM orders
+      WHERE status <> 'cancelled'
+        AND ((created_at AT TIME ZONE 'America/Chicago')::date = p_today OR pickup_date = p_today)
+    ),
+    'active_lbs', (SELECT coalesce(sum(weight_lbs), 0) FROM orders WHERE status NOT IN ('delivered', 'cancelled')),
+    'active_pieces', (
+      SELECT coalesce(sum(oi.quantity), 0)
+      FROM order_items oi JOIN orders o ON o.id = oi.order_id
+      WHERE o.status NOT IN ('delivered', 'cancelled') AND oi.service_type = 'dry_clean'
+    ),
+    'net_revenue', (
+      SELECT coalesce(sum(total - refunded_amount), 0) FROM orders WHERE payment_status IN ('charged', 'refunded')
+    )
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.order_financial_summary(p_from DATE, p_to DATE)
+RETURNS JSON
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $function$
+  WITH o AS (
+    SELECT *, payment_status IN ('charged', 'refunded') AS collected
+    FROM orders
+    WHERE (created_at AT TIME ZONE 'America/Chicago')::date BETWEEN p_from AND p_to
+  )
+  SELECT json_build_object(
+    'gross_revenue', coalesce(sum(total) FILTER (WHERE collected), 0),
+    'refunded_total', coalesce(sum(refunded_amount) FILTER (WHERE collected), 0),
+    'net_revenue', coalesce(sum(total - refunded_amount) FILTER (WHERE collected), 0),
+    'sales_tax_collected', coalesce(sum(sales_tax) FILTER (WHERE collected), 0),
+    'environmental_fees_collected', coalesce(sum(environmental_fee) FILTER (WHERE collected), 0),
+    'in_vault', coalesce(sum(total) FILTER (WHERE payment_status IN ('authorized', 'pending') AND status <> 'cancelled'), 0),
+    'charged_count', count(*) FILTER (WHERE payment_status = 'charged'),
+    'authorized_count', count(*) FILTER (WHERE payment_status IN ('authorized', 'pending') AND status <> 'cancelled'),
+    'failed_count', count(*) FILTER (WHERE payment_status = 'failed'),
+    'refunded_count', count(*) FILTER (WHERE payment_status = 'refunded'),
+    'total_transactions', count(*),
+    'aov', CASE WHEN count(*) FILTER (WHERE collected) > 0
+                THEN round(sum(total) FILTER (WHERE collected) / count(*) FILTER (WHERE collected), 2)
+                ELSE 0 END
+  )
+  FROM o;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.mission_control_summary(DATE) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.order_financial_summary(DATE, DATE) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.mission_control_summary(DATE) TO service_role;
+GRANT EXECUTE ON FUNCTION public.order_financial_summary(DATE, DATE) TO service_role;
+
+-- Bookings are created in one transaction; a repeated checkout returns the first order
+-- (20261005_atomic_booking.sql, PR-10 / PR-11)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key ON orders(idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION public.create_booking(p JSONB)
+RETURNS JSONB
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+  v_key UUID := nullif(p->>'idempotency_key', '')::UUID;
+  v_date DATE := (p->'order'->>'pickup_date')::DATE;
+  v_window TEXT := p->'order'->>'pickup_window';
+  v_customer UUID := (p->'order'->>'customer_id')::UUID;
+  v_promo TEXT := nullif(p->'order'->>'promo_code', '');
+  v_count INT;
+  v_order orders%ROWTYPE;
+BEGIN
+  -- One booking at a time per pickup day, so capacity checks can't race
+  PERFORM pg_advisory_xact_lock(hashtext('f11_booking_' || v_date::TEXT));
+
+  -- Same checkout submitted again: return the order it already created
+  IF v_key IS NOT NULL THEN
+    SELECT * INTO v_order FROM orders WHERE idempotency_key = v_key;
+    IF FOUND THEN
+      RETURN jsonb_build_object('ok', true, 'replay', true, 'order', jsonb_build_object(
+        'id', v_order.id, 'order_number', v_order.order_number, 'total', v_order.total, 'status', v_order.status,
+        'customer_id', v_order.customer_id));
+    END IF;
+  END IF;
+
+  SELECT count(*) INTO v_count FROM orders
+  WHERE pickup_date = v_date AND pickup_window = v_window AND status <> 'cancelled';
+  IF v_count >= (p->>'window_capacity')::INT THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'window_full');
+  END IF;
+
+  IF p->'order'->>'express_tier' = 'express_24hr' THEN
+    SELECT count(*) INTO v_count FROM orders
+    WHERE pickup_date = v_date AND express_tier = 'express_24hr' AND status <> 'cancelled';
+    IF v_count >= (p->>'express_capacity')::INT THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'express_full');
+    END IF;
+  END IF;
+
+  IF v_promo IS NOT NULL THEN
+    IF EXISTS (SELECT 1 FROM orders WHERE customer_id = v_customer AND promo_code = v_promo AND status <> 'cancelled') THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'promo_used');
+    END IF;
+    IF coalesce((p->>'reserve_promo')::BOOLEAN, false) AND NOT public.reserve_promo_use(v_promo) THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'promo_exhausted');
+    END IF;
+  END IF;
+
+  INSERT INTO orders (
+    order_number, customer_id, address_id, status, order_type, pickup_date, pickup_window,
+    delivery_date, delivery_window, weight_lbs, subtotal, express_tier, promo_code, discount_amount,
+    express_surcharge, environmental_fee, sales_tax, total, payment_id, payment_status,
+    square_customer_id, square_card_id, notes, idempotency_key
+  )
+  SELECT
+    r.order_number, r.customer_id, r.address_id, 'booked', r.order_type, r.pickup_date, r.pickup_window,
+    r.delivery_date, r.delivery_window, r.weight_lbs, r.subtotal, r.express_tier, r.promo_code,
+    coalesce(r.discount_amount, 0), coalesce(r.express_surcharge, 0), r.environmental_fee, r.sales_tax,
+    r.total, r.payment_id, coalesce(r.payment_status, 'pending'), r.square_customer_id, r.square_card_id,
+    r.notes, v_key
+  FROM jsonb_populate_record(NULL::orders, p->'order') r
+  RETURNING * INTO v_order;
+
+  INSERT INTO order_items (order_id, garment_type, service_type, quantity, unit_price, subtotal, notes)
+  SELECT v_order.id, i.garment_type, i.service_type, i.quantity, i.unit_price, i.subtotal, i.notes
+  FROM jsonb_populate_recordset(NULL::order_items, coalesce(p->'items', '[]'::jsonb)) i;
+
+  INSERT INTO order_events (order_id, status, note, triggered_by)
+  VALUES (v_order.id, 'booked', p->'event'->>'note', coalesce(p->'event'->>'triggered_by', 'system'));
+
+  RETURN jsonb_build_object('ok', true, 'replay', false, 'order', jsonb_build_object(
+    'id', v_order.id, 'order_number', v_order.order_number, 'total', v_order.total, 'status', v_order.status,
+    'customer_id', v_order.customer_id));
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.create_booking(JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_booking(JSONB) TO service_role;
+
+-- One row per message; replaces the conversations.messages array
+-- (20261005_messages_table.sql, PR-26). conversations is no longer written.
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  channel VARCHAR(20) NOT NULL CHECK (channel IN ('web', 'sms', 'whatsapp')),
+  direction VARCHAR(10) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+  body TEXT NOT NULL DEFAULT '',
+  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+  stage VARCHAR(50),
+  media_url TEXT,
+  mode VARCHAR(50), -- simulated, live, ai_reply, ai_escalation, growth_winback ...
+  external_id VARCHAR(100), -- Twilio message SID, or the id from the old array
+  from_address VARCHAR(100),
+  to_address VARCHAR(100),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_customer_channel ON messages(customer_id, channel, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_order_id ON messages(order_id) WHERE order_id IS NOT NULL;
+
+-- Server writes only; a signed-in customer may read their own messages
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS messages_customer_read ON messages;
+CREATE POLICY messages_customer_read ON messages
+  FOR SELECT USING (customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid()));
+REVOKE ALL ON messages FROM anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON messages FROM authenticated;
+
+-- Privacy request tools: export and anonymize a customer (20261005_privacy_tools.sql, PR-25).
+-- How to use them: supabase/runbooks/privacy-requests.md
+CREATE OR REPLACE FUNCTION public.export_customer_data(p_customer_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+  v_result JSONB;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM customers WHERE id = p_customer_id) THEN
+    RAISE EXCEPTION 'No customer with id %', p_customer_id;
+  END IF;
+
+  SELECT jsonb_build_object(
+    'generated_at', now(),
+    'customer', (SELECT to_jsonb(c) FROM customers c WHERE c.id = p_customer_id),
+    'preferences', (SELECT to_jsonb(p) FROM customer_preferences p WHERE p.customer_id = p_customer_id),
+    'addresses', coalesce((SELECT jsonb_agg(to_jsonb(a) ORDER BY a.created_at)
+                           FROM addresses a WHERE a.customer_id = p_customer_id), '[]'::jsonb),
+    'orders', coalesce((
+      SELECT jsonb_agg(to_jsonb(o) || jsonb_build_object(
+        'items', coalesce((SELECT jsonb_agg(to_jsonb(i)) FROM order_items i WHERE i.order_id = o.id), '[]'::jsonb),
+        'events', coalesce((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.timestamp) FROM order_events e WHERE e.order_id = o.id), '[]'::jsonb),
+        'photos', coalesce((SELECT jsonb_agg(to_jsonb(g) ORDER BY g.captured_at) FROM garment_photos g WHERE g.order_id = o.id), '[]'::jsonb)
+      ) ORDER BY o.created_at)
+      FROM orders o WHERE o.customer_id = p_customer_id), '[]'::jsonb),
+    'claims', coalesce((SELECT jsonb_agg(to_jsonb(cl) ORDER BY cl.created_at)
+                        FROM claims cl WHERE cl.customer_id = p_customer_id), '[]'::jsonb),
+    'conversations', coalesce((SELECT jsonb_agg(to_jsonb(cv) ORDER BY cv.created_at)
+                               FROM conversations cv WHERE cv.customer_id = p_customer_id), '[]'::jsonb),
+    'messages', coalesce((SELECT jsonb_agg(to_jsonb(ms) ORDER BY ms.created_at)
+                          FROM messages ms WHERE ms.customer_id = p_customer_id), '[]'::jsonb)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.anonymize_customer(p_customer_id UUID, p_request_id TEXT DEFAULT NULL)
+RETURNS JSONB
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+  v_customer customers%ROWTYPE;
+  v_photos TEXT[];
+  v_orders INT;
+BEGIN
+  SELECT * INTO v_customer FROM customers WHERE id = p_customer_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'No customer with id %', p_customer_id;
+  END IF;
+  IF v_customer.role <> 'customer' THEN
+    RAISE EXCEPTION 'This is a staff account (%). Remove it from Staff first.', v_customer.role;
+  END IF;
+  IF EXISTS (SELECT 1 FROM orders WHERE customer_id = p_customer_id AND status NOT IN ('delivered', 'cancelled')) THEN
+    RAISE EXCEPTION 'This customer has orders still in progress. Deliver or cancel them first.';
+  END IF;
+
+  -- Photo files to delete from Storage (the database only holds their URLs)
+  SELECT coalesce(array_agg(DISTINCT url), '{}') INTO v_photos FROM (
+    SELECT g.photo_url AS url FROM garment_photos g JOIN orders o ON o.id = g.order_id WHERE o.customer_id = p_customer_id
+    UNION ALL
+    SELECT unnest(cl.photo_urls) FROM claims cl WHERE cl.customer_id = p_customer_id
+  ) urls WHERE url IS NOT NULL AND url <> '';
+
+  DELETE FROM garment_photos g USING orders o WHERE o.id = g.order_id AND o.customer_id = p_customer_id;
+  UPDATE claims SET description = '[removed at customer request]', photo_urls = '{}', updated_at = now()
+  WHERE customer_id = p_customer_id;
+  DELETE FROM conversations WHERE customer_id = p_customer_id;
+  DELETE FROM messages WHERE customer_id = p_customer_id;
+  DELETE FROM customer_preferences WHERE customer_id = p_customer_id;
+
+  -- City, state and ZIP stay: they decide which tax and zone applied to past orders
+  UPDATE addresses SET street = '[removed]', unit = NULL, delivery_notes = NULL, lat = NULL, lng = NULL
+  WHERE customer_id = p_customer_id;
+
+  -- Orders and their amounts stay for tax records; the card link and free-text notes go
+  UPDATE orders SET notes = NULL, square_customer_id = NULL, square_card_id = NULL, updated_at = now()
+  WHERE customer_id = p_customer_id;
+  GET DIAGNOSTICS v_orders = ROW_COUNT;
+
+  UPDATE customers SET
+    full_name = 'Deleted customer',
+    email = 'deleted-' || id::TEXT || '@deleted.invalid',
+    phone = NULL,
+    auth_id = NULL,
+    sms_consent = false,
+    sms_promotions_consent = false,
+    sms_consent_at = NULL,
+    square_customer_id = NULL,
+    updated_at = now()
+  WHERE id = p_customer_id;
+
+  INSERT INTO admin_audit_logs (admin_id, admin_email, action, target_type, target_id, details)
+  VALUES (NULL, 'database: anonymize_customer', 'customer_anonymized', 'customer', p_customer_id::TEXT,
+          jsonb_build_object('request_id', p_request_id, 'orders_kept', v_orders, 'photo_files', cardinality(v_photos)));
+
+  RETURN jsonb_build_object(
+    'customer_id', p_customer_id,
+    'orders_kept', v_orders,
+    'delete_login_user_id', v_customer.auth_id,
+    'delete_square_customer_id', v_customer.square_customer_id,
+    'delete_photo_files', to_jsonb(v_photos)
+  );
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.export_customer_data(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.anonymize_customer(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.export_customer_data(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.anonymize_customer(UUID, TEXT) TO service_role;

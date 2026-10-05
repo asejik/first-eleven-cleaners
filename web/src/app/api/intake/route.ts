@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
@@ -15,7 +16,31 @@ import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
+import { checkIntakeAllowed } from '@/lib/order-lifecycle';
+import { texasDate, texasDayStartUtc } from '@/lib/texas-time';
+import { runAfterResponse } from '@/lib/after-response';
+import { reportError } from '@/lib/error-reporting';
 
+
+const IntakeSchema = z.object({
+  order_id: z.guid('A valid order_id is required'),
+  weight_lbs: z.number({ message: 'Weight must be a number of pounds' }).min(0, 'Weight cannot be negative').max(500, 'Weight looks too high; please re-check the scale').default(0),
+  dry_clean_items: z
+    .array(
+      z.object({
+        garment_type: z.string().min(1).max(100),
+        quantity: z.number().int().min(0).max(500),
+        notes: z.string().max(500).optional(),
+      })
+    )
+    .max(100)
+    .default([]),
+  photos: z
+    .array(z.object({ photo_url: z.string().min(1), condition_notes: z.string().max(1000).optional() }))
+    .max(20)
+    .default([]),
+  intake_notes: z.string().max(2000).default(''),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -27,35 +52,41 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Fetch orders ready for intake inspection or recently in plant
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select(`
+    // Only what the station shows, filtered and capped in SQL (PR-14): the queue of picked-up
+    // bags, the 50 most recently inspected orders, and today's inspection count.
+    const intakeSelect = `
         *,
         customer:customers(*),
         address:addresses(*),
         items:order_items(*),
         photos:garment_photos(*)
-      `)
-      .order('created_at', { ascending: false });
+      `;
+    const todayStart = texasDayStartUtc(texasDate()); // Dallas calendar day (PR-13)
+    const [queueRes, historyRes, todayRes] = await Promise.all([
+      supabase.from('orders').select(intakeSelect).eq('status', 'picked_up').order('created_at', { ascending: true }),
+      supabase
+        .from('orders')
+        .select(intakeSelect)
+        .in('status', ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'])
+        .order('updated_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('order_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'weighed_itemized')
+        .gte('timestamp', todayStart),
+    ]);
 
-    if (error) {
-      console.error('Intake GET error:', error);
-      return NextResponse.json({ queue: [], allOrders: [] });
+    if (queueRes.error || historyRes.error) {
+      console.error('Intake GET error:', queueRes.error || historyRes.error);
+      return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 });
     }
 
-    // Queue of bags ready for intake at the plant (must have been picked up by a driver)
-    const queue = (orders || []).filter((o) => o.status === 'picked_up');
+    const queue = queueRes.data || [];
+    const intakeHistory = historyRes.data || [];
+    const todayIntakeCount = todayRes.count ?? 0;
 
-    // Orders that have completed intake inspection
-    const intakeHistory = (orders || []).filter(
-      (o) => o.status === 'weighed_itemized' || o.status === 'in_cleaning' || o.status === 'out_for_delivery' || o.status === 'delivered'
-    );
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayIntakeCount = intakeHistory.filter((o) => o.updated_at && o.updated_at.startsWith(todayStr)).length;
-
-    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount, allOrders: orders || [] }));
+    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount }));
   } catch (err) {
     console.error('Intake API error:', err);
     return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 }, { status: 500 });
@@ -67,18 +98,14 @@ export async function POST(request: Request) {
     const auth = await verifyApiAuth(['intake_staff', 'admin'], request);
     if (auth.errorResponse) return auth.errorResponse;
 
-    const body = await request.json();
-    const {
-      order_id,
-      weight_lbs = 0,
-      dry_clean_items = [],
-      photos = [],
-      intake_notes = '',
-    } = body;
-
-    if (!order_id) {
-      return NextResponse.json({ error: 'order_id is required' }, { status: 400 });
+    const parsed = IntakeSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Please check the intake details.' },
+        { status: 400 }
+      );
     }
+    const { order_id, weight_lbs, dry_clean_items, photos, intake_notes } = parsed.data;
 
     const supabase = createAdminClient();
 
@@ -112,19 +139,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Business rule: Intake inspection requires driver to have picked up the bag
-    if (order.status === 'booked') {
-      return NextResponse.json(
-        { error: 'Cannot process intake: Bag has not been picked up yet. Driver must complete pickup first.' },
-        { status: 400 }
-      );
+    // Business rule: intake runs on a picked-up bag, or re-weighs a weighed order that
+    // hasn't been charged yet. Never on paid, cancelled or delivered orders (PR-02).
+    const intakeCheck = checkIntakeAllowed(order.status, order.payment_status);
+    if (!intakeCheck.ok) {
+      return NextResponse.json({ error: intakeCheck.error }, { status: order.status === 'booked' ? 400 : 409 });
     }
 
     // 2. Calculate Pricing
+    // Wash & fold is billed only when laundry was actually weighed (15 lb minimum applies then).
+    // A "Both" order that arrives with dry cleaning only is not charged for laundry (PR-03).
     let washFoldSubtotal = 0;
-    if (weight_lbs > 0 || order.order_type === 'wash_fold' || order.order_type === 'mixed') {
-      const billedWeight = Math.max(WASH_FOLD_MINIMUM_LBS, Number(weight_lbs) || 0);
-      washFoldSubtotal = billedWeight * WASH_FOLD_PRICE_PER_LB;
+    if (weight_lbs > 0) {
+      const billedWeight = Math.max(WASH_FOLD_MINIMUM_LBS, weight_lbs);
+      washFoldSubtotal = Number((billedWeight * WASH_FOLD_PRICE_PER_LB).toFixed(2));
     }
 
     let dryCleanSubtotal = 0;
@@ -138,9 +166,23 @@ export async function POST(request: Request) {
       notes?: string;
     }> = [];
 
+    if (washFoldSubtotal > 0) {
+      orderItemsToInsert.push({
+        order_id: order.id,
+        garment_type: 'wash_fold',
+        service_type: 'wash_fold',
+        quantity: 1,
+        unit_price: WASH_FOLD_PRICE_PER_LB,
+        subtotal: washFoldSubtotal,
+        notes: weight_lbs < WASH_FOLD_MINIMUM_LBS
+          ? `${weight_lbs} lbs wash & fold laundry (${WASH_FOLD_MINIMUM_LBS} lb minimum)`
+          : `${weight_lbs} lbs wash & fold laundry`,
+      });
+    }
+
     if (Array.isArray(dry_clean_items)) {
-      dry_clean_items.forEach((item: { garment_type: string; quantity: number; notes?: string }) => {
-        const qty = Number(item.quantity) || 0;
+      dry_clean_items.forEach((item) => {
+        const qty = item.quantity;
         if (qty > 0) {
           const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
           const unitPrice = priceMeta ? priceMeta.price : 8.99;
@@ -203,21 +245,29 @@ export async function POST(request: Request) {
     }
 
     // 4. Insert Garment Photos (Resolving base64 to Supabase Storage CDN)
+    let unsavedPhotoCount = 0;
+    let savedPhotoUrls: string[] = [];
     if (Array.isArray(photos) && photos.length > 0) {
-      const photosToInsert = await Promise.all(
-        photos.map(async (p: { photo_url: string; condition_notes?: string }) => {
+      const resolvedPhotos = await Promise.all(
+        photos.map(async (p) => {
           const resolvedUrl = await resolveAndUploadPhotoUrl(p.photo_url, order.id, 'intake');
+          if (!resolvedUrl) return null; // never store a raw data URL (PR-06)
           return {
             order_id: order.id,
             photo_type: 'intake',
-            photo_url: resolvedUrl || p.photo_url,
+            photo_url: resolvedUrl,
             condition_notes: p.condition_notes || intake_notes || 'Intake Passport Verification',
             captured_by: 'Plant Intake Specialist',
           };
         })
       );
 
-      await supabase.from('garment_photos').insert(photosToInsert);
+      const photosToInsert = resolvedPhotos.filter((p): p is NonNullable<typeof p> => p !== null);
+      unsavedPhotoCount = photos.length - photosToInsert.length;
+      savedPhotoUrls = photosToInsert.map((p) => p.photo_url);
+      if (photosToInsert.length > 0) {
+        await supabase.from('garment_photos').insert(photosToInsert);
+      }
     }
 
     // 5. Automatic Payment Capture on Card on File
@@ -244,6 +294,7 @@ export async function POST(request: Request) {
           } else {
             failureReason = charge.ok ? `Square payment status ${charge.status}` : charge.error;
             console.error('Square card-on-file charge declined in intake:', failureReason);
+            reportError('intake/payment-hold', failureReason, { alert: true, details: `Order ${order.order_number || order.id} is on Payment Hold` });
             paymentStatus = 'failed';
           }
         } else {
@@ -292,13 +343,15 @@ export async function POST(request: Request) {
       ? `[PAYMENT HOLD: Card authorization declined for $${finalTotal.toFixed(2)}] ${intake_notes || order.notes || ''}`.trim()
       : (intake_notes || order.notes);
 
-    await supabase
+    const { data: updatedRows, error: updateErr } = await supabase
       .from('orders')
       .update({
-        weight_lbs: Number(weight_lbs) || null,
+        weight_lbs: weight_lbs || null,
         subtotal,
         express_surcharge: financials.expressSurcharge,
         discount_amount: financials.discountAmount,
+        environmental_fee: financials.environmentalFee, // PR-15
+        sales_tax: financials.salesTax,
         total: finalTotal,
         status: 'weighed_itemized',
         payment_status: paymentStatus,
@@ -306,15 +359,27 @@ export async function POST(request: Request) {
         notes: effectiveNotes,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .eq('status', order.status)
+      .select('id');
+
+    if (updateErr || !updatedRows || updatedRows.length === 0) {
+      // The card may already have been charged above; the Square payment ID is in the logs and events
+      console.error(`[Intake] Order ${order.id} changed during intake or could not be saved (payment ${paymentStatus}, ${paymentId}):`, updateErr);
+      reportError('api/intake', updateErr || 'Order changed during intake', { alert: true, details: `Order ${order.order_number || order.id}: payment ${paymentStatus} ${paymentId || ''}; check Square before retrying` });
+      return NextResponse.json(
+        { error: 'This order changed while intake was running. Refresh the queue and check the order before retrying.' },
+        { status: 409 }
+      );
+    }
 
     // 7. Log Timeline Events
     await supabase.from('order_events').insert({
       order_id: order.id,
       status: 'weighed_itemized',
       note: isPaymentFailed
-        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized ($${subtotal.toFixed(2)}). ORDER ON PAYMENT HOLD: Card declined.`
-        : `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
+        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized ($${subtotal.toFixed(2)}). ORDER ON PAYMENT HOLD: Card declined.`
+        : `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
       triggered_by: intakeAuthor,
     });
 
@@ -325,32 +390,34 @@ export async function POST(request: Request) {
       const rawCustomer = order.customer;
       const customer = (Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer) as { full_name?: string; phone?: string; email?: string } | null;
       const origin = getAppBaseUrl();
-      const primaryPhotoUrl = photos?.[0]?.photo_url;
+      const primaryPhotoUrl = savedPhotoUrls[0];
 
       const customAlertText = isPaymentFailed
-        ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but card authorization failed. Please update your payment method here to start cleaning: ${origin}/dashboard/billing`
+        ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but your card was declined. Please pay securely here so we can start cleaning: ${origin}/track/${order.id}`
         : undefined;
 
       const payload: MessagePayload = {
         orderId: order.id,
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customer?.full_name || 'Valued Customer',
-        customerPhone: customer?.phone || '+12145550199',
+        customerPhone: customer?.phone || '',
+        // No phone on file: email only, never a placeholder number (PR-22)
+        ...(customer?.phone ? {} : { smsConsent: false }),
         customerEmail: customer?.email,
         stage: 'weighed_itemized',
         pickupDate: order.pickup_date,
         pickupWindow: order.pickup_window,
         deliveryDate: order.delivery_date,
         deliveryWindow: order.delivery_window,
-        weightLbs: Number(weight_lbs) || null,
-        itemCount: orderItemsToInsert.reduce((acc, i) => acc + i.quantity, 0),
+        weightLbs: weight_lbs || null,
+        itemCount: orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').reduce((acc, i) => acc + i.quantity, 0),
         total: finalTotal,
         photoUrl: primaryPhotoUrl,
-        trackingUrl: isPaymentFailed ? `${origin}/dashboard/billing` : `${origin}/track/${order.id}`,
+        trackingUrl: `${origin}/track/${order.id}`,
         customMessage: customAlertText,
       };
 
-      await messagingService.dispatchStageNotification(payload);
+      runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'intake notification');
     }
 
     return NextResponse.json({
@@ -362,9 +429,10 @@ export async function POST(request: Request) {
       payment_id: paymentId,
       subtotal,
       total: finalTotal,
-      warning: isPaymentFailed
-        ? `Automatic card authorization failed ($${finalTotal.toFixed(2)}). Order is on Payment Hold.`
-        : undefined,
+      warning: [
+        isPaymentFailed ? `Automatic card authorization failed ($${finalTotal.toFixed(2)}). Order is on Payment Hold.` : null,
+        unsavedPhotoCount > 0 ? `${unsavedPhotoCount} photo(s) could not be saved. Please retake and re-upload them.` : null,
+      ].filter(Boolean).join(' ') || undefined,
     });
   } catch (err: unknown) {
     console.error('Intake POST error:', err);

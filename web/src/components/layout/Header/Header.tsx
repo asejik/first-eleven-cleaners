@@ -9,6 +9,7 @@ import { Button, Badge } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import type { UserRole } from '@/types';
 import styles from './Header.module.css';
+import { COMMERCIAL_PORTAL_ENABLED } from '@/lib/features';
 
 const emptySubscribe = () => () => {};
 
@@ -48,7 +49,7 @@ export function Header() {
       { href: ROUTES.missionControl, label: '⚡ Mission Control' },
       { href: ROUTES.intake, label: '⚖️ Intake' },
       { href: ROUTES.staffDriver, label: '🚐 Driver' },
-      { href: ROUTES.portal, label: '🏢 B2B Portal' },
+      ...(COMMERCIAL_PORTAL_ENABLED ? [{ href: ROUTES.portal, label: '🏢 B2B Portal' }] : []),
       { href: `${ROUTES.dashboard}?view=customer`, label: '👤 Customer Preview' },
     ];
   } else {

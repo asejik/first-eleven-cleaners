@@ -65,7 +65,7 @@ export function generatePostDeliveryReviewPrompt(
 ): ReviewPromptPayload {
   const firstName = customerName.split(' ')[0] || 'there';
   const googleReviewUrl = 'https://g.page/r/firstelevencleaners/review';
-  const messageText = `Hi ${firstName}! Marcus delivered Order #${orderNumber} fresh & match-ready to your porch. How was your experience today? Tap to leave a quick review & help our Dallas fleet: ${googleReviewUrl}`;
+  const messageText = `Hi ${firstName}! Order #${orderNumber} was delivered fresh & match-ready to your porch. How was your experience today? Tap to leave a quick review & help our Dallas fleet: ${googleReviewUrl}`;
 
   return {
     orderId,

@@ -5,8 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get('date');
-  const capParam = searchParams.get('express_cap');
-  const expressCapacity = capParam ? parseInt(capParam, 10) : EXPRESS_DAILY_SLOT_CAP;
+  // Same cap the booking server enforces; not adjustable from the query string (PR-09)
+  const expressCapacity = EXPRESS_DAILY_SLOT_CAP;
 
   if (!dateParam) {
     return NextResponse.json({ error: 'date query parameter is required (YYYY-MM-DD)' }, { status: 400 });

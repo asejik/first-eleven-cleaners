@@ -7,12 +7,16 @@ import { getAppBaseUrl } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
+import { texasDate } from '@/lib/texas-time';
+import { runAfterResponse } from '@/lib/after-response';
 
 
 interface DriverContext {
   isDriverRole: boolean;
   isAdminRole: boolean;
   driverLabel: string;
+  /** customers.id of the signed-in driver (orders.assigned_driver_id) */
+  driverCustomerId: string | null;
   matchesDriver: (capturedBy?: string | null) => boolean;
 }
 
@@ -58,7 +62,53 @@ function getDriverContext(auth: {
     return false;
   };
 
-  return { isDriverRole, isAdminRole, driverLabel, matchesDriver };
+  return { isDriverRole, isAdminRole, driverLabel, driverCustomerId: auth.customer?.id || null, matchesDriver };
+}
+
+/**
+ * Whose van holds an out-for-delivery order (P03 PR-19). orders.assigned_driver_id is the
+ * record; orders loaded before that column existed fall back to the old name match on the
+ * load event/photo.
+ */
+function vanClaim(
+  o: { assigned_driver_id?: string | null; photos?: unknown; events?: unknown },
+  ctx: Pick<DriverContext, 'isAdminRole' | 'driverCustomerId' | 'matchesDriver'>
+): { claimed: boolean; mine: boolean } {
+  if (o.assigned_driver_id) {
+    return { claimed: true, mine: ctx.isAdminRole || o.assigned_driver_id === ctx.driverCustomerId };
+  }
+  const photos = (o.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
+  const events = (o.events as Array<{ status?: string; triggered_by?: string }>) || [];
+  const loadPhoto = photos.filter((p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup').pop();
+  const loadEvent = events
+    .filter((e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control'))
+    .pop();
+  if (!loadPhoto && !loadEvent) return { claimed: false, mine: false };
+  const capturedBy = `${loadPhoto?.captured_by || ''} ${loadEvent?.triggered_by || ''}`.toLowerCase();
+  return { claimed: true, mine: ctx.isAdminRole || ctx.matchesDriver(capturedBy) };
+}
+
+/** Conditional status change: applies only if the order is still in `expected` (PR-02). */
+async function moveOrderStatus(
+  supabase: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  expected: string,
+  next: string
+): Promise<NextResponse | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ status: next, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .eq('status', expected)
+    .select('id');
+  if (error) {
+    console.error('Driver status update error:', error);
+    return NextResponse.json({ error: 'Could not update this order. Please try again.' }, { status: 500 });
+  }
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'This order was already updated. Refresh your manifest.' }, { status: 409 });
+  }
+  return null;
 }
 
 export const dynamic = 'force-dynamic';
@@ -69,7 +119,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const shift = searchParams.get('shift') || 'all'; // 'morning' | 'evening' | 'all'
-  const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+  const date = searchParams.get('date') || texasDate();
 
   try {
     const supabase = createAdminClient();
@@ -84,6 +134,7 @@ export async function GET(request: Request) {
         .select(`
           id,
           order_number,
+          assigned_driver_id,
           customer_id,
           address_id,
           status,
@@ -106,6 +157,7 @@ export async function GET(request: Request) {
         .select(`
           id,
           order_number,
+          assigned_driver_id,
           customer_id,
           address_id,
           status,
@@ -135,7 +187,8 @@ export async function GET(request: Request) {
     }
 
     const allActive = activeOrders || [];
-    const { isDriverRole, isAdminRole, matchesDriver } = getDriverContext(auth);
+    const driverCtx = getDriverContext(auth);
+    const { isDriverRole, isAdminRole, matchesDriver } = driverCtx;
 
     // 1. Customer Pickups Scheduled
     const pickups = allActive.filter((o) => {
@@ -173,16 +226,8 @@ export async function GET(request: Request) {
       const matchShift = shift === 'all' || !o.delivery_window || o.delivery_window === shift;
       if (!isOutForDelivery || !matchShift) return false;
 
-      // Check if already claimed / loaded into a driver's van
-      const photos = (o.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-      const events = (o.events as Array<{ status?: string; triggered_by?: string }>) || [];
-      const plantLoadPhotos = photos.filter((p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup');
-      const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-      const plantLoadEvents = events.filter((e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control'));
-      const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-
-      const isClaimedByDriver = Boolean(plantLoadPhoto || plantLoadEvent);
-      return !isClaimedByDriver;
+      // Not yet loaded into any van (PR-19)
+      return !vanClaim(o, driverCtx).claimed;
     });
 
     // 4. Out on Delivery Route (Loaded into THIS driver's delivery van)
@@ -191,22 +236,9 @@ export async function GET(request: Request) {
       const matchShift = shift === 'all' || !o.delivery_window || o.delivery_window === shift;
       if (!isOutForDelivery || !matchShift) return false;
 
-      const photos = (o.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-      const events = (o.events as Array<{ status?: string; triggered_by?: string }>) || [];
-      const plantLoadPhotos = photos.filter((p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup');
-      const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-      const plantLoadEvents = events.filter((e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control'));
-      const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-
-      const isClaimed = Boolean(plantLoadPhoto || plantLoadEvent);
-      if (!isClaimed) return false;
-
-      if (isDriverRole) {
-        const capturedBy = ((plantLoadPhoto?.captured_by || '') + ' ' + (plantLoadEvent?.triggered_by || '')).toLowerCase();
-        return matchesDriver(capturedBy);
-      }
-
-      return true;
+      // In this driver's van (admins see every loaded van) (PR-19)
+      const claim = vanClaim(o, driverCtx);
+      return claim.claimed && claim.mine;
     });
 
     // 2b. Picked Up Completed (Permanent record of customer pickups completed by THIS driver and transferred to the office/plant)
@@ -307,7 +339,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminClient();
-    const { isDriverRole, isAdminRole, driverLabel, matchesDriver } = getDriverContext(auth);
+    const { isDriverRole, isAdminRole, driverLabel, driverCustomerId, matchesDriver } = getDriverContext(auth);
 
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id.trim());
 
@@ -318,7 +350,13 @@ export async function POST(request: Request) {
         id,
         order_number,
         status,
+        assigned_driver_id,
         express_tier,
+        express_surcharge,
+        express_auto_refunded,
+        payment_status,
+        payment_id,
+        refunded_amount,
         subtotal,
         pickup_date,
         pickup_window,
@@ -353,7 +391,9 @@ export async function POST(request: Request) {
       orderId: order.id,
       orderNumber: order.order_number || order.id.slice(0, 8),
       customerName: customer?.full_name || 'Valued Customer',
-      customerPhone: customer?.phone || '+12145550199',
+      customerPhone: customer?.phone || '',
+      // No phone on file: email only, never a placeholder number (PR-22)
+      ...(customer?.phone ? {} : { smsConsent: false }),
       customerEmail: customer?.email,
       stage: 'picked_up',
       pickupDate: order.pickup_date,
@@ -374,11 +414,18 @@ export async function POST(request: Request) {
         );
       }
 
-      // 1. Update order to picked_up
-      await supabase
-        .from('orders')
-        .update({ status: 'picked_up', updated_at: new Date().toISOString() })
-        .eq('id', order.id);
+      // 1. Save the mandatory proof photo first: no photo, no status change (PR-06)
+      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'pickup_proof');
+      if (!resolvedPhotoUrl) {
+        return NextResponse.json(
+          { error: 'The proof photo could not be saved. Please retake it and try again.' },
+          { status: 502 }
+        );
+      }
+
+      // 2. Update order to picked_up
+      const pickupBlocked = await moveOrderStatus(supabase, order.id, 'booked', 'picked_up');
+      if (pickupBlocked) return pickupBlocked;
 
       // 2. Insert event
       await supabase.from('order_events').insert({
@@ -388,54 +435,64 @@ export async function POST(request: Request) {
         triggered_by: driverLabel,
       });
 
-      // 3. Resolve and upload photo to Supabase Storage CDN
-      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'pickup_proof');
-
+      // 3. Record the proof photo
       await supabase.from('garment_photos').insert({
         order_id: order.id,
         photo_type: 'pickup_proof',
-        photo_url: resolvedPhotoUrl || photo_url,
+        photo_url: resolvedPhotoUrl,
         condition_notes: notes || 'Contactless pickup verification',
         captured_by: driverLabel,
       });
 
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'picked_up';
-      basePayload.photoUrl = resolvedPhotoUrl || photo_url || undefined;
-      await messagingService.dispatchStageNotification(basePayload);
+      basePayload.photoUrl = resolvedPhotoUrl;
+      const notifyPayload = { ...basePayload };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 
       return NextResponse.json({ success: true, new_status: 'picked_up' });
     }
 
     // Step: Driver loads fresh garments from plant/office into delivery van
     if (action === 'load_for_delivery' || action === 'out_for_delivery') {
-      // Business rule: Check if order is already claimed/loaded into another driver's van
-      const existingEvents = (order.events as Array<{ status?: string; triggered_by?: string }>) || [];
-      const existingPhotos = (order.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-      const plantLoadEvents = existingEvents.filter(
-        (e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control')
-      );
-      const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-      const plantLoadPhotos = existingPhotos.filter(
-        (p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup'
-      );
-      const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-
-      if (plantLoadEvent || plantLoadPhoto) {
-        const capturedBy = ((plantLoadPhoto?.captured_by || '') + ' ' + (plantLoadEvent?.triggered_by || '')).toLowerCase();
-        if (!matchesDriver(capturedBy) && !isAdminRole) {
-          return NextResponse.json(
-            { error: 'This order has already been loaded into another driver\'s van.' },
-            { status: 409 }
-          );
-        }
+      // Only cleaned orders released by the plant (Out for Delivery) can be loaded (PR-02)
+      if (order.status !== 'out_for_delivery') {
+        return NextResponse.json(
+          { error: 'This order is not ready for delivery yet. Only orders released from the plant can be loaded.' },
+          { status: 409 }
+        );
       }
 
-      // 1. Update order to out_for_delivery
-      await supabase
+      // Business rule: an order rides in one van. Claim it with a single conditional update so
+      // two drivers loading at once can't both get it (PR-19).
+      const driverCtx = { isAdminRole, driverCustomerId, matchesDriver };
+      const claim = vanClaim(order, driverCtx);
+      if (claim.claimed && !claim.mine) {
+        return NextResponse.json(
+          { error: 'This order has already been loaded into another driver\'s van.' },
+          { status: 409 }
+        );
+      }
+      if (!driverCustomerId) {
+        return NextResponse.json({ error: 'Your staff profile could not be found. Please sign in again.' }, { status: 403 });
+      }
+      const { data: claimedRows, error: claimErr } = await supabase
         .from('orders')
-        .update({ status: 'out_for_delivery', updated_at: new Date().toISOString() })
-        .eq('id', order.id);
+        .update({ assigned_driver_id: driverCustomerId, updated_at: new Date().toISOString() })
+        .eq('id', order.id)
+        .eq('status', 'out_for_delivery')
+        .or(`assigned_driver_id.is.null,assigned_driver_id.eq.${driverCustomerId}`)
+        .select('id');
+      if (claimErr) {
+        console.error('Driver van claim error:', claimErr);
+        return NextResponse.json({ error: 'Could not load this order. Please try again.' }, { status: 500 });
+      }
+      if (!claimedRows || claimedRows.length === 0) {
+        return NextResponse.json(
+          { error: 'This order has already been loaded into another driver\'s van.' },
+          { status: 409 }
+        );
+      }
 
       // 2. Insert event recording who loaded it from office
       await supabase.from('order_events').insert({
@@ -449,10 +506,12 @@ export async function POST(request: Request) {
       let resolvedPhotoUrl: string | null = null;
       if (photo_url && typeof photo_url === 'string' && photo_url.trim()) {
         resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'return');
+      }
+      if (resolvedPhotoUrl) {
         await supabase.from('garment_photos').insert({
           order_id: order.id,
           photo_type: 'return',
-          photo_url: resolvedPhotoUrl || photo_url,
+          photo_url: resolvedPhotoUrl,
           condition_notes: notes || 'Loaded from plant for outbound delivery route',
           captured_by: driverLabel,
         });
@@ -461,27 +520,24 @@ export async function POST(request: Request) {
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'out_for_delivery';
       basePayload.photoUrl = resolvedPhotoUrl || undefined;
-      await messagingService.dispatchStageNotification(basePayload);
+      const notifyPayload = { ...basePayload };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 
       return NextResponse.json({ success: true, new_status: 'out_for_delivery' });
     }
 
     if (action === 'delivery_complete') {
-      // Business rule: Only the driver whose van the order was loaded into (or admin) can confirm delivery
-      if (isDriverRole && !isAdminRole) {
-        const existingEvents = (order.events as Array<{ status?: string; triggered_by?: string }>) || [];
-        const existingPhotos = (order.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-        const plantLoadEvents = existingEvents.filter(
-          (e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control')
+      if (order.status !== 'out_for_delivery') {
+        return NextResponse.json(
+          { error: 'Only orders that are out for delivery can be marked delivered.' },
+          { status: 409 }
         );
-        const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-        const plantLoadPhotos = existingPhotos.filter(
-          (p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup'
-        );
-        const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
+      }
 
-        const capturedBy = ((plantLoadPhoto?.captured_by || '') + ' ' + (plantLoadEvent?.triggered_by || '')).toLowerCase();
-        if (capturedBy && !matchesDriver(capturedBy)) {
+      // Business rule: only the driver whose van holds the order (or an admin) confirms delivery (PR-19)
+      if (isDriverRole && !isAdminRole) {
+        const claim = vanClaim(order, { isAdminRole, driverCustomerId, matchesDriver });
+        if (claim.claimed && !claim.mine) {
           return NextResponse.json(
             { error: 'This order is assigned to another driver\'s van and cannot be confirmed by your account.' },
             { status: 403 }
@@ -489,11 +545,18 @@ export async function POST(request: Request) {
         }
       }
 
-      // 1. Update order to delivered
-      await supabase
-        .from('orders')
-        .update({ status: 'delivered', updated_at: new Date().toISOString() })
-        .eq('id', order.id);
+      // 1. Save the mandatory proof photo first: no photo, no status change (PR-06)
+      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'delivery_proof');
+      if (!resolvedPhotoUrl) {
+        return NextResponse.json(
+          { error: 'The proof photo could not be saved. Please retake it and try again.' },
+          { status: 502 }
+        );
+      }
+
+      // 2. Update order to delivered
+      const deliveryBlocked = await moveOrderStatus(supabase, order.id, 'out_for_delivery', 'delivered');
+      if (deliveryBlocked) return deliveryBlocked;
 
       // 2. Insert event
       await supabase.from('order_events').insert({
@@ -503,21 +566,20 @@ export async function POST(request: Request) {
         triggered_by: driverLabel,
       });
 
-      // 3. Resolve and upload photo to Supabase Storage CDN
-      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'delivery_proof');
-
+      // 3. Record the proof photo
       await supabase.from('garment_photos').insert({
         order_id: order.id,
         photo_type: 'delivery_proof',
-        photo_url: resolvedPhotoUrl || photo_url,
+        photo_url: resolvedPhotoUrl,
         condition_notes: notes || 'Delivery drop-off proof',
         captured_by: driverLabel,
       });
 
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'delivered';
-      basePayload.photoUrl = resolvedPhotoUrl || photo_url || undefined;
-      await messagingService.dispatchStageNotification(basePayload);
+      basePayload.photoUrl = resolvedPhotoUrl;
+      const notifyPayload = { ...basePayload };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 
       // 5. Check 24-Hour Express SLA (Delivered by 10:00 AM on delivery date)
       const expressSLAResult = await handleExpressDeliverySLA(order, new Date());

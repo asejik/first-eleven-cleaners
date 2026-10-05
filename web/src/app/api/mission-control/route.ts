@@ -7,6 +7,14 @@ import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
+import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
+import { refundOrder } from '@/lib/refunds';
+import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
+import { texasDate } from '@/lib/texas-time';
+import { runAfterResponse } from '@/lib/after-response';
+import { reportError } from '@/lib/error-reporting';
+import { recordAdminAction } from '@/lib/audit-log';
+import { getClientIp } from '@/lib/rate-limiter';
 
 
 export async function GET(request: Request) {
@@ -79,19 +87,19 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    const revenueQuery = supabase
-      .from('orders')
-      .select('total');
+    // KPIs are aggregated in SQL (Dallas calendar day) instead of downloading every order (PR-14)
+    const summaryQuery = supabase.rpc('mission_control_summary', { p_today: texasDate() });
 
     const [
       { data: allOrders, count: totalOrdersCount, error: ordersErr },
       { data: claims },
-      { data: revenueRows }
+      { data: summary, error: summaryErr }
     ] = await Promise.all([
       ordersQuery.range(offset, offset + limit - 1),
       claimsQuery,
-      revenueQuery
+      summaryQuery
     ]);
+    if (summaryErr) console.error('Mission Control summary error:', summaryErr);
 
     if (ordersErr) {
       console.error('Mission Control GET error:', ordersErr);
@@ -100,24 +108,9 @@ export async function GET(request: Request) {
 
     const orders = allOrders || [];
 
-    // 3. Compute KPI Summary
-    const activeOrders = orders.filter((o) => o.status !== 'delivered');
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const todayOrders = orders.filter((o) => o.created_at?.startsWith(todayStr) || o.pickup_date === todayStr);
-    const todayRevenue = todayOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-    const allTimeRevenue = (revenueRows || []).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-
-    const totalLbs = orders.reduce((acc, o) => acc + (Number(o.weight_lbs) || 0), 0);
-    const totalDryCleanPieces = orders.reduce((acc, o) => {
-      const pieces = (o.items || []).reduce((subAcc: number, i: { quantity?: number }) => subAcc + (Number(i.quantity) || 0), 0);
-      return acc + pieces;
-    }, 0);
-
-    // Labor KPI Benchmark: Targeted at <= 32% of net sales
-    const baseLaborRate = 0.28; // Standard 28% efficiency benchmark
-    const estimatedLaborCost = Number((todayRevenue * baseLaborRate).toFixed(2));
-    const laborPercentage = todayRevenue > 0 ? Number(((estimatedLaborCost / todayRevenue) * 100).toFixed(1)) : 28.0;
+    // 3. KPI summary from mission_control_summary()
+    const kpi = (summary || {}) as Record<string, unknown>;
+    const kpiNum = (k: string) => Number(kpi[k]) || 0;
 
     return NextResponse.json(await withSignedPhotoUrls({
       orders,
@@ -126,18 +119,13 @@ export async function GET(request: Request) {
       limit,
       total_count: totalOrdersCount ?? orders.length,
       stats: {
-        active_count: activeOrders.length,
-        total_count: totalOrdersCount ?? orders.length,
-        today_revenue: todayRevenue,
-        all_time_revenue: allTimeRevenue,
-        total_lbs: totalLbs,
-        total_pieces: totalDryCleanPieces,
-        labor: {
-          estimated_cost: estimatedLaborCost,
-          target_max_pct: 32.0,
-          current_pct: laborPercentage,
-          status: laborPercentage <= 32.0 ? 'optimal' : 'alert',
-        },
+        active_count: kpiNum('active_count'),
+        total_count: kpiNum('total_count') || (totalOrdersCount ?? orders.length),
+        today_revenue: kpiNum('today_sales'),
+        // Money actually collected, net of refunds (PR-15)
+        all_time_revenue: kpiNum('net_revenue'),
+        total_lbs: kpiNum('active_lbs'),
+        total_pieces: kpiNum('active_pieces'),
       },
     }));
   } catch (err) {
@@ -171,6 +159,9 @@ export async function POST(request: Request) {
       if (!order_id || !new_stage) {
         return NextResponse.json({ error: 'order_id and new_stage are required' }, { status: 400 });
       }
+      if (!(ORDER_STATUS_KEYS as readonly string[]).includes(new_stage)) {
+        return NextResponse.json({ error: 'Unknown order stage.' }, { status: 400 });
+      }
 
       // Fetch order
       const { data: order, error: orderErr } = await supabase
@@ -183,41 +174,76 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
 
-      // Enforce Payment Guard: Block advancing orders into cleaning or delivery if payment failed
-      const restrictedStages = ['in_cleaning', 'out_for_delivery', 'delivered'];
-      if (restrictedStages.includes(new_stage) && order.payment_status === 'failed') {
-        if (!manager_override) {
-          return NextResponse.json(
-            {
-              error: `Cannot advance Order #${order.order_number || order.id.slice(0, 8)} to ${new_stage.replace('_', ' ')}: Payment authorization failed ($${Number(order.total || 0).toFixed(2)}). Settle payment or authorize Manager Override to proceed.`,
-              payment_failed: true,
-              requires_override: true,
-            },
-            { status: 400 }
-          );
-        }
+      // Only allowed moves (PR-02): intake is the only way to Weighed & Itemized
+      const transition = checkMissionControlTransition(order.status, new_stage);
+      if (!transition.ok) {
+        return NextResponse.json({ error: transition.error }, { status: 409 });
+      }
 
-        // Log manager override event
+      // Keep "Mission Control" in the label: the driver manifest uses it to tell board moves from driver van loads
+      const adminLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
+
+      // Payment Guard: an order enters cleaning or delivery only once its card is charged
+      const needsOverride = requiresCapturedPayment(new_stage) && order.payment_status !== 'charged';
+      if (needsOverride && !manager_override) {
+        return NextResponse.json(
+          {
+            error: `Cannot advance Order #${order.order_number || order.id.slice(0, 8)} to ${new_stage.replace(/_/g, ' ')}: payment is ${order.payment_status || 'not captured'} ($${Number(order.total || 0).toFixed(2)}). Settle payment or authorize Manager Override to proceed.`,
+            payment_failed: true,
+            requires_override: true,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Conditional update: only applies if the order is still in the stage the board saw
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from('orders')
+        .update({ status: new_stage, updated_at: new Date().toISOString() })
+        .eq('id', order.id)
+        .eq('status', order.status)
+        .select('id');
+
+      if (updateErr) {
+        return apiError('api/mission-control', updateErr, 500);
+      }
+      if (!updatedRows || updatedRows.length === 0) {
+        return NextResponse.json(
+          { error: 'This order was updated by someone else. Refresh the board and try again.' },
+          { status: 409 }
+        );
+      }
+
+      if (needsOverride) {
         await supabase.from('order_events').insert({
           order_id: order.id,
           status: new_stage,
-          note: `[MANAGER OVERRIDE] Operator authorized advancement of unpaid order to ${new_stage}. Reason: ${override_reason || 'Managerial discretion / corporate invoice'}.`,
-          triggered_by: auth.customer?.full_name ? `Admin (${auth.customer.full_name})` : 'Mission Control Admin',
+          note: `[MANAGER OVERRIDE] Operator authorized advancement of unpaid order (payment ${order.payment_status || 'unknown'}) to ${new_stage}. Reason: ${override_reason || 'Managerial discretion / corporate invoice'}.`,
+          triggered_by: adminLabel,
         });
       }
-
-      // Update status
-      await supabase
-        .from('orders')
-        .update({ status: new_stage, updated_at: new Date().toISOString() })
-        .eq('id', order.id);
 
       // Log event
       await supabase.from('order_events').insert({
         order_id: order.id,
         status: new_stage,
         note: `Stage advanced to ${new_stage} via Mission Control Ops Board.`,
-        triggered_by: 'Mission Control Operator',
+        triggered_by: adminLabel,
+      });
+
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: 'order.stage_change',
+        targetType: 'order',
+        targetId: order.id,
+        details: {
+          order_number: order.order_number,
+          from: order.status,
+          to: new_stage,
+          payment_status: order.payment_status,
+          ...(needsOverride ? { manager_override: true, override_reason: override_reason || null } : {}),
+        },
+        ip: getClientIp(request),
       });
 
       // Dispatch Notification
@@ -229,7 +255,9 @@ export async function POST(request: Request) {
         orderId: order.id,
         orderNumber: order.order_number || order.id.slice(0, 8),
         customerName: customer?.full_name || 'Valued Customer',
-        customerPhone: customer?.phone || '+12145550199',
+        customerPhone: customer?.phone || '',
+        // No phone on file: email only, never a placeholder number (PR-22)
+        ...(customer?.phone ? {} : { smsConsent: false }),
         customerEmail: customer?.email,
         stage: new_stage as OrderStatusKey,
         pickupDate: order.pickup_date,
@@ -241,7 +269,7 @@ export async function POST(request: Request) {
         trackingUrl: `${origin}/track/${order.id}`,
       };
 
-      await messagingService.dispatchStageNotification(payload);
+      runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'stage change notification');
 
       let expressSLAResult = null;
       if (new_stage === 'delivered') {
@@ -251,24 +279,68 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, order_id: order.id, new_status: new_stage, express_sla: expressSLAResult });
     }
 
-    // 2. Resolve Claim Action
+    // 2. Resolve Claim Action. A money-back resolution refunds the customer's card through
+    // Square first; the claim is marked refunded only once Square accepts it (PR-05).
     if (action === 'resolve_claim') {
       if (!claim_id) {
         return NextResponse.json({ error: 'claim_id is required' }, { status: 400 });
       }
 
       const refundNum = refund_amount ? Number(refund_amount) : 0;
+      if (!Number.isFinite(refundNum) || refundNum < 0) {
+        return NextResponse.json({ error: 'Refund amount must be a positive number.' }, { status: 400 });
+      }
+
+      const { data: claim } = await supabase
+        .from('claims')
+        .select('id, order_id, status, refund_amount, square_refund_id')
+        .eq('id', claim_id)
+        .maybeSingle();
+      if (!claim) {
+        return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
+      }
+
+      const actorLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
+      let refundId: string | null = null;
+
+      if (refundNum > 0) {
+        if (claim.square_refund_id || claim.status === 'refunded') {
+          return NextResponse.json({ error: 'This claim has already been refunded.' }, { status: 409 });
+        }
+        const { data: claimOrder } = await supabase
+          .from('orders')
+          .select('id, order_number, total, payment_status, payment_id, refunded_amount')
+          .eq('id', claim.order_id)
+          .maybeSingle();
+        if (!claimOrder) {
+          return NextResponse.json({ error: 'The order for this claim was not found.' }, { status: 404 });
+        }
+
+        const refund = await refundOrder(supabase, claimOrder, {
+          amount: refundNum,
+          // One refund per claim, ever (Square limits keys to 45 characters)
+          idempotencyKey: `clm_${String(claim.id).replace(/-/g, '')}`.slice(0, 45),
+          reason: `Make It Right claim (Order #${claimOrder.order_number || claimOrder.id.slice(0, 8)})`,
+          actorLabel,
+        });
+        if (!refund.ok) {
+          return NextResponse.json({ error: refund.error }, { status: refund.status });
+        }
+        refundId = refund.refundId;
+      }
+
       const formattedNotes = refundNum > 0
-        ? `[Refund of $${refundNum.toFixed(2)} Approved] ${resolution_notes || 'Resolved under Make It Right guarantee.'}`
+        ? `[Refund of $${refundNum.toFixed(2)} issued, Square Refund ${refundId}] ${resolution_notes || 'Resolved under Make It Right guarantee.'}`
         : (resolution_notes || 'Resolved under 100% Make It Right guarantee.');
 
-      const finalStatus = refundNum > 0 ? 'refunded' : (claim_status || 'resolved');
+      const finalStatus = refundNum > 0 ? 'refunded' : (claim_status === 'refunded' ? 'resolved' : (claim_status || 'resolved'));
 
       const { data: updatedClaim, error: claimErr } = await supabase
         .from('claims')
         .update({
           status: finalStatus,
           resolution_notes: formattedNotes,
+          ...(refundNum > 0 ? { refund_amount: Number(refundNum.toFixed(2)), square_refund_id: refundId } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', claim_id)
@@ -276,10 +348,70 @@ export async function POST(request: Request) {
         .single();
 
       if (claimErr) {
+        if (refundId) {
+          console.error(`[Claims] Refund ${refundId} issued but claim ${claim_id} not updated:`, claimErr);
+          reportError('claims/refund', claimErr, { alert: true, details: `Square refund ${refundId} issued but claim ${claim_id} not updated` });
+        }
         return apiError('api/mission-control', claimErr, 500);
       }
 
-      return NextResponse.json({ success: true, claim: updatedClaim });
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: refundNum > 0 ? 'claim.refund' : 'claim.resolve',
+        targetType: 'claim',
+        targetId: String(claim_id),
+        details: {
+          order_id: claim.order_id,
+          status: finalStatus,
+          ...(refundNum > 0 ? { refund_amount: Number(refundNum.toFixed(2)), square_refund_id: refundId } : {}),
+        },
+        ip: getClientIp(request),
+      });
+
+      return NextResponse.json({ success: true, claim: updatedClaim, refund_id: refundId });
+    }
+
+    // 3. Payment Hold recovery (PR-04): retry the saved card, or record a payment taken in
+    // the Square Dashboard. Both are logged with the admin's name.
+    if (action === 'retry_charge' || action === 'mark_paid_external') {
+      if (!order_id) {
+        return NextResponse.json({ error: 'order_id is required' }, { status: 400 });
+      }
+      const { data: heldOrder } = await supabase
+        .from('orders')
+        .select('id, order_number, total, payment_status, square_customer_id, square_card_id')
+        .eq('id', order_id)
+        .maybeSingle();
+      if (!heldOrder) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+
+      const actorLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
+      const result =
+        action === 'retry_charge'
+          ? await chargeHeldOrder(supabase, heldOrder, { keyPrefix: 'rty', actorLabel })
+          : await markHeldOrderPaid(supabase, heldOrder, {
+              squarePaymentId: String(body.square_payment_id || ''),
+              actorLabel,
+            });
+
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: action === 'retry_charge' ? 'payment.retry_charge' : 'payment.mark_paid_external',
+        targetType: 'order',
+        targetId: heldOrder.id,
+        details: {
+          order_number: heldOrder.order_number,
+          outcome: result.ok ? 'paid' : 'refused',
+          ...(result.ok ? { payment_id: result.paymentId, amount: result.amount } : { error: result.error }),
+        },
+        ip: getClientIp(request),
+      });
+
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
+      }
+      return NextResponse.json({ success: true, payment_id: result.paymentId, amount: result.amount });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

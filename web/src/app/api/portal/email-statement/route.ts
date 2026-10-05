@@ -3,8 +3,10 @@ import { sendEmail, buildStatementEmailHtml } from '@/lib/resend';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
+import { COMMERCIAL_PORTAL_ENABLED, portalDisabledResponse } from '@/lib/features';
 
 export async function POST(request: Request) {
+  if (!COMMERCIAL_PORTAL_ENABLED) return portalDisabledResponse(); // sample data, switched off (PR-20)
   try {
     const auth = await verifyApiAuth(['admin'], request);
     if (auth.errorResponse) return auth.errorResponse;

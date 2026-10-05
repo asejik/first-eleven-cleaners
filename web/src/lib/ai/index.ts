@@ -5,6 +5,8 @@ import type {
   ConciergeContext,
   IAIEngineProvider,
 } from './types';
+import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE } from './price-list';
+import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB } from '@/lib/constants';
 
 export * from './types';
 export * from './systemPrompt';
@@ -185,30 +187,30 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
         const parts: string[] = [];
 
         if (lbsMatch) {
-          const lbs = Math.max(15, parseInt(lbsMatch[1], 10));
-          const cost = lbs * 3.0;
+          const lbs = Math.max(WASH_FOLD_MINIMUM_LBS, parseInt(lbsMatch[1], 10));
+          const cost = lbs * WASH_FOLD_PRICE_PER_LB;
           estTotal += cost;
           parts.push(`${lbs} lbs Wash & Fold ($${cost.toFixed(2)})`);
         }
         if (suitMatch) {
           const qty = parseInt(suitMatch[1], 10);
-          const cost = qty * 19.95;
+          const cost = qty * SUIT_PRICE;
           estTotal += cost;
           parts.push(`${qty} Suits ($${cost.toFixed(2)})`);
         }
         if (shirtMatch) {
           const qty = parseInt(shirtMatch[1], 10);
-          const cost = qty * 8.95;
+          const cost = qty * DRESS_SHIRT_PRICE;
           estTotal += cost;
           parts.push(`${qty} Dress Shirts ($${cost.toFixed(2)})`);
         }
 
-        calcNote = `\n\n💡 **Instant Estimate for your items:**\n${parts.join(' + ')} = **$${estTotal.toFixed(2)} total** *(includes free pickup & delivery)*.`;
+        calcNote = `\n\n💡 **Instant Estimate for your items:**\n${parts.join(' + ')} = **$${estTotal.toFixed(2)}** before the environmental fee and tax *(pickup & delivery are free)*.`;
       }
 
       if (isSpanish) {
         return {
-          content: `Nuestros precios son 100% transparentes sin cargos ocultos:\n\n• **Lavandería Wash & Fold:** $3.00/lb (mínimo publicado de 15 lbs / $45.00)\n• **Traje de 2 piezas:** $19.95\n• **Camisas de vestir:** $8.95\n• **Vestidos:** $14.00\n• **Pantalones / Slacks:** $8.95\n• **Edredones / Blancos:** $35.00${calcNote}`,
+          content: `Nuestros precios son 100% transparentes:\n\n${chatPriceList('es')}${calcNote}`,
           intent: 'pricing_inquiry',
           detectedLanguage: 'es',
           action: {
@@ -220,7 +222,7 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
       }
 
       return {
-        content: `Our published rates are transparent with no hidden delivery fees:\n\n• **Wash & Fold Laundry:** $3.00/lb (15-lb published minimum / $45.00)\n• **2-Piece Suit:** $19.95\n• **Business Dress Shirt:** $8.95\n• **Dress / Gown:** $14.00\n• **Pants / Slacks:** $8.95\n• **Comforter / Bedding:** $35.00${calcNote}`,
+        content: `Our published rates are transparent with no hidden delivery fees:\n\n${chatPriceList('en')}${calcNote}`,
         intent: 'pricing_inquiry',
         detectedLanguage: 'en',
         action: {
@@ -322,6 +324,7 @@ export class ClaudeAIEngineProvider implements IAIEngineProvider {
           system: ELEVEN_SYSTEM_PROMPT,
           messages,
         }),
+        signal: AbortSignal.timeout(20_000), // PR-17
       });
 
       if (!res.ok) {

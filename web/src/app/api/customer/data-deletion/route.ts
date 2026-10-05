@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/resend';
 import { apiError } from '@/lib/api-errors';
+import { LEGAL_CONFIG } from '@/lib/constants';
+import { escapeHtml } from '@/lib/sanitize';
+
+// Fulfilled with the SQL helpers in supabase/runbooks/privacy-requests.md (PR-25)
+const PrivacyRequestSchema = z.object({
+  request_type: z.enum(['export', 'deletion']).default('deletion'),
+  notes: z.string().trim().max(1000).default(''),
+});
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +33,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { request_type = 'deletion', notes = '' } = body;
+    const parsed = PrivacyRequestSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Choose either a data export or a deletion request.' }, { status: 400 });
+    }
+    const { request_type, notes } = parsed.data;
 
     const supabase = createAdminClient();
     const requestId = `tdpsa_${crypto.randomUUID().slice(0, 10)}`;
@@ -38,7 +50,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     const existingNotes = prefs?.special_notes || '';
-    const updatedNotes = `${existingNotes}\n[TDPSA Privacy Request: ${String(request_type).toUpperCase()} | ID: ${requestId} | Submitted: ${new Date().toISOString()} | ${notes}]`.trim();
+    const updatedNotes = `${existingNotes}\n[TDPSA Privacy Request: ${request_type.toUpperCase()} | ID: ${requestId} | Submitted: ${new Date().toISOString()} | ${notes}]`.trim();
 
     await supabase
       .from('customer_preferences')
@@ -70,21 +82,23 @@ export async function POST(request: Request) {
     // Send compliance alert to privacy officer (F008 Fix)
     try {
       await sendEmail({
-        to: 'concierge@firstelevencleaners.com',
-        subject: `🔒 Action Required: TDPSA Personal Data Request (${String(request_type).toUpperCase()}) - ${customer.email}`,
+        to: LEGAL_CONFIG.privacyEmail,
+        subject: `🔒 Action Required: TDPSA Personal Data Request (${request_type.toUpperCase()}) - ${customer.email}`,
         html: `
           <h2>Texas Data Privacy and Security Act (TDPSA) Request</h2>
-          <p>A customer has submitted a formal <strong>${String(request_type).toUpperCase()}</strong> request under the Texas Data Privacy and Security Act.</p>
+          <p>A customer has submitted a formal <strong>${request_type.toUpperCase()}</strong> request under the Texas Data Privacy and Security Act.</p>
           <ul>
             <li><strong>Request ID:</strong> ${requestId}</li>
-            <li><strong>Customer Name:</strong> ${customer.full_name}</li>
-            <li><strong>Customer Email:</strong> ${customer.email}</li>
-            <li><strong>Customer Phone:</strong> ${customer.phone || 'N/A'}</li>
+            <li><strong>Customer Name:</strong> ${escapeHtml(customer.full_name || '')}</li>
+            <li><strong>Customer Email:</strong> ${escapeHtml(customer.email || '')}</li>
+            <li><strong>Customer Phone:</strong> ${escapeHtml(customer.phone || 'N/A')}</li>
             <li><strong>Customer ID:</strong> ${customer.id}</li>
             <li><strong>Submitted At:</strong> ${new Date().toISOString()}</li>
             <li><strong>Statutory Response Deadline:</strong> 45 calendar days</li>
           </ul>
-          ${notes ? `<p><strong>Customer Notes:</strong> ${notes}</p>` : ''}
+          ${notes ? `<p><strong>Customer Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+          <p><strong>How to fulfil it:</strong> follow <code>web/supabase/runbooks/privacy-requests.md</code>
+          (${request_type === 'export' ? `<code>select export_customer_data('${customer.id}');</code>` : `<code>select anonymize_customer('${customer.id}', '${requestId}');</code>`}).</p>
         `,
       });
     } catch (emailErr) {

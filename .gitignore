@@ -124,3 +124,6 @@ web/AGENTS.md
 AGENTS.md
 .agents/
 .claude/
+p03_db_verify.sql
+p03_db_changes.sql
+p03_db_rollback.sql

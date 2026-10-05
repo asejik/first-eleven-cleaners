@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { formatStageMessage, type MessagePayload, type FormattedMessage } from './templates';
 import { sendEmail, buildStageNotificationEmailHtml } from '@/lib/resend';
 import { signStorageUrl, MMS_PHOTO_LINK_TTL_SECONDS } from '@/lib/storage';
+import { toE164 } from '@/lib/phone';
+import { logMessages } from '@/lib/message-log';
 
 function maskEmail(email?: string | null): string {
   if (!email) return 'unknown';
@@ -72,44 +74,19 @@ export class SimulatedMessageProvider implements IMessagingProvider {
       }
 
       if (customerId) {
-        // Record in conversations table
-        const { data: existingConv } = await supabase
-          .from('conversations')
-          .select('id, messages')
-          .eq('customer_id', customerId)
-          .eq('channel', channel)
-          .maybeSingle();
-
-        const newMsgEntry = {
-          id: messageId,
-          order_id: payload.orderId,
-          stage: payload.stage,
-          text: content,
-          media_url: formatted.mediaUrl || null,
+        // One row per message (PR-26)
+        await logMessages(supabase, [{
+          customerId,
+          channel,
           direction: 'outbound',
+          body: content,
+          orderId: payload.orderId,
+          stage: payload.stage,
+          mediaUrl: formatted.mediaUrl || null,
           mode: 'simulated',
-          created_at: timestamp,
-        };
-
-        if (existingConv) {
-          const updatedMessages = Array.isArray(existingConv.messages)
-            ? [...existingConv.messages, newMsgEntry]
-            : [newMsgEntry];
-
-          await supabase
-            .from('conversations')
-            .update({
-              messages: updatedMessages,
-              updated_at: timestamp,
-            })
-            .eq('id', existingConv.id);
-        } else {
-          await supabase.from('conversations').insert({
-            customer_id: customerId,
-            channel,
-            messages: [newMsgEntry],
-          });
-        }
+          externalId: messageId,
+          createdAt: timestamp,
+        }]);
       }
     } catch (err) {
       console.warn('Simulated message DB logging notice:', err);
@@ -211,10 +188,12 @@ export class TwilioMessageProvider implements IMessagingProvider {
     }
 
     // 2. Carrier Fallback Logic:
-    // Customers who didn't opt into SMS receive all 6 order-status updates by email instead of SMS
-    if (channel === 'sms' && hasSmsConsent === false) {
+    // Customers who didn't opt into SMS receive all 6 order-status updates by email instead of SMS.
+    // Consent must be known to be true: if it couldn't be confirmed, don't text (PR-18).
+    const toE164Number = toE164(payload.customerPhone);
+    if (channel === 'sms' && (hasSmsConsent !== true || !toE164Number)) {
       console.log(
-        `[Carrier Compliance] Customer has not opted into SMS for order #${payload.orderNumber || payload.orderId}. Dispatched ${payload.stage} status update via Resend Email fallback.`
+        `[Carrier Compliance] No confirmed SMS consent or valid number for order #${payload.orderNumber || payload.orderId}. Dispatched ${payload.stage} status update via Resend Email fallback.`
       );
       return this.fallbackSim.dispatchStageNotification(
         { ...payload, customerEmail: customerEmail || payload.customerEmail },
@@ -232,7 +211,13 @@ export class TwilioMessageProvider implements IMessagingProvider {
 
     const formatted = formatStageMessage(payload);
     const body = channel === 'whatsapp' ? formatted.whatsappBody : formatted.smsBody;
-    const toNumber = channel === 'whatsapp' ? `whatsapp:${payload.customerPhone}` : payload.customerPhone;
+    if (!toE164Number) {
+      return this.fallbackSim.dispatchStageNotification(
+        { ...payload, customerEmail: customerEmail || payload.customerEmail },
+        channel
+      );
+    }
+    const toNumber = channel === 'whatsapp' ? `whatsapp:${toE164Number}` : toE164Number;
 
     try {
       // Use Twilio REST API directly
@@ -263,6 +248,7 @@ export class TwilioMessageProvider implements IMessagingProvider {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: params.toString(),
+        signal: AbortSignal.timeout(8_000), // PR-17
       });
 
       const data = await res.json();

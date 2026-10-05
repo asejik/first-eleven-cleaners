@@ -92,6 +92,9 @@ export async function GET(
             delivery_window: dbOrder.delivery_window,
             created_at: dbOrder.created_at,
             updated_at: dbOrder.updated_at,
+            // Payment Hold: the link holder can pay the amount due (PR-04). No other money data.
+            payment_hold: dbOrder.payment_status === 'failed',
+            ...(dbOrder.payment_status === 'failed' ? { amount_due: Number(dbOrder.total) || 0 } : {}),
             photos: ((dbOrder.photos || []) as Array<Record<string, unknown>>).map((photo) => ({
               id: photo.id,
               photo_type: photo.photo_type,
@@ -120,6 +123,12 @@ export async function GET(
       console.error('Supabase get order detail error:', err);
       return NextResponse.json({ error: 'Internal server error retrieving order.' }, { status: 500 });
     }
+  }
+
+  // Sample orders are for local development only (PR-31)
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[Orders] Supabase is not configured in production; refusing to serve sample orders.');
+    return NextResponse.json({ error: 'Orders are temporarily unavailable. Please try again shortly.' }, { status: 503 });
   }
 
   // Mock comprehensive order for single order tracker view

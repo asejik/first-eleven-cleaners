@@ -36,7 +36,7 @@ export interface CommercialAccount {
   created_at: string;
 }
 
-export interface CommercialInvoiceItem {
+interface CommercialInvoiceItem {
   description: string;
   quantity: number;
   unit: string;

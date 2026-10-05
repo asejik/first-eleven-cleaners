@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fakeRpc } from './helpers/fake-create-booking';
 
 type Row = Record<string, unknown>;
 const { state } = vi.hoisted(() => ({
@@ -45,7 +46,7 @@ function builder(table: string) {
   return b;
 }
 
-vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from: (t: string) => builder(t) }) }));
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from: (t: string) => builder(t), rpc: fakeRpc(builder) }) }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));
@@ -60,7 +61,8 @@ import { POST } from '@/app/api/bookings/route';
 function booking(consent: boolean) {
   const todayTx = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
   const d = new Date(`${todayTx}T12:00:00`);
-  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  d.setDate(d.getDate() + 2); // first Monday at least 2 days ahead (standard minimum, PR-12)
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
   return new Request('http://localhost/api/bookings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

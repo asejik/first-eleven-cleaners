@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fakeRpc } from './helpers/fake-create-booking';
 
 // ---------------------------------------------------------------------------
 // Fake Supabase client with per-table failure injection
@@ -48,7 +49,7 @@ function builder(table: string) {
 }
 
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({ from: (table: string) => builder(table) }),
+  createAdminClient: () => ({ from: (table: string) => builder(table), rpc: fakeRpc(builder) }),
 }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
@@ -67,7 +68,8 @@ import { POST } from '@/app/api/bookings/route';
 function nextMonday(): string {
   const todayTx = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
   const d = new Date(`${todayTx}T12:00:00`);
-  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  d.setDate(d.getDate() + 2); // first Monday at least 2 days ahead (standard minimum, PR-12)
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
   return d.toISOString().split('T')[0];
 }
 

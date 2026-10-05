@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, type OrderStatusKey } from '@/lib/constants';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/intake/page.module.css';
+import { prepareImageForUpload } from '@/lib/image-upload';
 
 export interface IntakeTicketWorkspaceProps {
   order: Order;
@@ -70,46 +71,34 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
 
     setIsUploadingPhoto(true);
 
-    // Direct CDN upload
+    // Resize in the browser, then upload. The ticket only ever holds stored links (PR-06).
     try {
+      const uploadFile = await prepareImageForUpload(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', uploadFile);
       formData.append('order_id', order.id);
       formData.append('photo_type', 'intake');
 
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const uploadData = await res.json();
-      if (res.ok && uploadData.url) {
-        setPhotos((prev) => [
-          ...prev,
-          { photo_url: uploadData.url, preview_url: uploadData.preview_url, condition_notes: 'Intake inspection proof' },
-        ]);
-        addToast({
-          type: 'success',
-          title: 'Photo Uploaded',
-          message: 'Inspection photo saved to cloud storage.',
-        });
-      } else {
-        // Local preview fallback
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPhotos((prev) => [
-            ...prev,
-            { photo_url: reader.result as string, condition_notes: 'Uploaded intake proof' },
-          ]);
-        };
-        reader.readAsDataURL(file);
+      const uploadData = await res.json().catch(() => ({}));
+      if (!res.ok || !uploadData.url) {
+        throw new Error(uploadData.error || 'The photo could not be uploaded. Please try again.');
       }
+      setPhotos((prev) => [
+        ...prev,
+        { photo_url: uploadData.url, preview_url: uploadData.preview_url, condition_notes: 'Intake inspection proof' },
+      ]);
+      addToast({
+        type: 'success',
+        title: 'Photo Uploaded',
+        message: 'Inspection photo saved to cloud storage.',
+      });
     } catch (err) {
-      console.warn('Direct upload failed, fallback to local preview:', err);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos((prev) => [
-          ...prev,
-          { photo_url: reader.result as string, condition_notes: 'Uploaded intake proof' },
-        ]);
-      };
-      reader.readAsDataURL(file);
+      addToast({
+        type: 'error',
+        title: 'Photo Not Saved',
+        message: (err as Error).message || 'The photo could not be uploaded. Please try again.',
+      });
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -125,7 +114,8 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
   };
 
   // Calculations
-  const isWashFold = order.order_type === 'wash_fold' || order.order_type === 'mixed' || weightLbs > 0;
+  // Same rule as the server: laundry is billed only when it was weighed (15 lb minimum then)
+  const isWashFold = Number(weightLbs) > 0;
   const billedWeight = isWashFold ? Math.max(WASH_FOLD_MINIMUM_LBS, Number(weightLbs) || 0) : 0;
   const washFoldSubtotal = isWashFold ? billedWeight * WASH_FOLD_PRICE_PER_LB : 0;
 

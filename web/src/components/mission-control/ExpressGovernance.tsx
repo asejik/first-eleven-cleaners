@@ -1,56 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, Badge, Button } from '@/components/ui';
 import { EXPRESS_DAILY_SLOT_CAP } from '@/lib/constants';
 import type { Order } from '@/types';
+import { texasDate, addDaysToDate } from '@/lib/texas-time';
 
 interface ExpressGovernanceProps {
   orders: Order[];
   onRefresh?: () => void;
-  onToast?: (toast: { type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string }) => void;
 }
 
-export function ExpressGovernance({ orders, onRefresh, onToast }: ExpressGovernanceProps) {
-  // 1. Capacity Cap State (Persisted in localStorage, default = 8)
-  const [slotCap, setSlotCap] = useState<number>(() => {
-    if (typeof window === 'undefined') return EXPRESS_DAILY_SLOT_CAP;
-    try {
-      const savedCap = localStorage.getItem('f11_express_daily_cap');
-      if (savedCap) {
-        const parsed = parseInt(savedCap, 10);
-        if (!isNaN(parsed) && parsed > 0) return parsed;
-      }
-    } catch {}
-    return EXPRESS_DAILY_SLOT_CAP;
-  });
-  const [capInput, setCapInput] = useState<string>(() => String(slotCap));
-  const [isSaved, setIsSaved] = useState(false);
-
-  const handleSaveCap = () => {
-    const parsed = parseInt(capInput, 10);
-    if (isNaN(parsed) || parsed < 1) {
-      if (onToast) onToast({ type: 'error', title: 'Invalid Slot Cap', message: 'Daily Express slot cap must be at least 1 order per day.' });
-      return;
-    }
-    setSlotCap(parsed);
-    try {
-      localStorage.setItem('f11_express_daily_cap', String(parsed));
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2500);
-      if (onToast) onToast({ type: 'success', title: 'Express Cap Saved', message: `Daily Express capacity limit updated to ${parsed} orders/day.` });
-    } catch {
-      // ignore
-    }
-  };
+export function ExpressGovernance({ orders, onRefresh }: ExpressGovernanceProps) {
+  // The daily cap the booking server enforces (read-only here; P03 PR-09)
+  const slotCap = EXPRESS_DAILY_SLOT_CAP;
 
   // 2. Filter express orders
   const expressOrders = orders.filter((o) => o.express_tier === 'express_24hr');
 
   // Tomorrow calculation
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = addDaysToDate(texasDate(), 1); // Dallas calendar (PR-13)
 
   const tomorrowExpressOrders = expressOrders.filter((o) => o.pickup_date === tomorrowStr);
   const remainingTomorrowSlots = Math.max(0, slotCap - tomorrowExpressOrders.length);
@@ -58,49 +26,11 @@ export function ExpressGovernance({ orders, onRefresh, onToast }: ExpressGoverna
 
   // Auto-refund and SLA statistics
   const deliveredExpress = expressOrders.filter((o) => o.status === 'delivered');
-  const missedSLAOrders = expressOrders.filter((o) => o.express_auto_refunded || o.events?.some((e) => (e.status as string) === 'express_auto_refund' || (e.note || '').includes('AUTOMATIC REFUND')));
-  const totalRefundAmount = missedSLAOrders.reduce((acc, o) => acc + (Number(o.express_refund_amount) || 15.0), 0);
+  const missedSLAOrders = expressOrders.filter((o) => o.express_auto_refunded || o.events?.some((e) => (e.status as string) === 'express_auto_refund' || (e.status as string) === 'express_refund_failed'));
+  const manualRefundOrders = expressOrders.filter((o) => !o.express_auto_refunded && o.events?.some((e) => (e.status as string) === 'express_refund_failed'));
+  const totalRefundAmount = missedSLAOrders.reduce((acc, o) => acc + (Number(o.express_refund_amount) || 0), 0);
   const onTimeCount = deliveredExpress.length - missedSLAOrders.length;
   const onTimePct = deliveredExpress.length > 0 ? ((Math.max(0, onTimeCount) / deliveredExpress.length) * 100).toFixed(1) : '100.0';
-
-  // Simulator state
-  const [simOrderId, setSimOrderId] = useState<string>('');
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  const handleSimulateLateDelivery = async () => {
-    if (!simOrderId) {
-      if (onToast) onToast({ type: 'error', title: 'Order Required', message: 'Select or enter an Express order ID to simulate.' });
-      return;
-    }
-    setIsSimulating(true);
-    try {
-      // Advance to delivered with mock 10:18 AM timestamp
-      const res = await fetch('/api/mission-control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'advance_stage',
-          order_id: simOrderId,
-          new_stage: 'delivered',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to simulate');
-
-      if (onToast) {
-        onToast({
-          type: 'warning',
-          title: '⚡ Express SLA Miss Triggered',
-          message: 'Delivery recorded past 10:00 AM window. Express fee auto-refunded to card & customer notified.',
-        });
-      }
-      if (onRefresh) onRefresh();
-    } catch (err: unknown) {
-      if (onToast) onToast({ type: 'error', title: 'Simulation Error', message: (err as Error).message });
-    } finally {
-      setIsSimulating(false);
-    }
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
@@ -164,29 +94,8 @@ export function ExpressGovernance({ orders, onRefresh, onToast }: ExpressGoverna
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                value={capInput}
-                onChange={(e) => setCapInput(e.target.value)}
-                style={{
-                  width: '60px',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  background: '#1e293b',
-                  border: '1px solid rgba(201,161,74,0.5)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
-              />
-              <Button variant="primary" size="sm" onClick={handleSaveCap}>
-                {isSaved ? '✓ Saved' : 'Update Cap'}
-              </Button>
+            <div style={{ fontSize: '11px', color: '#94a3b8', maxWidth: '180px' }}>
+              Enforced by the booking server. To change it, ask your developer.
             </div>
           </div>
         </div>
@@ -217,13 +126,13 @@ export function ExpressGovernance({ orders, onRefresh, onToast }: ExpressGoverna
           <div style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <span style={{ fontSize: '11px', color: '#cbd5e1', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>Auto-Refunds Triggered</span>
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: missedSLAOrders.length > 0 ? '#f59e0b' : '#10b981', marginTop: '4px' }}>
-              {missedSLAOrders.length} <span style={{ fontSize: '12px', color: '#cbd5e1' }}>(${totalRefundAmount.toFixed(2)})</span>
+              {missedSLAOrders.length} <span style={{ fontSize: '12px', color: '#cbd5e1' }}>(${totalRefundAmount.toFixed(2)} refunded{manualRefundOrders.length > 0 ? `, ${manualRefundOrders.length} need a manual refund` : ''})</span>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Auto-Refund SLA Guarantee Explainer & Test Trigger */}
+      {/* Auto-Refund SLA Guarantee Explainer */}
       <Card variant="bordered" padding="lg" style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ maxWidth: '740px' }}>
@@ -231,58 +140,21 @@ export function ExpressGovernance({ orders, onRefresh, onToast }: ExpressGoverna
               <span style={{ fontSize: '18px' }}>🛡️</span> 10:00 AM Delivery Window Guarantee Logic
             </h3>
             <p style={{ fontSize: '13px', color: '#e2e8f0', marginTop: '6px', margin: '6px 0 0', lineHeight: '1.6' }}>
-              If an Express order is marked delivered after 10:00 AM on the promised delivery date, the system automatically:
+              If an Express order is marked delivered after 10:00 AM (Dallas time) on the promised delivery date, the system automatically:
             </p>
             <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#e2e8f0', lineHeight: '1.5' }}>
               <div>
-                <strong style={{ color: 'var(--color-gold)' }}>1.</strong> Refunds the Express surcharge (<span style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>$15 min / +50%</span>) to the customer&apos;s payment card.
+                <strong style={{ color: 'var(--color-gold)' }}>1.</strong> Refunds the Express surcharge (<span style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>$15 min / +50%</span>), plus its fee and tax, to the customer&apos;s card through Square.
               </div>
               <div>
-                <strong style={{ color: 'var(--color-gold)' }}>2.</strong> Dispatches exact customer SMS: <em style={{ color: '#ffffff', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px' }}>&ldquo;Your Express delivery ran past our window. The Express fee has been refunded automatically — that&apos;s our guarantee.&rdquo;</em>
+                <strong style={{ color: 'var(--color-gold)' }}>2.</strong> Once Square accepts the refund, sends the customer: <em style={{ color: '#ffffff', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px' }}>&ldquo;Your Express delivery ran past our window. The Express fee has been refunded automatically — that&apos;s our guarantee.&rdquo;</em>
               </div>
               <div>
-                <strong style={{ color: 'var(--color-gold)' }}>3.</strong> Logs the refund as an Express SLA miss in Mission Control.
+                <strong style={{ color: 'var(--color-gold)' }}>3.</strong> Logs the refund as an Express SLA miss in Mission Control. If the refund can&apos;t be made, nothing is sent to the customer and the order timeline says to refund it manually.
               </div>
             </div>
           </div>
 
-          {/* Test Simulator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <select
-              value={simOrderId}
-              onChange={(e) => setSimOrderId(e.target.value)}
-              style={{
-                padding: '7px 10px',
-                borderRadius: '6px',
-                background: '#1e293b',
-                border: '1px solid rgba(255,255,255,0.25)',
-                color: '#ffffff',
-                fontSize: '12px',
-                outline: 'none',
-              }}
-            >
-              <option value="" style={{ background: '#1e293b', color: '#cbd5e1' }}>Select Express Order to Test...</option>
-              {expressOrders.map((o) => (
-                <option key={o.id} value={o.id} style={{ background: '#1e293b', color: '#ffffff' }}>
-                  #{o.order_number || o.id.slice(0, 8)} ({o.customer?.full_name || 'Customer'}) - {o.status}
-                </option>
-              ))}
-            </select>
-            <Button
-              variant="outlineGold"
-              size="sm"
-              onClick={handleSimulateLateDelivery}
-              disabled={isSimulating || !simOrderId}
-              style={{
-                color: !simOrderId ? 'rgba(255, 255, 255, 0.75)' : 'var(--color-gold)',
-                borderColor: !simOrderId ? 'rgba(255, 255, 255, 0.25)' : 'var(--color-gold)',
-                background: !simOrderId ? 'rgba(255, 255, 255, 0.05)' : 'rgba(201, 161, 74, 0.12)',
-                fontWeight: 600,
-              }}
-            >
-              {isSimulating ? 'Processing...' : '⚡ Test SLA Miss Simulator'}
-            </Button>
-          </div>
         </div>
       </Card>
 

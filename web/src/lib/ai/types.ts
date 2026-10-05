@@ -7,7 +7,7 @@ export interface AIConversationMessage {
   action?: AIAction;
 }
 
-export interface AIAction {
+interface AIAction {
   type:
     | 'booking_created'
     | 'show_prices'
@@ -20,7 +20,7 @@ export interface AIAction {
   payload?: Record<string, unknown>;
 }
 
-export type ConciergeIntent =
+type ConciergeIntent =
   | 'book_usual'
   | 'check_status'
   | 'pricing_inquiry'

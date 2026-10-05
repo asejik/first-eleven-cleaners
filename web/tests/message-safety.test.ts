@@ -103,7 +103,8 @@ describe('Booking API name check and per-contact limits (SEC-09)', () => {
   function booking(name: string, email = 'limit.tester@example.com', phone = '2145550100') {
     const todayTx = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
     const d = new Date(`${todayTx}T12:00:00`);
-    d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+    d.setDate(d.getDate() + 2); // first Monday at least 2 days ahead (standard minimum, PR-12)
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7));
     return new Request('http://localhost/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

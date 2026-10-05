@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { apiError } from '@/lib/api-errors';
+import { logMessages } from '@/lib/message-log';
 import {
   POS_ATTACH_RECOMMENDATIONS,
   evaluateChurnWinbackList,
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
         o.id,
         o.order_number || o.id.slice(0, 8),
         customer?.full_name || 'Customer',
-        customer?.phone || '+12145550199'
+        customer?.phone || ''
       );
     });
 
@@ -74,40 +75,15 @@ export async function POST(req: Request) {
     const supabase = createAdminClient();
 
     if (action === 'send_winback' && customer_id) {
-      // Log winback message in conversations
-      const { data: existingConv } = await supabase
-        .from('conversations')
-        .select('id, messages')
-        .eq('customer_id', customer_id)
-        .eq('channel', 'sms')
-        .maybeSingle();
-
-      const winbackEntry = {
-        id: crypto.randomUUID(),
-        stage: 'booked',
-        text: text || 'Enjoy 15% off your next pickup with code COMEBACK15.',
-        media_url: null,
+      // Log the win-back message (one row per message, PR-26)
+      await logMessages(supabase, [{
+        customerId: customer_id,
+        channel: 'sms',
         direction: 'outbound',
+        body: text || 'Enjoy 15% off your next pickup with code COMEBACK15.',
+        stage: 'booked',
         mode: 'growth_winback',
-        created_at: new Date().toISOString(),
-      };
-
-      if (existingConv) {
-        const updatedMessages = Array.isArray(existingConv.messages)
-          ? [...existingConv.messages, winbackEntry]
-          : [winbackEntry];
-
-        await supabase
-          .from('conversations')
-          .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
-          .eq('id', existingConv.id);
-      } else {
-        await supabase.from('conversations').insert({
-          customer_id,
-          channel: 'sms',
-          messages: [winbackEntry],
-        });
-      }
+      }]);
 
       return NextResponse.json({ success: true, message: `Win-back perk dispatched to ${phone}` });
     }

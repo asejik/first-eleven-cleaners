@@ -3,12 +3,22 @@
 // Cache-first for assets, Network-first for dynamic navigation
 // =================================================================
 
-const CACHE_NAME = 'f11-cleaners-v1';
+// v2: stop caching private pages; activating v2 deletes v1 caches that may hold them (PR-28)
+const CACHE_NAME = 'f11-cleaners-v2';
+
+// Pages with personal or staff data: always from the network, never stored on the device
+const PRIVATE_PATH_PREFIXES = [
+  '/dashboard', '/track', '/claim', '/mission-control', '/staff', '/driver',
+  '/portal', '/admin', '/auth', '/reset-password',
+];
+const isPrivatePath = (pathname) =>
+  PRIVATE_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.json',
   '/icon.png',
   '/icon.webp',
+  '/icon-192.png',
   '/logo.png',
   '/logo.webp',
 ];
@@ -76,7 +86,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. HTML Navigation Pages — Network-First with Offline Cache Fallback
+  // 4a. Private pages — network only; offline shows the cached home page
+  if (request.mode === 'navigate' && isPrivatePath(url.pathname)) {
+    event.respondWith(fetch(request).catch(() => caches.match('/')));
+    return;
+  }
+
+  // 4b. Public HTML Navigation Pages — Network-First with Offline Cache Fallback
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)

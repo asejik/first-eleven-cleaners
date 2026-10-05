@@ -8,7 +8,6 @@ export interface IntakeQueueResponse {
   queue: Order[];
   intakeHistory?: Order[];
   todayIntakeCount?: number;
-  allOrders: Order[];
 }
 
 export function useIntakeQueue() {

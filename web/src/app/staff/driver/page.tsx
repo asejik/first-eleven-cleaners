@@ -10,6 +10,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import { DriverStopCard } from '@/components/driver';
 import styles from './page.module.css';
+import { prepareImageForUpload } from '@/lib/image-upload';
 
 export default function DriverPage() {
   const [shift, setShift] = useState<string>('all');
@@ -63,28 +64,29 @@ export default function DriverPage() {
     }
 
     try {
-      let finalPhotoUrl = photoPreview;
-      if (photoFile) {
-        setIsUploading(true);
-        try {
-          const formData = new FormData();
-          formData.append('file', photoFile);
-          formData.append('order_id', selectedOrder.id);
-          formData.append('photo_type', selectedOrder.type === 'pickup' ? 'pickup_proof' : 'delivery_proof');
+      // Resize the photo in the browser, then upload it; the stop is confirmed with the
+      // stored link only. Never send the raw photo inside the request (PR-06).
+      if (!photoFile) throw new Error('Please take the proof photo again.');
+      let finalPhotoUrl: string;
+      setIsUploading(true);
+      try {
+        const uploadFile = await prepareImageForUpload(photoFile);
+        const formData = new FormData();
+        formData.append('file', uploadFile);
+        formData.append('order_id', selectedOrder.id);
+        formData.append('photo_type', selectedOrder.type === 'pickup' ? 'pickup_proof' : 'delivery_proof');
 
-          const uploadRes = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          });
-          const uploadData = await uploadRes.json();
-          if (uploadRes.ok && uploadData.url) {
-            finalPhotoUrl = uploadData.url;
-          }
-        } catch (uploadErr) {
-          console.warn('Direct upload failed, falling back to server resolution:', uploadErr);
-        } finally {
-          setIsUploading(false);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const uploadData = await uploadRes.json().catch(() => ({}));
+        if (!uploadRes.ok || !uploadData.url) {
+          throw new Error(uploadData.error || 'The photo could not be uploaded. Check your signal and try again.');
         }
+        finalPhotoUrl = uploadData.url;
+      } finally {
+        setIsUploading(false);
       }
 
       const actionType = selectedOrder.type === 'pickup' ? 'pickup_complete' : 'delivery_complete';

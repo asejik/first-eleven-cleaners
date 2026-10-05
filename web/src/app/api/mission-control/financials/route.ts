@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { apiError } from '@/lib/api-errors';
+import { texasDate, texasDayStartUtc, addDaysToDate } from '@/lib/texas-time';
 
 export const dynamic = 'force-dynamic';
+
+const TRANSACTION_LIST_LIMIT = 500;
 
 export async function GET(request: Request) {
   try {
@@ -12,9 +15,17 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient();
 
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select(`
+    // Date range in Dallas calendar days (default: the last 90 days). Totals come from SQL over
+    // the whole range; the transaction list is capped at the 500 most recent (PR-14).
+    const { searchParams } = new URL(request.url);
+    const isDate = (v: string | null): v is string => Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+    const to = isDate(searchParams.get('to')) ? (searchParams.get('to') as string) : texasDate();
+    const from = isDate(searchParams.get('from')) ? (searchParams.get('from') as string) : addDaysToDate(to, -89);
+
+    const [listRes, summaryRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`
         id,
         order_number,
         status,
@@ -22,7 +33,11 @@ export async function GET(request: Request) {
         weight_lbs,
         subtotal,
         discount_amount,
+        express_surcharge,
+        environmental_fee,
+        sales_tax,
         total,
+        refunded_amount,
         payment_id,
         payment_status,
         notes,
@@ -32,39 +47,24 @@ export async function GET(request: Request) {
         address:addresses(id, street, unit, city, state, zip),
         items:order_items(id, garment_type, service_type, quantity, unit_price, subtotal),
         events:order_events(id, status, triggered_by, timestamp, note)
-      `)
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' })
+        .gte('created_at', texasDayStartUtc(from))
+        .lt('created_at', texasDayStartUtc(addDaysToDate(to, 1)))
+        .order('created_at', { ascending: false })
+        .limit(TRANSACTION_LIST_LIMIT),
+      supabase.rpc('order_financial_summary', { p_from: from, p_to: to }),
+    ]);
 
-    if (error) {
-      console.error('Mission control financials error:', error);
-      return apiError('api/mission-control/financials', error, 500);
+    const { data: orders, error, count } = listRes;
+    if (error || summaryRes.error) {
+      console.error('Mission control financials error:', error || summaryRes.error);
+      return apiError('api/mission-control/financials', error || summaryRes.error, 500);
     }
 
     const allOrders = orders || [];
 
-    // Financial Metrics Calculation
-    let grossRevenue = 0;
-    let inVault = 0;
-    let chargedCount = 0;
-    let authorizedCount = 0;
-    let failedCount = 0;
-    let refundedCount = 0;
-
     const transactions = allOrders.map((o) => {
-      const orderTotal = Number(o.total || 0);
       const pStatus = (o.payment_status || 'pending').toLowerCase();
-
-      if (pStatus === 'charged') {
-        grossRevenue += orderTotal;
-        chargedCount += 1;
-      } else if (pStatus === 'authorized' || pStatus === 'pending') {
-        inVault += orderTotal;
-        authorizedCount += 1;
-      } else if (pStatus === 'failed') {
-        failedCount += 1;
-      } else if (pStatus === 'refunded') {
-        refundedCount += 1;
-      }
 
       // Find the specific charge event if recorded
       const chargeEvent = (o.events as Array<{ status: string; note: string; timestamp: string }> || [])
@@ -76,11 +76,17 @@ export async function GET(request: Request) {
         customer: o.customer,
         address: o.address,
         order_type: o.order_type,
+        status: o.status,
         weight_lbs: o.weight_lbs,
         subtotal: Number(o.subtotal || 0),
         discount_amount: Number(o.discount_amount || 0),
-        total: orderTotal,
-        payment_id: o.payment_id || `sq_auth_${o.id.slice(0, 8)}`,
+        express_surcharge: Number(o.express_surcharge || 0),
+        environmental_fee: o.environmental_fee === null || o.environmental_fee === undefined ? null : Number(o.environmental_fee),
+        sales_tax: o.sales_tax === null || o.sales_tax === undefined ? null : Number(o.sales_tax),
+        total: Number(o.total || 0),
+        refunded_amount: Number(o.refunded_amount || 0),
+        // Real Square payment ID only; null until the card is charged (no invented IDs)
+        payment_id: o.payment_id || null,
         payment_status: pStatus,
         payment_date: chargeEvent?.timestamp || o.updated_at || o.created_at,
         charge_note: chargeEvent?.note || null,
@@ -90,18 +96,27 @@ export async function GET(request: Request) {
       };
     });
 
-    const aov = chargedCount > 0 ? Number((grossRevenue / chargedCount).toFixed(2)) : 0;
+    // Summary from SQL (order_financial_summary): money collected through Square net of
+    // refunds; "in vault" is uncharged money owed on live (not cancelled) orders (PR-15)
+    const raw = (summaryRes.data || {}) as Record<string, unknown>;
+    const num = (k: string) => Number(raw[k]) || 0;
 
     return NextResponse.json({
+      range: { from, to },
+      truncated: (count ?? transactions.length) > transactions.length,
       summary: {
-        gross_revenue: Number(grossRevenue.toFixed(2)),
-        in_vault: Number(inVault.toFixed(2)),
-        aov,
-        total_transactions: transactions.length,
-        charged_count: chargedCount,
-        authorized_count: authorizedCount,
-        failed_count: failedCount,
-        refunded_count: refundedCount,
+        gross_revenue: num('gross_revenue'),
+        refunded_total: num('refunded_total'),
+        net_revenue: num('net_revenue'),
+        sales_tax_collected: num('sales_tax_collected'),
+        environmental_fees_collected: num('environmental_fees_collected'),
+        in_vault: num('in_vault'),
+        aov: num('aov'),
+        total_transactions: num('total_transactions'),
+        charged_count: num('charged_count'),
+        authorized_count: num('authorized_count'),
+        failed_count: num('failed_count'),
+        refunded_count: num('refunded_count'),
       },
       transactions,
     });

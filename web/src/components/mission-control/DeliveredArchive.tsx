@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui';
 import type { Order } from '@/types';
 import styles from './DeliveredArchive.module.css';
+import { texasDate } from '@/lib/texas-time';
 
 interface DeliveredArchiveProps {
   orders: Order[];
@@ -22,7 +23,7 @@ export function DeliveredArchive({ orders, onBackToPipeline }: DeliveredArchiveP
   }, [orders]);
 
   // 2. Compute live metrics
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => texasDate(), []);
 
   const todayCount = useMemo(() => {
     return deliveredOrders.filter((o) => {
@@ -50,7 +51,7 @@ export function DeliveredArchive({ orders, onBackToPipeline }: DeliveredArchiveP
       if (!orderDate || isNaN(orderDate.getTime())) return false;
 
       if (dateFilter === 'today') {
-        const orderDateStr = orderDate.toISOString().split('T')[0];
+        const orderDateStr = texasDate(orderDate);
         if (orderDateStr !== todayStr) return false;
       } else if (dateFilter === 'week') {
         const sevenDaysAgo = new Date(currentDate);

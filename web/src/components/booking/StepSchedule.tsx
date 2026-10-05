@@ -170,6 +170,8 @@ export function StepSchedule({
               className={`${styles.windowCard} ${pickupWindow === 'evening' ? styles.selectedWindow : ''}`}
               onClick={() => setPickupWindow('evening')}
               aria-pressed={pickupWindow === 'evening'}
+              disabled={expressTier === 'express_24hr'}
+              title={expressTier === 'express_24hr' ? '24-Hour Express is a morning pickup' : undefined}
             >
               <span className={styles.winIcon}>🌆</span>
               <strong>Evening Window</strong>

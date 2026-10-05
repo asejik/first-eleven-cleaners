@@ -122,12 +122,12 @@ export async function resolveAndUploadPhotoUrl(
   if (trimmed.startsWith('data:image/')) {
     const match = trimmed.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
     if (!match) {
-      return trimmed; // Unrecognized format, return original
+      return null; // Unrecognized format: never store raw data URLs (PR-06)
     }
 
     const mimeType = match[1] || 'image/jpeg';
     const base64Data = match[2];
-    if (!base64Data) return trimmed;
+    if (!base64Data) return null;
 
     const ext = mimeType.includes('png')
       ? 'png'
@@ -142,10 +142,12 @@ export async function resolveAndUploadPhotoUrl(
     const buffer = Buffer.from(base64Data, 'base64');
     const uploadedUrl = await uploadToStorage(buffer, filename, mimeType, bucket);
 
-    return uploadedUrl || trimmed; // Fall back to base64 if storage upload failed
+    // Never fall back to storing the base64 string itself: it bloats the row and the
+    // photo is lost from storage anyway. Callers treat null as "photo not saved" (PR-06).
+    return uploadedUrl;
   }
 
-  return trimmed;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +157,7 @@ export async function resolveAndUploadPhotoUrl(
 // ---------------------------------------------------------------------------
 const STORAGE_OBJECT_RE = /\/storage\/v1\/object\/(?:public|sign)\/([^/?#]+)\/([^?#]+)/;
 
-export const PHOTO_LINK_TTL_SECONDS = 60 * 60; // screens: 1 hour
+const PHOTO_LINK_TTL_SECONDS = 60 * 60; // screens: 1 hour
 export const MMS_PHOTO_LINK_TTL_SECONDS = 24 * 60 * 60; // Twilio fetches media after sending
 
 function parseStorageUrl(url: string): { bucket: string; path: string; origin: string } | null {
@@ -176,7 +178,7 @@ export function canonicalStorageUrl(url: string): string {
 }
 
 /** Signs storage URLs in bulk; non-storage URLs map to themselves. */
-export async function signStorageUrls(urls: string[], expiresIn = PHOTO_LINK_TTL_SECONDS): Promise<Map<string, string>> {
+async function signStorageUrls(urls: string[], expiresIn = PHOTO_LINK_TTL_SECONDS): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   const byBucket = new Map<string, { url: string; path: string }[]>();
   for (const url of new Set(urls)) {

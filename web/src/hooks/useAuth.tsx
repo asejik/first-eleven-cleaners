@@ -13,6 +13,7 @@ import {
   createMockCustomer,
 } from '@/lib/mock-auth';
 import { ROUTES } from '@/lib/constants';
+import { toE164 } from '@/lib/phone';
 
 interface AuthState {
   user: Customer | null;
@@ -242,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               emailRedirectTo: `${window.location.origin}${ROUTES.authConfirm}`,
               data: {
                 full_name: data.full_name,
-                phone: data.phone,
+                phone: toE164(data.phone) || data.phone, // E.164 (PR-18)
                 sms_consent: Boolean(data.sms_consent),
                 sms_promotions_consent: Boolean(data.sms_promotions_consent),
               },
@@ -285,7 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 {
                   auth_id: authData.user.id,
                   email: data.email,
-                  phone: data.phone,
+                  phone: toE164(data.phone) || data.phone, // E.164 (PR-18)
                   full_name: data.full_name,
                   sms_consent: Boolean(data.sms_consent),
                   sms_promotions_consent: Boolean(data.sms_promotions_consent),
@@ -306,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: authData.user.id,
               auth_id: authData.user.id,
               email: data.email,
-              phone: data.phone,
+              phone: toE164(data.phone) || data.phone, // E.164 (PR-18)
               full_name: data.full_name,
               sms_consent: Boolean(data.sms_consent),
               sms_promotions_consent: Boolean(data.sms_promotions_consent),
@@ -324,7 +325,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Mock signup for local dev environment
       const mockCustomer = createMockCustomer(data.email, {
         full_name: data.full_name,
-        phone: data.phone,
+        phone: toE164(data.phone) || data.phone, // E.164 (PR-18)
       });
       mockCustomer.sms_consent = Boolean(data.sms_consent);
       mockCustomer.sms_promotions_consent = Boolean(data.sms_promotions_consent);

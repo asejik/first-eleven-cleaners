@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
 import { ORDER_STATUSES, ROUTES } from '@/lib/constants';
+import { PayNowCard } from '@/components/orders/PayNowCard';
 import styles from './page.module.css';
 
 export default function PublicTrackingPage() {
@@ -48,6 +49,10 @@ export default function PublicTrackingPage() {
           <h1 className={styles.title}>Live Garment Tracker</h1>
           <p className={styles.orderNumber}>Tracking Order #{order?.order_number || orderId}</p>
         </div>
+
+        {order && (order.payment_hold ?? order.payment_status === 'failed') && (
+          <PayNowCard orderId={order.id} amountDue={Number(order.amount_due ?? order.total) || 0} />
+        )}
 
         {order ? (
           <Card variant="bordered" padding="lg" className={styles.trackingCard}>

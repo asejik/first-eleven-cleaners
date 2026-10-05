@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_PRICE_PER_LB,
@@ -15,6 +15,7 @@ import {
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
+import { earliestPickupDate } from '@/lib/schedule';
 
 // Helper to format local date to YYYY-MM-DD (avoiding UTC timezone shift)
 export function formatLocalDate(d: Date): string {
@@ -37,46 +38,9 @@ export function formatDisplayDate(dateStr: string): string {
   });
 }
 
-/**
- * Calculates earliest allowable Express pickup date based on cutoffs:
- * - Orders placed by 7:00 AM can take THIS morning's Express pickup (Mon–Fri).
- * - Orders placed between 7:00 AM and 9:00 PM: next available is tomorrow morning (skipping weekends).
- * - Orders placed after 9:00 PM: tomorrow morning is closed; earliest is day-after-tomorrow.
- * - Saturday Express is not offered; Sunday is closed.
- */
-export function getNextExpressPickupDate(now: Date = new Date()): string {
-  const d = new Date(now);
-  const hour = d.getHours();
-  const dayOfWeek = d.getDay(); // 0: Sun, 1: Mon, ..., 5: Fri, 6: Sat
-
-  let addDays = 1;
-  if (hour < 7 && dayOfWeek >= 1 && dayOfWeek <= 5) {
-    addDays = 0; // Same-day morning pickup
-  } else if (hour >= 21) {
-    addDays = 2; // Past 9:00 PM cutoff for tomorrow
-  } else {
-    addDays = 1; // Between 7:00 AM and 9:00 PM -> tomorrow morning
-  }
-
-  d.setDate(d.getDate() + addDays);
-
-  // Express is Monday through Friday pickups only
-  while (d.getDay() === 0 || d.getDay() === 6) {
-    d.setDate(d.getDate() + 1);
-  }
-
-  return formatLocalDate(d);
-}
-
-// Helper to calculate earliest allowable pickup date based on turnaround tier
+// Earliest pickup dates come from the same Dallas-time rules the server enforces (PR-12)
 export function getMinPickupDate(tier: 'standard' | 'express_24hr' = 'standard') {
-  if (tier === 'express_24hr') {
-    return getNextExpressPickupDate();
-  }
-  const d = new Date();
-  d.setDate(d.getDate() + 2); // 48-hour minimum advance schedule for standard
-  if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Skip Sunday (plant closed)
-  return formatLocalDate(d);
+  return earliestPickupDate(tier);
 }
 
 // Helper to calculate estimated delivery date based on pickup date and tier
@@ -128,6 +92,8 @@ export function useBookingState() {
 
   const handleSelectTier = (tier: 'standard' | 'express_24hr') => {
     setExpressTier(tier);
+    // Express is a morning pickup only (PR-12)
+    if (tier === 'express_24hr') setPickupWindow('morning');
     const minDate = getMinPickupDate(tier);
     if (pickupDate < minDate) {
       setPickupDate(minDate);
@@ -148,6 +114,9 @@ export function useBookingState() {
 
   // Step 6: Confirmation result
   const [confirmedOrder, setConfirmedOrder] = useState<{ order_number: string; id: string } | null>(null);
+  // One key per checkout: resubmitting (double click, retry after a timeout) returns the
+  // order already created instead of booking twice (PR-11)
+  const checkoutKeyRef = useRef<string | null>(null);
 
   // TanStack Query Hooks
   const { data: slotData } = useAvailableSlots(pickupDate);
@@ -334,7 +303,11 @@ export function useBookingState() {
     last4: string = cardNumber ? cardNumber.slice(-4) : '4242'
   ) => {
     try {
+      if (!checkoutKeyRef.current && typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        checkoutKeyRef.current = crypto.randomUUID();
+      }
       const payload = {
+        idempotency_key: checkoutKeyRef.current ?? undefined,
         customer: { full_name: fullName, email, phone },
         address: { street, unit, city, state: 'TX', zip, delivery_notes: deliveryNotes },
         services: {
@@ -370,6 +343,7 @@ export function useBookingState() {
 
       const result = await submitBookingMutation.mutateAsync(payload);
       setConfirmedOrder({ order_number: result.order_number, id: result.order.id });
+      checkoutKeyRef.current = null; // the next booking is a new checkout
       try {
         sessionStorage.removeItem('f11_booking_draft');
       } catch {

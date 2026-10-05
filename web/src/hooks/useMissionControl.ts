@@ -15,12 +15,6 @@ export interface MissionControlResponse {
     all_time_revenue: number;
     total_lbs: number;
     total_pieces: number;
-    labor: {
-      estimated_cost: number;
-      target_max_pct: number;
-      current_pct: number;
-      status: 'optimal' | 'alert';
-    };
   } | null;
 }
 
@@ -94,6 +88,43 @@ export function useAdvanceOrderStage() {
       queryClient.invalidateQueries({ queryKey: ['mission_control'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+/** Payment Hold recovery (PR-04): retry the saved card, or record a Square Dashboard payment. */
+export function usePaymentRecovery() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      payload:
+        | { action: 'retry_charge'; order_id: string }
+        | { action: 'mark_paid_external'; order_id: string; square_payment_id: string }
+    ) => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.access_token) {
+          headers['Authorization'] = `Bearer ${data.session.access_token}`;
+        }
+      } catch (e) {
+        console.warn('Could not get session token for payment recovery:', e);
+      }
+
+      const res = await fetch('/api/mission-control', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Payment action failed');
+      return data as { success: true; payment_id: string; amount: number };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mission_control'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 }
