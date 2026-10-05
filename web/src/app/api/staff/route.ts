@@ -6,6 +6,8 @@ import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
 import { apiError } from '@/lib/api-errors';
 import { phoneSchema } from '@/lib/phone';
+import { recordAdminAction } from '@/lib/audit-log';
+import { getClientIp } from '@/lib/rate-limiter';
 
 const CreateStaffSchema = z.object({
   full_name: personNameSchema,
@@ -270,6 +272,15 @@ export async function POST(request: Request) {
       created_at: createdAtTimestamp,
       last_sign_in_at: null,
     };
+
+    await recordAdminAction(supabase, {
+      actor: { id: auth.customer?.id, email: auth.customer?.email || auth.user?.email },
+      action: usedExistingAccount ? 'staff_role_granted' : 'staff_created',
+      targetType: 'staff',
+      targetId: staffCustomerId,
+      details: { target_email: cleanEmail, role },
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({
       success: true,

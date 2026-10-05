@@ -572,3 +572,28 @@ REVOKE EXECUTE ON FUNCTION public.customers_normalize_phone() FROM PUBLIC, anon,
 
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_orders_assigned_driver ON orders(assigned_driver_id) WHERE assigned_driver_id IS NOT NULL;
+
+-- admin_audit_logs is append-only (20261005_admin_audit_immutable.sql, PR-24)
+CREATE OR REPLACE FUNCTION public.admin_audit_logs_block_changes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $function$
+BEGIN
+  RAISE EXCEPTION 'admin_audit_logs is append-only: % is not allowed', TG_OP
+    USING ERRCODE = 'insufficient_privilege';
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_audit_logs_block_changes() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS admin_audit_logs_no_update_delete ON admin_audit_logs;
+CREATE TRIGGER admin_audit_logs_no_update_delete
+  BEFORE UPDATE OR DELETE ON admin_audit_logs
+  FOR EACH ROW EXECUTE FUNCTION public.admin_audit_logs_block_changes();
+
+DROP TRIGGER IF EXISTS admin_audit_logs_no_truncate ON admin_audit_logs;
+CREATE TRIGGER admin_audit_logs_no_truncate
+  BEFORE TRUNCATE ON admin_audit_logs
+  FOR EACH STATEMENT EXECUTE FUNCTION public.admin_audit_logs_block_changes();
+

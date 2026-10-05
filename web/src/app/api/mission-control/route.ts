@@ -13,6 +13,8 @@ import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KE
 import { texasDate } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
+import { recordAdminAction } from '@/lib/audit-log';
+import { getClientIp } from '@/lib/rate-limiter';
 
 
 export async function GET(request: Request) {
@@ -239,6 +241,21 @@ export async function POST(request: Request) {
         triggered_by: adminLabel,
       });
 
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: 'order.stage_change',
+        targetType: 'order',
+        targetId: order.id,
+        details: {
+          order_number: order.order_number,
+          from: order.status,
+          to: new_stage,
+          payment_status: order.payment_status,
+          ...(needsOverride ? { manager_override: true, override_reason: override_reason || null } : {}),
+        },
+        ip: getClientIp(request),
+      });
+
       // Dispatch Notification
       const rawCustomer = order.customer;
       const customer = (Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer) as { full_name?: string; phone?: string; email?: string } | null;
@@ -348,6 +365,19 @@ export async function POST(request: Request) {
         return apiError('api/mission-control', claimErr, 500);
       }
 
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: refundNum > 0 ? 'claim.refund' : 'claim.resolve',
+        targetType: 'claim',
+        targetId: String(claim_id),
+        details: {
+          order_id: claim.order_id,
+          status: finalStatus,
+          ...(refundNum > 0 ? { refund_amount: Number(refundNum.toFixed(2)), square_refund_id: refundId } : {}),
+        },
+        ip: getClientIp(request),
+      });
+
       return NextResponse.json({ success: true, claim: updatedClaim, refund_id: refundId });
     }
 
@@ -374,6 +404,19 @@ export async function POST(request: Request) {
               squarePaymentId: String(body.square_payment_id || ''),
               actorLabel,
             });
+
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: action === 'retry_charge' ? 'payment.retry_charge' : 'payment.mark_paid_external',
+        targetType: 'order',
+        targetId: heldOrder.id,
+        details: {
+          order_number: heldOrder.order_number,
+          outcome: result.ok ? 'paid' : 'refused',
+          ...(result.ok ? { payment_id: result.paymentId, amount: result.amount } : { error: result.error }),
+        },
+        ip: getClientIp(request),
+      });
 
       if (!result.ok) {
         return NextResponse.json({ error: result.error }, { status: result.status });

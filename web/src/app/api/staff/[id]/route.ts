@@ -6,6 +6,8 @@ import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import type { StaffMember } from '@/types';
 import { apiError } from '@/lib/api-errors';
 import { phoneSchema } from '@/lib/phone';
+import { recordAdminAction } from '@/lib/audit-log';
+import { getClientIp } from '@/lib/rate-limiter';
 
 const UpdateStaffSchema = z.object({
   full_name: personNameSchema.optional(),
@@ -138,22 +140,18 @@ export async function PATCH(
       created_at: updatedCust.created_at,
     };
 
-    // Record immutable admin audit log (F008 Fix)
-    try {
-      await supabase.from('admin_audit_logs').insert({
-        admin_id: auth.customer?.id || null,
-        admin_email: auth.customer?.email || auth.user?.email || 'admin@firstelevencleaners.com',
-        action: 'staff_updated',
-        target_type: 'staff',
-        target_id: id,
-        details: {
+    // Record immutable admin audit log (F008, PR-24)
+    await recordAdminAction(supabase, {
+      actor: { id: auth.customer?.id, email: auth.customer?.email || auth.user?.email },
+      action: 'staff_updated',
+      targetType: 'staff',
+      targetId: id,
+      details: {
           updates,
           target_email: customer.email,
         },
-      });
-    } catch (auditErr) {
-      console.warn('Failed to record admin audit log:', auditErr);
-    }
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({
       success: true,
@@ -216,21 +214,17 @@ export async function DELETE(
       .update({ role: 'customer' })
       .eq('id', id);
 
-    // Record immutable admin audit log (F008 Fix)
-    try {
-      await supabase.from('admin_audit_logs').insert({
-        admin_id: auth.customer?.id || null,
-        admin_email: auth.customer?.email || auth.user?.email || 'admin@firstelevencleaners.com',
-        action: 'staff_deleted',
-        target_type: 'staff',
-        target_id: id,
-        details: {
+    // Record immutable admin audit log (F008, PR-24)
+    await recordAdminAction(supabase, {
+      actor: { id: auth.customer?.id, email: auth.customer?.email || auth.user?.email },
+      action: 'staff_deleted',
+      targetType: 'staff',
+      targetId: id,
+      details: {
           target_email: customer.email,
         },
-      });
-    } catch (auditErr) {
-      console.warn('Failed to record admin audit log:', auditErr);
-    }
+      ip: getClientIp(request),
+    });
 
     return NextResponse.json({
       success: true,
