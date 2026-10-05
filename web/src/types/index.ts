@@ -115,6 +115,9 @@ export interface Order {
   total: number;
   payment_id: string | null;
   payment_status: 'pending' | 'authorized' | 'charged' | 'failed' | 'refunded';
+  /** Public tracking view only: order is on Payment Hold, and the amount the link holder can pay (PR-04) */
+  payment_hold?: boolean;
+  amount_due?: number;
   notes: string | null;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
   created_at: string;

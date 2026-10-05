@@ -146,18 +146,21 @@ export async function chargeCardOnFile(
     amount,
     orderId,
     orderNumber,
+    idempotencyKey,
   }: {
     squareCustomerId: string;
     cardId: string;
     amount: number;
     orderId: string;
     orderNumber: string;
+    /** Override for deliberate retries after a decline (max 45 characters) */
+    idempotencyKey?: string;
   }
 ): Promise<{ ok: true; paymentId: string; status: string } | { ok: false; error: string }> {
   const amountCents = Math.round(amount * 100);
   const result = await squareRequest<{ payment: { id: string; status: string } }>(config, '/payments', {
     // Square limits idempotency keys to 45 characters
-    idempotency_key: `int_${orderId.replace(/-/g, '')}_${amountCents}`,
+    idempotency_key: idempotencyKey || `int_${orderId.replace(/-/g, '')}_${amountCents}`,
     source_id: cardId,
     customer_id: squareCustomerId,
     location_id: config.locationId,
@@ -201,6 +204,23 @@ export async function refundPayment(
     return { ok: false, error: `Square refund status ${status}` };
   }
   return { ok: true, refundId: id, status };
+}
+
+/** Looks up a payment, e.g. to verify one taken outside the app before marking an order paid. */
+export async function getPayment(
+  config: SquareConfig,
+  paymentId: string
+): Promise<{ ok: true; status: string; amountCents: number; refundedCents: number } | { ok: false; error: string }> {
+  const result = await squareRequest<{
+    payment: { status: string; amount_money?: { amount?: number }; refunded_money?: { amount?: number } };
+  }>(config, `/payments/${encodeURIComponent(paymentId)}`, undefined, 'GET');
+  if (!result.ok) return { ok: false, error: result.error };
+  return {
+    ok: true,
+    status: result.data.payment.status,
+    amountCents: Number(result.data.payment.amount_money?.amount) || 0,
+    refundedCents: Number(result.data.payment.refunded_money?.amount) || 0,
+  };
 }
 
 export interface SquareCardSummary {

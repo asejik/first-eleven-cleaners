@@ -380,7 +380,7 @@ export async function POST(request: Request) {
       const primaryPhotoUrl = savedPhotoUrls[0];
 
       const customAlertText = isPaymentFailed
-        ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but card authorization failed. Please update your payment method here to start cleaning: ${origin}/dashboard/billing`
+        ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but your card was declined. Please pay securely here so we can start cleaning: ${origin}/track/${order.id}`
         : undefined;
 
       const payload: MessagePayload = {
@@ -398,7 +398,7 @@ export async function POST(request: Request) {
         itemCount: orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').reduce((acc, i) => acc + i.quantity, 0),
         total: finalTotal,
         photoUrl: primaryPhotoUrl,
-        trackingUrl: isPaymentFailed ? `${origin}/dashboard/billing` : `${origin}/track/${order.id}`,
+        trackingUrl: `${origin}/track/${order.id}`,
         customMessage: customAlertText,
       };
 

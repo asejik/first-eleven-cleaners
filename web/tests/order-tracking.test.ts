@@ -109,8 +109,11 @@ describe('Public order tracking exposes only the tracking view (SEC-07)', () => 
       [
         'id', 'order_number', 'status', 'order_type', 'express_tier', 'pickup_date', 'pickup_window',
         'delivery_date', 'delivery_window', 'created_at', 'updated_at', 'photos',
+        // PR-04: hold flag only; the amount due appears only while the order is on Payment Hold
+        'payment_hold',
       ].sort()
     );
+    expect(order.payment_hold).toBe(false);
     expect(order.photos[0]).not.toHaveProperty('captured_by');
     expect(order.photos[0].photo_url).toContain('garment-photos');
     // SEC-30: photos are served as short-lived signed links, never the permanent public URL

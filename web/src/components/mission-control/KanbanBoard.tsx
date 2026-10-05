@@ -11,6 +11,10 @@ interface KanbanBoardProps {
   orders: Order[];
   onAdvance: (orderId: string, currentStage: OrderStatusKey) => void;
   isAdvancing: boolean;
+  /** Payment Hold recovery (PR-04) */
+  onRetryCharge?: (orderId: string) => void;
+  onMarkPaid?: (orderId: string) => void;
+  isRecoveringPayment?: boolean;
   onViewArchive?: () => void;
 }
 
@@ -69,6 +73,9 @@ export function KanbanBoard({
   onAdvance,
   isAdvancing,
   onViewArchive,
+  onRetryCharge,
+  onMarkPaid,
+  isRecoveringPayment = false,
 }: KanbanBoardProps) {
   const [isDeliveredCollapsed, setIsDeliveredCollapsed] = useState(false);
   const [deliveredScope, setDeliveredScope] = useState<'today' | 'all'>('today');
@@ -222,6 +229,33 @@ export function KanbanBoard({
                             }}
                           >
                             ⚠️ PAYMENT FAILED (HOLD)
+                          </div>
+                        )}
+
+                        {o.payment_status === 'failed' && (onRetryCharge || onMarkPaid) && (
+                          <div style={{ display: 'flex', gap: '6px', margin: '0 0 6px' }}>
+                            {onRetryCharge && (
+                              <button
+                                type="button"
+                                className={styles.advanceBtn}
+                                onClick={() => onRetryCharge(o.id)}
+                                disabled={isRecoveringPayment}
+                                title="Charge the card on file again for the order total"
+                              >
+                                Retry charge
+                              </button>
+                            )}
+                            {onMarkPaid && (
+                              <button
+                                type="button"
+                                className={styles.advanceBtn}
+                                onClick={() => onMarkPaid(o.id)}
+                                disabled={isRecoveringPayment}
+                                title="Record a payment taken in the Square Dashboard"
+                              >
+                                Mark paid…
+                              </button>
+                            )}
                           </div>
                         )}
 

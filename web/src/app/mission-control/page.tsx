@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMissionControl, useAdvanceOrderStage, useResolveClaim } from '@/hooks/useMissionControl';
+import { useMissionControl, useAdvanceOrderStage, useResolveClaim, usePaymentRecovery } from '@/hooks/useMissionControl';
 import { useNotifications, useDispatchNotification } from '@/hooks/useNotifications';
 import { Loader } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -40,6 +40,7 @@ export default function MissionControlPage() {
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
+  const paymentRecovery = usePaymentRecovery();
   const router = useRouter();
   const resolveClaim = useResolveClaim();
   const { data: notifsData } = useNotifications();
@@ -60,6 +61,34 @@ export default function MissionControlPage() {
   const stats = data?.stats;
   const claims = data?.claims || [];
   const notifications = notifsData?.notifications || [];
+
+  // Payment Hold recovery (PR-04)
+  const handleRetryCharge = async (orderId: string) => {
+    const target = orders.find((o) => o.id === orderId);
+    const orderNum = target?.order_number || orderId.slice(0, 8);
+    if (!window.confirm(`Charge the card on file again for Order #${orderNum} ($${Number(target?.total || 0).toFixed(2)})?`)) return;
+    try {
+      const res = await paymentRecovery.mutateAsync({ action: 'retry_charge', order_id: orderId });
+      addToast({ type: 'success', title: 'Payment Captured', message: `Order #${orderNum}: $${Number(res.amount).toFixed(2)} charged. Hold cleared.` });
+    } catch (err: unknown) {
+      addToast({ type: 'error', title: 'Charge Declined', message: (err as Error).message });
+    }
+  };
+
+  const handleMarkPaid = async (orderId: string) => {
+    const target = orders.find((o) => o.id === orderId);
+    const orderNum = target?.order_number || orderId.slice(0, 8);
+    const squarePaymentId = window.prompt(
+      `Order #${orderNum} ($${Number(target?.total || 0).toFixed(2)}): paste the Square payment ID of the payment you took in the Square Dashboard.`
+    );
+    if (!squarePaymentId) return;
+    try {
+      await paymentRecovery.mutateAsync({ action: 'mark_paid_external', order_id: orderId, square_payment_id: squarePaymentId });
+      addToast({ type: 'success', title: 'Marked Paid', message: `Order #${orderNum} recorded as paid. Hold cleared.` });
+    } catch (err: unknown) {
+      addToast({ type: 'error', title: 'Could Not Mark Paid', message: (err as Error).message });
+    }
+  };
 
   const handleAdvance = async (orderId: string, currentStage: OrderStatusKey) => {
     const currentIndex = STAGES.indexOf(currentStage);
@@ -385,6 +414,9 @@ export default function MissionControlPage() {
                       orders={orders}
                       onAdvance={handleAdvance}
                       isAdvancing={advanceStage.isPending}
+                      onRetryCharge={handleRetryCharge}
+                      onMarkPaid={handleMarkPaid}
+                      isRecoveringPayment={paymentRecovery.isPending}
                       onViewArchive={() => setPipelineSubView('archive')}
                     />
                   ) : (

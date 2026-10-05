@@ -7,6 +7,7 @@ import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
+import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 
 
@@ -293,6 +294,36 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ success: true, claim: updatedClaim });
+    }
+
+    // 3. Payment Hold recovery (PR-04): retry the saved card, or record a payment taken in
+    // the Square Dashboard. Both are logged with the admin's name.
+    if (action === 'retry_charge' || action === 'mark_paid_external') {
+      if (!order_id) {
+        return NextResponse.json({ error: 'order_id is required' }, { status: 400 });
+      }
+      const { data: heldOrder } = await supabase
+        .from('orders')
+        .select('id, order_number, total, payment_status, square_customer_id, square_card_id')
+        .eq('id', order_id)
+        .maybeSingle();
+      if (!heldOrder) {
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+
+      const actorLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
+      const result =
+        action === 'retry_charge'
+          ? await chargeHeldOrder(supabase, heldOrder, { keyPrefix: 'rty', actorLabel })
+          : await markHeldOrderPaid(supabase, heldOrder, {
+              squarePaymentId: String(body.square_payment_id || ''),
+              actorLabel,
+            });
+
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
+      }
+      return NextResponse.json({ success: true, payment_id: result.paymentId, amount: result.amount });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
