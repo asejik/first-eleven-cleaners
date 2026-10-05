@@ -31,6 +31,6 @@ npm run build
 ## Vercel Deployment
 - **Root Directory**: When deploying to Vercel, set the Root Directory to `web` in the Vercel project settings.
 - **Config**: [`vercel.json`](vercel.json) is pre-configured with Next.js framework settings.
-- See the main [Root README](../README.md#vercel-production-deployment-guide) for the complete production environment variable checklist.
+- See the main [Root README](../README.md#-vercel-production-deployment) for the complete production environment variable checklist.
 
 

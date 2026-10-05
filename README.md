@@ -29,6 +29,8 @@ graph TD
 
 ### 1. 🧺 Customer Experience PWA (`/`, `/book`, `/dashboard`, `/track/[orderId]`)
 * **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning item selector, and morning/evening pickup windows. First-time customers book without creating an account.
+* **Server-Checked Schedule (Dallas time):** Standard pickups need 2 days' notice, never on Sunday, up to 60 days ahead. **24-Hour Express** is Mon-Fri, morning window only, with 7 AM (same-day) and 9 PM (next-day) cutoffs, a +50% surcharge ($15 minimum), and specialty items excluded. Window and Express capacity are enforced.
+* **Safe Checkout:** Prices are recomputed on the server in whole cents. Each booking (order, items, promo use) is saved in one database transaction, and a double-click or retry returns the first order instead of booking twice.
 * **Card on File, Charged After Weighing:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and charged the final, itemized, taxed total after intake inspection.
 * **Live Order Tracker:** Visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*. Tracking links are private to the customer.
 * **Garment Passport™ Photo Timeline:** Intake inspection photos (with pre-existing flaw notes) alongside pickup and delivery proof photos.
@@ -41,7 +43,7 @@ graph TD
 * **Central Intake Station:** Weight recording, dry-cleaning itemization, camera capture and photo upload (resized on device), flaw notes, and automatic charge of the card on file.
 * **Payments & Financials:** Per-order tax and fee records, collected-revenue ledger, held-payment recovery (retry, pay link, mark paid), and Square refunds for claims and late Express deliveries.
 * **Make It Right Claims Center:** Resolution presets for *🔄 Free Re-Clean*, *💰 Refund (through Square)*, or *💬 Care Explanation*.
-* **Messaging HUD:** Outgoing SMS/WhatsApp/email audit feed with **`🚨 AI Escalations`**.
+* **Messaging HUD:** Feed of the latest 200 SMS/WhatsApp messages (one database row per message) with **`🚨 AI Escalations`**.
 * **Staff Roster & Roles:** Driver and intake specialist accounts; roles are managed here and enforced server-side.
 * **Audit Log:** Append-only record of admin order, money and staff actions.
 
@@ -64,7 +66,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 
 ### 6. 📈 Growth, Compliance & Promotions
 * **Promo Codes (`/api/promo/validate`):** Date windows, usage caps reserved atomically, fixed-dollar or percentage discounts, and one use per customer per code.
-* **Texas Data Privacy (TDPSA):** Customer data requests (`/api/customer/data-deletion`) with admin export and anonymize tools.
+* **Texas Data Privacy (TDPSA):** Customer data requests (`/api/customer/data-deletion`) with admin export and anonymize tools; see the [privacy request runbook](web/supabase/runbooks/privacy-requests.md).
 * **SMS Compliance:** E.164 phone storage, STOP/START handling across all records, and consent that fails closed.
 * **Local SEO:** Dynamic `/robots.txt`, `/sitemap.xml`, JSON-LD `DryCleaningOrLaundryService` schema, and a maskable PWA manifest.
 
@@ -121,7 +123,9 @@ first-eleven-cleaners/
     ├── supabase/
     │   ├── schema.sql          # Full schema for a new database (17 tables, RLS, functions)
     │   ├── seed.sql            # DFW zones, promo codes, time slots
-    │   └── migrations/         # Dated changes for existing databases, each with a rollback
+    │   ├── migrations/         # Dated changes for existing databases, each with a rollback
+    │   ├── runbooks/           # Operator procedures (privacy requests)
+    │   └── tests/              # SQL self-checks for database functions (dev databases only)
     └── tests/                  # Vitest suites
 ```
 
@@ -192,7 +196,8 @@ NEXT_PUBLIC_APP_NAME="First Eleven Cleaners"
 
 ### 4. Database Setup
 * **New database:** in the Supabase **SQL Editor**, run [`web/supabase/schema.sql`](web/supabase/schema.sql), then [`web/supabase/seed.sql`](web/supabase/seed.sql).
-* **Existing database:** apply the files in [`web/supabase/migrations/`](web/supabase/migrations/) that it hasn't received yet, in date order. Each file ends with a rollback script.
+* **Existing database:** apply the files in [`web/supabase/migrations/`](web/supabase/migrations/) that it hasn't received yet, in date order. Each file ends with a rollback script. Deploy app code that depends on a migration only after the migration has run.
+* **Self-checks:** [`web/supabase/tests/`](web/supabase/tests/) holds SQL checks for the booking, dashboard and privacy functions. Each runs inside a transaction that is rolled back; run them on a development database only.
 
 ### 5. Storage Buckets
 Create two buckets in **Storage**: `garment-photos` and `claims-photos`.
@@ -261,7 +266,7 @@ In Vercel **Settings → Domains**, add `firstelevencleaners.com` and `www.first
 
 ## 🔒 Security & Compliance
 
-The platform went through an independent security audit and a production-readiness audit in October 2026. All findings from the security audit were fixed, each with regression tests. The detailed reports are kept private.
+The platform went through an independent security audit and a production-readiness audit in October 2026. All findings from the security audit, and all code findings from the production-readiness audit, were fixed, each with regression tests. The remaining production-readiness items are owner actions: a separate development database, a Supabase plan with tested restorable backups, and a photo retention period. The detailed reports are kept private.
 
 * **Verified sessions:** every server request verifies the login token with Supabase; roles come only from the server-controlled `customers.role` column, never from email addresses or user-editable metadata.
 * **Email-verified accounts:** a guest's order history joins an account only after the email is confirmed.
@@ -272,6 +277,7 @@ The platform went through an independent security audit and a production-readine
 * **Abuse protection:** shared rate limits (Upstash), per-email/phone booking caps, AI concierge size and daily limits.
 * **Security headers:** CSP (no `unsafe-eval` in production), HSTS, `X-Frame-Options: DENY`, `nosniff`.
 * **Accountability:** append-only audit log of admin actions, plus server error tracking with admin alerts.
+* **Financial records:** each order stores its subtotal, Express surcharge, environmental fee, sales tax and total; refunds are issued through Square and kept in sync; disputes alert an admin.
 * **Texas Data Privacy and Security Act (TDPSA):** data request intake with admin export and anonymize tools.
 * **No secrets in git:** all environment files except `.env.example` are gitignored.
 
