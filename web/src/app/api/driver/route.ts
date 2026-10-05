@@ -146,7 +146,7 @@ export async function GET(request: Request) {
           delivery_window,
           notes,
           created_at,
-          customer:customers(id, full_name, phone, email, preferences:customer_preferences(gate_code, delivery_instructions)),
+          customer:customers!customer_id(id, full_name, phone, email, preferences:customer_preferences(gate_code, delivery_instructions)),
           address:addresses(id, street, unit, city, state, zip, delivery_notes),
           photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
           events:order_events(id, status, triggered_by, timestamp, note)
@@ -170,7 +170,7 @@ export async function GET(request: Request) {
           notes,
           created_at,
           updated_at,
-          customer:customers(id, full_name, phone, email, preferences:customer_preferences(gate_code, delivery_instructions)),
+          customer:customers!customer_id(id, full_name, phone, email, preferences:customer_preferences(gate_code, delivery_instructions)),
           address:addresses(id, street, unit, city, state, zip, delivery_notes),
           photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
           events:order_events(id, status, triggered_by, timestamp, note)
@@ -367,7 +367,7 @@ export async function POST(request: Request) {
         delivery_window,
         weight_lbs,
         total,
-        customer:customers(id, full_name, phone, email),
+        customer:customers!customer_id(id, full_name, phone, email),
         photos:garment_photos(id, photo_type, captured_by),
         events:order_events(id, status, triggered_by)
       `);

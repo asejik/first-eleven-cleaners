@@ -43,7 +43,7 @@ export async function GET(request: Request) {
         notes,
         created_at,
         updated_at,
-        customer:customers(id, full_name, email, phone),
+        customer:customers!customer_id(id, full_name, email, phone),
         address:addresses(id, street, unit, city, state, zip),
         items:order_items(id, garment_type, service_type, quantity, unit_price, subtotal),
         events:order_events(id, status, triggered_by, timestamp, note)

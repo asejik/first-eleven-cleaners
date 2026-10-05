@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         notes,
         created_at,
         updated_at,
-        customer:customers(id, full_name, email, phone, role),
+        customer:customers!customer_id(id, full_name, email, phone, role),
         address:addresses(id, street, unit, city, state, zip, delivery_notes),
         items:order_items(id, order_id, garment_type, service_type, quantity, unit_price, subtotal, notes),
         photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
       // Fetch order
       const { data: order, error: orderErr } = await supabase
         .from('orders')
-        .select('*, customer:customers(*)')
+        .select('*, customer:customers!customer_id(*)')
         .eq('id', order_id)
         .maybeSingle();
 

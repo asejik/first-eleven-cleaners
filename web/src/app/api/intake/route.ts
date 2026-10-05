@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     // bags, the 50 most recently inspected orders, and today's inspection count.
     const intakeSelect = `
         *,
-        customer:customers(*, preferences:customer_preferences(starch_level, fold_vs_hang, detergent_sensitivity)),
+        customer:customers!customer_id(*, preferences:customer_preferences(starch_level, fold_vs_hang, detergent_sensitivity)),
         address:addresses(*),
         items:order_items(*),
         photos:garment_photos(*)
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         square_customer_id,
         square_card_id,
         notes,
-        customer:customers(id, full_name, phone, email)
+        customer:customers!customer_id(id, full_name, phone, email)
       `)
       .eq('id', order_id)
       .maybeSingle();

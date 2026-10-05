@@ -45,7 +45,7 @@ export class SimulatedMessageProvider implements IMessagingProvider {
       let customerId: string | null = null;
       const { data: order } = await supabase
         .from('orders')
-        .select('customer_id, customer:customers(email)')
+        .select('customer_id, customer:customers!customer_id(email)')
         .eq('id', payload.orderId)
         .maybeSingle();
 
@@ -168,7 +168,7 @@ export class TwilioMessageProvider implements IMessagingProvider {
         const supabase = createAdminClient();
         const { data: order } = await supabase
           .from('orders')
-          .select('customer:customers(email, sms_consent)')
+          .select('customer:customers!customer_id(email, sms_consent)')
           .eq('id', payload.orderId)
           .maybeSingle();
 
