@@ -126,3 +126,10 @@
     transform: rotate(360deg);
   }
 }
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .refreshButton {
+    min-height: 44px;
+  }
+}

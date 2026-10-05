@@ -85,6 +85,13 @@ input, textarea, select {
   font-size: var(--text-base);
 }
 
+/* Checkboxes at least 24 px, WCAG 2.2 AA target size (P05 AR-08) */
+input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
 ul, ol {
   list-style: none;
 }

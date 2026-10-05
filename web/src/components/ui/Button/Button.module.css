@@ -189,3 +189,11 @@
   align-items: center;
   font-size: 1.1em;
 }
+
+/* Touch screens: 44 px tap targets (P05 AR-08) */
+@media (pointer: coarse) {
+  .sm,
+  .md {
+    min-height: 44px;
+  }
+}

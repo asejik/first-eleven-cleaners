@@ -53,6 +53,9 @@ export default function BookingPage() {
                 textDecoration: 'underline',
                 marginLeft: '12px',
                 whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: '44px',
               }}
             >
               Sign In &rarr;
