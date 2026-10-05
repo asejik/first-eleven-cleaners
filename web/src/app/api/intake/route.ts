@@ -18,6 +18,7 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { checkIntakeAllowed } from '@/lib/order-lifecycle';
 import { texasDate } from '@/lib/texas-time';
+import { runAfterResponse } from '@/lib/after-response';
 
 
 const IntakeSchema = z.object({
@@ -403,7 +404,7 @@ export async function POST(request: Request) {
         customMessage: customAlertText,
       };
 
-      await messagingService.dispatchStageNotification(payload);
+      runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'intake notification');
     }
 
     return NextResponse.json({

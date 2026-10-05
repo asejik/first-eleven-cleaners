@@ -55,6 +55,7 @@ async function squareRequest<T>(
         'Square-Version': SQUARE_API_VERSION,
       },
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(10_000), // never hang a booking or intake on Square (PR-17)
     });
     const json = await res.json();
     if (!res.ok) {

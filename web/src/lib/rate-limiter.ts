@@ -76,6 +76,7 @@ export async function checkRateLimitAsync(
           ['EXPIRE', key, windowSeconds],
         ]),
         cache: 'no-store',
+        signal: AbortSignal.timeout(2_000), // fall back to in-memory limits if Redis is slow (PR-17)
       });
 
       if (response.ok) {

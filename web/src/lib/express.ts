@@ -7,6 +7,7 @@ import {
   TX_SALES_TAX_RATE,
 } from '@/lib/constants';
 import { getSquareConfig, refundPayment } from '@/lib/square';
+import { runAfterResponse } from '@/lib/after-response';
 
 export interface ExpressSLAResult {
   isExpress: boolean;
@@ -174,24 +175,24 @@ export async function handleExpressDeliverySLA(
   const customerObj = Array.isArray(order.customer) ? order.customer[0] : order.customer;
   const customerPhone = customerObj?.phone || '';
 
-  try {
-    await messagingService.dispatchStageNotification({
-      orderId: order.id,
-      orderNumber: order.order_number || order.id.slice(0, 8),
-      customerName: customerObj?.full_name || 'Valued Customer',
-      customerPhone,
-      customerEmail: customerObj?.email,
-      // No phone on file: send by email only
-      ...(customerPhone ? {} : { smsConsent: false }),
-      stage: 'delivered',
-      deliveryDate: deliveryDateStr,
-      deliveryWindow: 'morning',
-      trackingUrl: `${getAppBaseUrl()}/track/${order.id}`,
-      customMessage: exactNotice,
-    });
-  } catch (notifyErr) {
-    console.warn('Could not dispatch express auto-refund notification:', notifyErr);
-  }
+  runAfterResponse(
+    () =>
+      messagingService.dispatchStageNotification({
+        orderId: order.id,
+        orderNumber: order.order_number || order.id.slice(0, 8),
+        customerName: customerObj?.full_name || 'Valued Customer',
+        customerPhone,
+        customerEmail: customerObj?.email,
+        // No phone on file: send by email only
+        ...(customerPhone ? {} : { smsConsent: false }),
+        stage: 'delivered',
+        deliveryDate: deliveryDateStr,
+        deliveryWindow: 'morning',
+        trackingUrl: `${getAppBaseUrl()}/track/${order.id}`,
+        customMessage: exactNotice,
+      }),
+    'express refund notification'
+  );
 
   return {
     isExpress: true,

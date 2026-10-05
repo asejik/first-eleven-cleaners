@@ -55,6 +55,7 @@ export async function sendEmail({
         subject,
         html,
       }),
+      signal: AbortSignal.timeout(8_000), // PR-17
     });
 
     const data = await res.json();

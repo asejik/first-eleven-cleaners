@@ -11,6 +11,7 @@ import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
 import { refundOrder } from '@/lib/refunds';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 import { texasDate } from '@/lib/texas-time';
+import { runAfterResponse } from '@/lib/after-response';
 
 
 export async function GET(request: Request) {
@@ -258,7 +259,7 @@ export async function POST(request: Request) {
         trackingUrl: `${origin}/track/${order.id}`,
       };
 
-      await messagingService.dispatchStageNotification(payload);
+      runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'stage change notification');
 
       let expressSLAResult = null;
       if (new_stage === 'delivered') {

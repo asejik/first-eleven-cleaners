@@ -263,6 +263,7 @@ export class TwilioMessageProvider implements IMessagingProvider {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: params.toString(),
+        signal: AbortSignal.timeout(8_000), // PR-17
       });
 
       const data = await res.json();

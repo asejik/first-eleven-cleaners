@@ -20,6 +20,7 @@ import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
 import { validateSchedule } from '@/lib/schedule';
+import { runAfterResponse } from '@/lib/after-response';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -546,27 +547,28 @@ export async function POST(request: Request) {
             });
 
             // 7. Dispatch stage notification for 'booked' (sends SMS/WhatsApp and/or Resend email)
-            try {
-              const origin = getAppBaseUrl();
-              messagingService.dispatchStageNotification({
-                orderId: insertedOrder.id,
-                orderNumber: orderNumber,
-                customerName: validated.customer.full_name,
-                customerPhone: validated.customer.phone,
-                customerEmail: validated.customer.email,
-                smsConsent: validated.consents.sms_order_updates,
-                stage: 'booked',
-                pickupDate: validated.schedule.pickup_date,
-                pickupWindow: validated.schedule.pickup_window,
-                deliveryDate: deliveryDateStr,
-                deliveryWindow: isExpress ? 'morning' : validated.schedule.pickup_window,
-                weightLbs: validated.services.estimated_weight_lbs,
-                total: computed.financials.finalTotal,
-                trackingUrl: `${origin}/track/${insertedOrder.id}`,
-              }).catch((notifyErr) => console.warn('Booking stage notification notice:', notifyErr));
-            } catch (notifyErr) {
-              console.warn('Booking stage notification error:', notifyErr);
-            }
+            // Sent after the response, kept alive until it finishes (PR-17)
+            const origin = getAppBaseUrl();
+            runAfterResponse(
+              () =>
+                messagingService.dispatchStageNotification({
+                  orderId: insertedOrder.id,
+                  orderNumber: orderNumber,
+                  customerName: validated.customer.full_name,
+                  customerPhone: validated.customer.phone,
+                  customerEmail: validated.customer.email,
+                  smsConsent: validated.consents.sms_order_updates,
+                  stage: 'booked',
+                  pickupDate: validated.schedule.pickup_date,
+                  pickupWindow: validated.schedule.pickup_window,
+                  deliveryDate: deliveryDateStr,
+                  deliveryWindow: isExpress ? 'morning' : validated.schedule.pickup_window,
+                  weightLbs: validated.services.estimated_weight_lbs,
+                  total: computed.financials.finalTotal,
+                  trackingUrl: `${origin}/track/${insertedOrder.id}`,
+              }),
+              'booking confirmation'
+            );
 
             return NextResponse.json({
               success: true,
@@ -635,27 +637,28 @@ export async function POST(request: Request) {
     };
 
     // Dispatch stage notification in fallback mode
-    try {
-      const origin = getAppBaseUrl();
-      messagingService.dispatchStageNotification({
-        orderId: createdOrder.id,
-        orderNumber: orderNumber,
-        customerName: validated.customer.full_name,
-        customerPhone: validated.customer.phone,
-        customerEmail: validated.customer.email,
-        smsConsent: validated.consents.sms_order_updates,
-        stage: 'booked',
-        pickupDate: validated.schedule.pickup_date,
-        pickupWindow: validated.schedule.pickup_window,
-        deliveryDate: deliveryDateStr,
-        deliveryWindow: isExpress ? 'morning' : validated.schedule.pickup_window,
-        weightLbs: validated.services.estimated_weight_lbs,
-        total: computed.financials.finalTotal,
-        trackingUrl: `${origin}/track/${createdOrder.id}`,
-      }).catch((notifyErr) => console.warn('Booking fallback stage notification notice:', notifyErr));
-    } catch (notifyErr) {
-      console.warn('Booking fallback notification error:', notifyErr);
-    }
+    // Sent after the response, kept alive until it finishes (PR-17)
+    const origin = getAppBaseUrl();
+    runAfterResponse(
+      () =>
+        messagingService.dispatchStageNotification({
+          orderId: createdOrder.id,
+          orderNumber: orderNumber,
+          customerName: validated.customer.full_name,
+          customerPhone: validated.customer.phone,
+          customerEmail: validated.customer.email,
+          smsConsent: validated.consents.sms_order_updates,
+          stage: 'booked',
+          pickupDate: validated.schedule.pickup_date,
+          pickupWindow: validated.schedule.pickup_window,
+          deliveryDate: deliveryDateStr,
+          deliveryWindow: isExpress ? 'morning' : validated.schedule.pickup_window,
+          weightLbs: validated.services.estimated_weight_lbs,
+          total: computed.financials.finalTotal,
+          trackingUrl: `${origin}/track/${createdOrder.id}`,
+      }),
+      'booking confirmation'
+    );
 
     return NextResponse.json({
       success: true,

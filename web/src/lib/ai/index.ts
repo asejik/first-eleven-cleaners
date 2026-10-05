@@ -322,6 +322,7 @@ export class ClaudeAIEngineProvider implements IAIEngineProvider {
           system: ELEVEN_SYSTEM_PROMPT,
           messages,
         }),
+        signal: AbortSignal.timeout(20_000), // PR-17
       });
 
       if (!res.ok) {

@@ -8,6 +8,7 @@ import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
+import { runAfterResponse } from '@/lib/after-response';
 
 
 interface DriverContext {
@@ -436,7 +437,8 @@ export async function POST(request: Request) {
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'picked_up';
       basePayload.photoUrl = resolvedPhotoUrl;
-      await messagingService.dispatchStageNotification(basePayload);
+      const notifyPayload = { ...basePayload };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 
       return NextResponse.json({ success: true, new_status: 'picked_up' });
     }
@@ -503,7 +505,8 @@ export async function POST(request: Request) {
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'out_for_delivery';
       basePayload.photoUrl = resolvedPhotoUrl || undefined;
-      await messagingService.dispatchStageNotification(basePayload);
+      const notifyPayload = { ...basePayload };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 
       return NextResponse.json({ success: true, new_status: 'out_for_delivery' });
     }
@@ -571,7 +574,8 @@ export async function POST(request: Request) {
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'delivered';
       basePayload.photoUrl = resolvedPhotoUrl;
-      await messagingService.dispatchStageNotification(basePayload);
+      const notifyPayload = { ...basePayload };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 
       // 5. Check 24-Hour Express SLA (Delivered by 10:00 AM on delivery date)
       const expressSLAResult = await handleExpressDeliverySLA(order, new Date());
