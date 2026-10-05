@@ -43,7 +43,7 @@ export function useCustomerOrders(options?: { page?: number; limit?: number }) {
 }
 
 /** A failed order load that keeps its HTTP status, so pages can tell "not found" from "try again" (P05 AR-10). */
-export class OrderLoadError extends Error {
+class OrderLoadError extends Error {
   constructor(public status: number) {
     super('Failed to load order details');
   }
