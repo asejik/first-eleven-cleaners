@@ -607,7 +607,7 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-gold-dark)', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-gold-text)', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>
                     <span>✨</span>
                     <span>All orders in good standing</span>
                   </div>

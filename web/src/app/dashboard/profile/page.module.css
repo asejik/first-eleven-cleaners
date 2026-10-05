@@ -209,7 +209,7 @@
   display: block;
   font-size: var(--text-2xs);
   text-transform: uppercase;
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
 }
 
 .logoutSection {

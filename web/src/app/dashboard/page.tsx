@@ -335,7 +335,7 @@ export default function DashboardPage() {
                       </div>
                       <div className={styles.orderSummaryText}>
                         {order.payment_status === 'charged' ? (
-                          <span style={{ color: '#34d399', fontWeight: 600 }}>Total Paid: ${order.total.toFixed(2)}</span>
+                          <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>Total Paid: ${order.total.toFixed(2)}</span>
                         ) : order.payment_status === 'failed' ? (
                           <span style={{ color: '#f87171', fontWeight: 700 }}>
                             ⚠️ Payment Due: ${order.total.toFixed(2)}

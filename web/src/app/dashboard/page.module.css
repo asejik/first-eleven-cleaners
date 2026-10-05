@@ -30,7 +30,7 @@
 .welcomeSubtitle {
   font-size: var(--text-xs);
   text-transform: uppercase;
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-weight: var(--font-bold);
   letter-spacing: var(--tracking-wider);
 }
@@ -129,7 +129,7 @@
 
 .statLink {
   font-size: var(--text-xs);
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-weight: var(--font-semibold);
 }
 

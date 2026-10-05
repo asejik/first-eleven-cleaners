@@ -39,7 +39,7 @@
 }
 
 .subtitle strong {
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
 }
 
 .form {
@@ -68,7 +68,7 @@
 }
 
 .loginLink {
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-weight: var(--font-semibold);
 }
 

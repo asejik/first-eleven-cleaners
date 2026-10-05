@@ -160,7 +160,7 @@
 }
 
 .accent {
-  color: var(--color-gold);
+  color: var(--color-gold-text);
 }
 
 .sectionSubtitle {
@@ -280,7 +280,7 @@
 
 .servicePrice {
   font-weight: var(--font-bold);
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-size: var(--text-sm);
 }
 

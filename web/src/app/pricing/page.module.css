@@ -267,7 +267,7 @@
 .expressSurchargeText {
   font-size: var(--text-lg);
   font-weight: var(--font-black);
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
 }
 
 .expressMinText {
@@ -347,7 +347,7 @@
 }
 
 .weightValue {
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-size: var(--text-base);
 }
 
@@ -379,7 +379,7 @@
 
 .emptyNote {
   font-size: var(--text-xs);
-  color: var(--color-gray-400);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
