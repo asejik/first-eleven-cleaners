@@ -17,7 +17,6 @@ import {
   DeliveredArchive,
   ClaimsQueue,
   ClaimResolutionModal,
-  CommercialAndGrowth,
   NotificationSimulator,
   StaffRoster,
   FinancialsLedger,
@@ -36,7 +35,7 @@ const STAGES: OrderStatusKey[] = [
 ];
 
 export default function MissionControlPage() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'growth' | 'dispatch' | 'express' | 'zones'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'dispatch' | 'express' | 'zones'>('pipeline');
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
@@ -267,7 +266,6 @@ export default function MissionControlPage() {
                   { id: 'zones', label: '🗺️ Zone Minimums' },
                   { id: 'roster', label: '🚐 Fleet & Staff Roster' },
                   { id: 'claims', label: '🛡️ Claims Queue', count: claims.length },
-                  { id: 'growth', label: '🏢 B2B Accounts' },
                   { id: 'dispatch', label: '📡 Messaging Dispatch' },
                 ].map((tab) => (
                   <button
@@ -425,10 +423,6 @@ export default function MissionControlPage() {
                     setRefundAmount(claim.refund_amount ? String(claim.refund_amount) : '');
                   }}
                 />
-              )}
-
-              {activeTab === 'growth' && (
-                <CommercialAndGrowth />
               )}
 
               {activeTab === 'dispatch' && (

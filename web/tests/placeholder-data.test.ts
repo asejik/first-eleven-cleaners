@@ -3,7 +3,6 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { SUPPORT_PHONE, LEGAL_CONFIG } from '@/lib/constants';
 import { buildStageNotificationEmailHtml, buildWelcomeEmailHtml } from '@/lib/resend';
-import { generatePostDeliveryReviewPrompt } from '@/lib/growth';
 
 // ---------------------------------------------------------------------------
 // PR-22: customers never see placeholder phone numbers or made-up staff names.
@@ -39,10 +38,12 @@ describe('Real contact details in customer messages (PR-22)', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('review requests do not name a driver who may not have made the delivery', () => {
-    const prompt = generatePostDeliveryReviewPrompt('o1', 'F11-1', 'Pat Lee', '+12145550100');
-    expect(prompt.messageText).not.toMatch(/Marcus/);
-    expect(prompt.messageText).toContain('F11-1');
+  it('no customer message names a driver who may not have made the delivery', () => {
+    // The review-request helper this checked was removed with the Growth tab (P05 AR-06);
+    // keep the guarantee for every message template in the codebase.
+    for (const file of sourceFiles(SRC)) {
+      expect(readFileSync(file, 'utf8'), file).not.toMatch(/Marcus delivered/);
+    }
   });
 
   it('privacy requests go to the privacy mailbox', () => {
