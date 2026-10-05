@@ -3,8 +3,7 @@ import { messagingService } from '@/lib/messaging';
 import {
   calculateExpressSurcharge,
   getAppBaseUrl,
-  ENVIRONMENTAL_FEE_RATE,
-  TX_SALES_TAX_RATE,
+  feeAndTaxOn,
 } from '@/lib/constants';
 import { getSquareConfig, refundPayment } from '@/lib/square';
 import { runAfterResponse } from '@/lib/after-response';
@@ -57,9 +56,8 @@ export function isExpressDeliveryLate(deliveryDate: string, deliveredAt: Date): 
  * sales tax charged on it. Capped at the order total.
  */
 export function expressRefundAmount(surcharge: number, orderTotal?: number | null): number {
-  const fee = Number((surcharge * ENVIRONMENTAL_FEE_RATE).toFixed(2));
-  const tax = Number(((surcharge + fee) * TX_SALES_TAX_RATE).toFixed(2));
-  const amount = Number((surcharge + fee + tax).toFixed(2));
+  const { environmentalFee, salesTax } = feeAndTaxOn(surcharge); // whole cents, half-up (PR-27)
+  const amount = Math.round((surcharge + environmentalFee + salesTax) * 100) / 100;
   const cap = Number(orderTotal);
   return cap > 0 ? Math.min(amount, cap) : amount;
 }

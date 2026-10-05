@@ -344,14 +344,36 @@ export interface OrderFinancials {
   total: number;
 }
 
+// --- Money in whole cents (PR-27) ---
+// Amounts are converted to integer cents, rates are applied with integer arithmetic, and
+// half-cents round up (standard sales-tax rounding). Results are returned in dollars.
+const toCents = (dollars: number) => Math.round(dollars * 100);
+const toDollars = (cents: number) => cents / 100;
+/** cents × (numerator / denominator), rounded half-up to whole cents */
+const applyRate = (amountCents: number, numerator: number, denominator: number) =>
+  Math.round((amountCents * numerator) / denominator);
+
+const EXPRESS_PERCENT = Math.round(EXPRESS_SURCHARGE_PERCENT * 100); // 50
+const ENV_FEE_BASIS_POINTS = Math.round(ENVIRONMENTAL_FEE_RATE * 10000); // 300
+const SALES_TAX_BASIS_POINTS = Math.round(TX_SALES_TAX_RATE * 10000); // 825
+
 /**
  * Calculates 24-Hour Express Surcharge:
  * +50% surcharge on subtotal, with a $15.00 minimum surcharge floor.
  * Subtotal of 0 incurs 0 surcharge.
  */
 export function calculateExpressSurcharge(subtotal: number, isExpress: boolean): number {
-  if (!isExpress || subtotal <= 0) return 0;
-  return Number(Math.max(subtotal * EXPRESS_SURCHARGE_PERCENT, EXPRESS_MINIMUM_SURCHARGE).toFixed(2));
+  const subtotalCents = toCents(subtotal);
+  if (!isExpress || subtotalCents <= 0) return 0;
+  return toDollars(Math.max(applyRate(subtotalCents, EXPRESS_PERCENT, 100), toCents(EXPRESS_MINIMUM_SURCHARGE)));
+}
+
+/** The environmental fee and sales tax charged on a net amount, in whole cents (PR-27). */
+export function feeAndTaxOn(netAmount: number): { environmentalFee: number; salesTax: number } {
+  const netCents = toCents(netAmount);
+  const feeCents = applyRate(netCents, ENV_FEE_BASIS_POINTS, 10000);
+  const taxCents = applyRate(netCents + feeCents, SALES_TAX_BASIS_POINTS, 10000);
+  return { environmentalFee: toDollars(feeCents), salesTax: toDollars(taxCents) };
 }
 
 export function calculateOrderFinancials({
@@ -371,47 +393,49 @@ export function calculateOrderFinancials({
   discountAmount?: number;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
 }): OrderFinancials {
-  let expressSurcharge = 0;
+  const subtotalCents = toCents(subtotal);
+
+  let expressCents = 0;
   if (directExpressSurcharge !== undefined) {
-    expressSurcharge = Number(directExpressSurcharge.toFixed(2));
+    expressCents = toCents(directExpressSurcharge);
   } else if (isExpress) {
-    expressSurcharge = calculateExpressSurcharge(subtotal, true);
+    expressCents = toCents(calculateExpressSurcharge(subtotal, true));
   } else if (expressMultiplier > 0) {
-    expressSurcharge = Number((subtotal * expressMultiplier).toFixed(2));
+    expressCents = Math.round(subtotalCents * expressMultiplier);
   }
-  const grossBeforeDiscount = subtotal + expressSurcharge;
+  const grossCents = subtotalCents + expressCents;
 
   // Recurring plan frequency discount: 10% for weekly, 5% for biweekly (F005)
   const frequencyDiscountPercent = frequency === 'weekly' ? 10 : frequency === 'biweekly' ? 5 : 0;
-  const frequencyDiscount = Number(((subtotal * frequencyDiscountPercent) / 100).toFixed(2));
+  const frequencyCents = applyRate(subtotalCents, frequencyDiscountPercent, 100);
 
   // Promotional or direct discount
   const promoDiscountPercent = discountPercent;
-  const promoDiscount = directDiscountAmount !== undefined
-    ? Number(directDiscountAmount.toFixed(2))
-    : Number(((grossBeforeDiscount * promoDiscountPercent) / 100).toFixed(2));
+  const promoCents = directDiscountAmount !== undefined
+    ? toCents(directDiscountAmount)
+    : Math.round((grossCents * promoDiscountPercent) / 100);
 
-  const totalDiscount = Number((frequencyDiscount + promoDiscount).toFixed(2));
-  const netSubtotal = Math.max(0, Number((grossBeforeDiscount - totalDiscount).toFixed(2)));
-  const environmentalFee = Number((netSubtotal * ENVIRONMENTAL_FEE_RATE).toFixed(2));
-  const taxableAmount = Number((netSubtotal + environmentalFee).toFixed(2));
-  const salesTax = Number((taxableAmount * TX_SALES_TAX_RATE).toFixed(2));
-  const finalTotal = Number((netSubtotal + environmentalFee + salesTax).toFixed(2));
+  const totalDiscountCents = frequencyCents + promoCents;
+  const netCents = Math.max(0, grossCents - totalDiscountCents);
+  const feeCents = applyRate(netCents, ENV_FEE_BASIS_POINTS, 10000);
+  const taxableCents = netCents + feeCents;
+  const taxCents = applyRate(taxableCents, SALES_TAX_BASIS_POINTS, 10000);
+  const finalCents = netCents + feeCents + taxCents;
 
   return {
-    subtotal,
-    expressSurcharge,
-    discountAmount: totalDiscount,
-    frequencyDiscount,
+    subtotal: toDollars(subtotalCents),
+    expressSurcharge: toDollars(expressCents),
+    discountAmount: toDollars(totalDiscountCents),
+    frequencyDiscount: toDollars(frequencyCents),
     frequencyDiscountPercent,
-    promoDiscount,
+    promoDiscount: toDollars(promoCents),
     promoDiscountPercent,
-    netSubtotal,
-    environmentalFee,
-    taxableAmount,
-    salesTax,
-    finalTotal,
-    total: finalTotal,
+    netSubtotal: toDollars(netCents),
+    environmentalFee: toDollars(feeCents),
+    taxableAmount: toDollars(taxableCents),
+    salesTax: toDollars(taxCents),
+    finalTotal: toDollars(finalCents),
+    total: toDollars(finalCents),
   };
 }
 
@@ -461,7 +485,7 @@ export function computeBookingFinancials({
   if (weightLbs > 0) {
     washFoldSubtotal = weightLbs < WASH_FOLD_MINIMUM_LBS
       ? WASH_FOLD_MINIMUM_PRICE
-      : Number((weightLbs * WASH_FOLD_PRICE_PER_LB).toFixed(2));
+      : toDollars(Math.round(weightLbs * toCents(WASH_FOLD_PRICE_PER_LB)));
 
     itemizedList.push({
       garment_type: 'wash_fold',
@@ -473,12 +497,13 @@ export function computeBookingFinancials({
     });
   }
 
-  let dryCleanSubtotal = 0;
+  let dryCleanCents = 0;
   for (const item of dryCleanItems) {
     const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
     if (priceMeta && item.quantity > 0) {
-      const lineTotal = Number((priceMeta.price * item.quantity).toFixed(2));
-      dryCleanSubtotal += lineTotal;
+      const lineCents = toCents(priceMeta.price) * item.quantity;
+      const lineTotal = toDollars(lineCents);
+      dryCleanCents += lineCents;
       itemizedList.push({
         garment_type: item.garment_type,
         service_type: 'dry_clean',
@@ -489,7 +514,8 @@ export function computeBookingFinancials({
     }
   }
 
-  const subtotal = Number((washFoldSubtotal + dryCleanSubtotal).toFixed(2));
+  const dryCleanSubtotal = toDollars(dryCleanCents);
+  const subtotal = toDollars(toCents(washFoldSubtotal) + dryCleanCents);
   const financials = calculateOrderFinancials({
     subtotal,
     isExpress,
