@@ -1,7 +1,7 @@
 # ⚽ First Eleven Cleaners — Modern On-Demand Garment Care & Fleet Logistics Platform
 
 > **"You Look Match-Ready. Every Single Day."**  
-> First Eleven Cleaners is an enterprise-grade, on-demand dry cleaning, wash & fold, and commercial textile logistics platform operating across the Dallas–Fort Worth Metroplex.  
+> First Eleven Cleaners is an on-demand dry cleaning, wash & fold, and pickup & delivery platform operating across the Dallas–Fort Worth Metroplex.  
 > **Brand & Operator:** First Eleven Cleaners • Dallas, Texas  
 > **Certifications:** SDVOSB (Service-Disabled Veteran-Owned) • Veteran-HUB • MBE • DBE
 
@@ -9,17 +9,18 @@
 
 ## 🌟 Executive Platform Overview
 
-First Eleven Cleaners pairs **Carvana-level visual transparency** and **Domino's-style live order tracking** with an **intelligent AI Concierge ("Eleven")**, an **industrial plant operations suite (Mission Control)**, a **dedicated Driver Fleet Manifest with strict van isolation**, and a **Commercial B2B Logistics Portal**.
+First Eleven Cleaners pairs **transparent, itemized pricing** and **live order tracking** with an **AI Concierge ("Eleven")**, a **plant operations suite (Mission Control)**, and a **Driver Fleet Manifest with van isolation**.
 
 ```mermaid
 graph TD
-    A["Customer PWA\n(/book, /dashboard, /track)"] --> E["Supabase PostgreSQL\n(Auth, RLS, Storage CDN)"]
-    B["Mission Control Ops\n(/mission-control, /intake, /archive)"] --> E
+    A["Customer PWA\n(/book, /dashboard, /track)"] --> E["Supabase PostgreSQL\n(Auth, RLS, Storage)"]
+    B["Mission Control Ops\n(/mission-control, /intake)"] --> E
     C["Driver Fleet Manifest\n(/staff/driver - Van Isolated)"] --> E
-    D["Commercial B2B Portal\n(/portal, /commercial)"] --> E
-    F["'Eleven' AI Concierge\n(Claude 3.5 Sonnet / Heuristic)"] --> E
-    G["Multi-Channel Messaging\n(Twilio SMS + WhatsApp + Simulator)"] --> E
-    H["Supabase Storage Bucket\n(garment-photos Public CDN)"] --> E
+    D["Commercial B2B Portal\n(/portal - off for launch)"] -.-> E
+    F["'Eleven' AI Concierge\n(Claude / Heuristic)"] --> E
+    G["Messaging\n(Twilio SMS + WhatsApp, Resend email)"] --> E
+    H["Private Storage Buckets\n(signed, expiring photo links)"] --> E
+    I["Square Payments\n(card on file, charged at intake)"] --> E
 ```
 
 ---
@@ -27,51 +28,45 @@ graph TD
 ## 🚀 Key System Features
 
 ### 1. 🧺 Customer Experience PWA (`/`, `/book`, `/dashboard`, `/track/[orderId]`)
-* **5-Step Frictionless Booking:** Auto-coverage check across DFW zones, dynamic Wash & Fold weight slider with real-time tariff calculation, dry-cleaning item selector, and morning/evening pickup windows.
-* **Live 6-Stage Domino's Order Tracker:** Real-time visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*.
-* **48-Hour Match-Ready Guarantee Counter:** Live countdown timer with automated $10 credit trigger if an order is delayed past its turnaround SLA.
-* **Garment Passport™ Visual Timeline:** Side-by-side split view comparing **Intake Digital Inspection** (with pre-existing flaw & stain notes) vs. pristine **Pressed & Delivered Return**.
-* **100% Make It Right Claim Portal (`/claim/[orderId]`):** Streamlined photo-upload claim filing for any garment care or delivery issue.
+* **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning item selector, and morning/evening pickup windows. First-time customers book without creating an account.
+* **Card on File, Charged After Weighing:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and charged the final, itemized, taxed total after intake inspection.
+* **Live Order Tracker:** Visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*. Tracking links are private to the customer.
+* **Garment Passport™ Photo Timeline:** Intake inspection photos (with pre-existing flaw notes) alongside pickup and delivery proof photos.
+* **Billing & Receipts (`/dashboard/billing`):** Saved Square cards, itemized receipts, and a pay link for any order whose card was declined.
+* **100% Make It Right Claims (`/claim/[orderId]`):** Claim filing for any garment care or delivery issue.
 
 ### 2. 🎛️ Mission Control Central Operations (`/mission-control`, `/mission-control/intake`)
-* **5-Stage Active WIP Pipeline:** High-efficiency plant kanban focused exclusively on work-in-progress stages (*Booked*, *Picked Up*, *Weighed & Itemized*, *In Cleaning*, *Out for Delivery*) with 1-click stage advancement and multi-channel customer notification triggers.
-* **Time-Scoped & Collapsible "Delivered Today" Column:** High-density column displaying orders completed today. Features independent scrolling (`max-height: 560px`), sticky summary counters, and a 1-click `[◀ Collapse / Expand ▶]` toggle that minimizes historical orders into a compact indicator bar to maximize plant WIP screen real estate.
-* **Searchable Delivered & Completed Archive:** Dedicated audit ledger accessible via view-switcher pills (`⚡ Live Active Board` vs `📦 Delivered & Completed Archive`). Includes multi-criteria search (order #, customer name, street, driver), date range filters (*All Time, Today, Past 7 Days, Past 30 Days*), gross revenue & volume metrics, proof-of-delivery photo modal, and printable receipts.
-* **Barcode & Camera Central Intake Station (`/mission-control/intake`):** Rapid garment check-in for gross scale weight recording, dry-cleaning itemization, direct device camera trigger and multi-file upload (`.jpg`, `.png`, `.webp`, `.heic`), automated public CDN streaming to Supabase Storage (`garment-photos`), pre-existing flaw notes, and side-by-side inspection against driver doorstep pickup proof.
-* **Real-Time Financials & Transactions Ledger:** Enterprise financial tracking of gross revenue, Square transaction IDs, settled card charges, pre-authorizations, and Net-30 commercial receivables.
-* **Make It Right Claims Resolution Center:** 1-click resolution presets for *🔄 Free Re-Clean*, *💰 Monetary Refund*, or *💬 Care Explanation*.
-* **Multi-Channel Messaging HUD & Simulator:** Real-time outgoing SMS and WhatsApp delivery audit feed with automated escalation tags for **`🚨 AI Escalations`**.
-* **Fleet & Staff Operations Roster:** Central directory managing driver and plant specialist assignments, system roles, and shifts.
+* **Active WIP Pipeline:** Kanban of work-in-progress stages with enforced stage order (intake, the charge step, can't be skipped) and customer notifications on each advance.
+* **Delivered & Completed Archive:** Searchable ledger with date filters, revenue and volume metrics, proof-of-delivery photos, and printable receipts.
+* **Central Intake Station:** Weight recording, dry-cleaning itemization, camera capture and photo upload (resized on device), flaw notes, and automatic charge of the card on file.
+* **Payments & Financials:** Per-order tax and fee records, collected-revenue ledger, held-payment recovery (retry, pay link, mark paid), and Square refunds for claims and late Express deliveries.
+* **Make It Right Claims Center:** Resolution presets for *🔄 Free Re-Clean*, *💰 Refund (through Square)*, or *💬 Care Explanation*.
+* **Messaging HUD:** Outgoing SMS/WhatsApp/email audit feed with **`🚨 AI Escalations`**.
+* **Staff Roster & Roles:** Driver and intake specialist accounts; roles are managed here and enforced server-side.
+* **Audit Log:** Append-only record of admin order, money and staff actions.
 
 ### 3. 🚚 Driver Fleet Manifest (`/staff/driver`)
-* **Strict Multi-Tenancy & Van Route Isolation:** Real-time route isolation ensures that when a driver loads an order into their van (*"Load into My Van"*), the stop is claimed exclusively by that driver and immediately disappears from all other drivers' active manifests.
-* **Server-Side Route Protection:** Backend API guards enforce strict fleet authorization:
-  - Prevents double-claiming across vans (`409 Conflict`).
-  - Blocks unauthorized cross-driver delivery completion (`403 Forbidden`).
-  - Guards against duplicate pickups (`409 Conflict`).
-* **Dual-Stream Manifest Interface:** Side-by-side and focused stream views separating **Inbound to Plant** (*To Pick Up*, *In My Van*, *Picked Up Completed*) from **Outbound to Customers** (*Ready at Plant to Load*, *Active Drops in Van*, *Delivered*).
-* **Route Actions:** 1-click direct phone dialer (`tel:`), GPS turn-by-turn navigation mapping (`maps.google.com`), and mandatory contactless doorstep photo proof camera capture.
+* **Van Route Isolation:** Loading an order into a van claims it atomically for that driver; it disappears from every other driver's manifest.
+* **Server-Side Route Protection:** Double-claims and duplicate pickups return `409 Conflict`; cross-driver delivery completion returns `403 Forbidden`.
+* **Dual-Stream Manifest:** **Inbound to Plant** (*To Pick Up*, *In My Van*, *Picked Up*) and **Outbound to Customers** (*Ready at Plant*, *Active Drops*, *Delivered*).
+* **Route Actions:** Tap-to-call, turn-by-turn navigation, and mandatory doorstep photo proof.
 
-### 4. ✨ "Eleven" AI Concierge Engine (`/api/concierge`, Floating Widget)
-* **Decoupled AI Engine Provider Pattern (`IAIEngineProvider`):** Built-in smart Heuristic Engine ($0 cost, memory-aware) with instant plug-and-play Claude 3.5 Sonnet activation via `ANTHROPIC_API_KEY`.
-* **"Eleven's Memory" Integration:** Automatically reads and respects customer preferences (starch level, fold vs hangers, hypoallergenic detergent).
-* **Conversational Booking:** Understands booking requests (*"Book my usual for tomorrow morning"*).
-* **Automatic Multilingual Support:** Automatically detects and responds in fluent English or Spanish.
-* **Human Escalation:** Flags complex issues and logs priority alerts directly into Mission Control.
+### 4. ✨ "Eleven" AI Concierge (`/api/concierge`, floating widget, inbound SMS)
+* **Provider Pattern (`IAIEngineProvider`):** Built-in heuristic engine ($0 cost) or Claude via `ANTHROPIC_API_KEY` (model set by `ANTHROPIC_MODEL`).
+* **Accurate Prices:** Eleven's price list is generated from the same catalog the booking page charges.
+* **Eleven's Memory:** Uses the signed-in customer's preferences (starch, fold vs. hang, detergent).
+* **Booking Hand-off:** Booking requests get a **Book a Pickup** button to the secure booking page; Eleven never creates or confirms orders itself.
+* **English & Spanish**, and **Human Escalation** into Mission Control.
+* **Cost Controls:** Message size limits and per-network / per-customer daily caps.
 
-### 5. 🏢 Commercial B2B Logistics Portal (`/portal`, `/commercial`)
-* **Corporate Account Switcher:** Multi-account interface tailored for hotels, medical spas, fitness clubs, and property managers.
-* **Executive KPI Dashboard:** Real-time tracking of monthly volume (lbs), RFID hamper carts, and 100% on-time SLA turnaround.
-* **Contract Rate Card Inspector:** Locked negotiated bulk pricing ($1.75/lb towel service, $14.50 valet suits).
-* **Automated Route Schedule Manager:** Edit recurring pickup schedules (e.g. Mon/Wed/Fri morning shift).
-* **Consolidated Monthly Invoices:** Itemized monthly statements with a 1-click printable PDF view and Net-30 settlement.
+### 5. 🏢 Commercial B2B Portal (`/portal`, `/commercial`) — *switched off for launch*
+The portal still runs on sample data, so `/portal` and `/api/portal*` return 404 until it is built on real commercial account data (`COMMERCIAL_PORTAL_ENABLED` in `web/src/lib/features.ts`). The `/commercial` page remains available for business inquiries.
 
 ### 6. 📈 Growth, Compliance & Promotions
-* **Dynamic Promo Code Engine (`/api/promo/validate`):** Connected to live Supabase `promo_codes` table with date validation, max-use limits, atomic usage increments, and fallback resilience.
-* **Texas Data Privacy Compliance (TDPSA):** Authenticated consumer data deletion and export endpoint (`/api/customer/data-deletion`) supporting statutory data erasure and portability rights.
-* **Local Dallas SEO Architecture:** Dynamic `/robots.txt`, `/sitemap.xml`, JSON-LD `DryCleaningOrLaundryService` schema with DFW coverage coordinates, and W3C compliant maskable PWA manifest.
-* **Post-Delivery Review Booster:** Automated prompt 2 hours post-delivery with direct 5-star Google review link.
-* **Churn Win-Back Model:** Detects inactive customers ($\ge 21$ days) and issues personalized `COMEBACK15` discounts.
+* **Promo Codes (`/api/promo/validate`):** Date windows, usage caps reserved atomically, fixed-dollar or percentage discounts, and one use per customer per code.
+* **Texas Data Privacy (TDPSA):** Customer data requests (`/api/customer/data-deletion`) with admin export and anonymize tools.
+* **SMS Compliance:** E.164 phone storage, STOP/START handling across all records, and consent that fails closed.
+* **Local SEO:** Dynamic `/robots.txt`, `/sitemap.xml`, JSON-LD `DryCleaningOrLaundryService` schema, and a maskable PWA manifest.
 
 ---
 
@@ -79,16 +74,18 @@ graph TD
 
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Framework** | [Next.js 16 (App Router + Turbopack)](https://nextjs.org/) | Core full-stack application and serverless API routes |
-| **Language** | [TypeScript 5 (Strict Mode)](https://www.typescriptlang.org/) | Complete type safety and domain models |
-| **Styling** | Vanilla CSS + Design System Tokens | Custom HSL palette (`Navy #0B1F3A`, `Gold #C9A14A`, `Pitch Green #1E5B3A`, `Cream #F4F2EC`) |
-| **State & Data Fetching** | [TanStack React Query v5](https://tanstack.com/query), [Zustand](https://zustand-demo.pmnd.rs/) | Server cache invalidation and client state management |
-| **Database & Auth** | [Supabase](https://supabase.com/) (PostgreSQL + RLS) | Relational storage, row-level security, auth session handling |
-| **Media Storage** | [Supabase Storage](https://supabase.com/storage) (`garment-photos`) | Public CDN for intake inspection and proof-of-delivery photos |
-| **Payments** | [Square Web Payments SDK](https://developer.squareup.com/docs/web-payments) | PCI-compliant tokenized credit card processing |
-| **Messaging** | Multi-Provider Engine (Simulator + [Twilio](https://www.twilio.com/) + [Resend](https://resend.com/)) | Transactional SMS, WhatsApp, and email alerts |
-| **AI Concierge** | Multi-Provider Engine (Simulated Heuristic + [Claude 3.5 Sonnet](https://www.anthropic.com/)) | Conversational AI concierge with memory |
-| **Testing** | [Vitest](https://vitest.dev/) | 34 automated unit, integration, and compliance test suites |
+| **Framework** | [Next.js 16 (App Router + Turbopack)](https://nextjs.org/) | Full-stack app and serverless API routes |
+| **Language** | [TypeScript 5 (strict)](https://www.typescriptlang.org/) | Type safety and domain models |
+| **Styling** | Vanilla CSS Modules + design tokens | No Tailwind; brand palette in `src/app/globals.css` |
+| **State & Data** | [TanStack React Query v5](https://tanstack.com/query), [Zustand](https://zustand-demo.pmnd.rs/) | Server cache and client state |
+| **Database & Auth** | [Supabase](https://supabase.com/) (PostgreSQL + RLS + Auth) | Data, row-level security, email-verified accounts |
+| **Media Storage** | Supabase Storage (`garment-photos`, `claims-photos`) | **Private** buckets served through expiring signed links |
+| **Payments** | [Square](https://developer.squareup.com/) Web Payments SDK + Cards & Payments APIs | Card on file at booking, charge at intake, refunds |
+| **Messaging** | [Twilio](https://www.twilio.com/) SMS/WhatsApp + [Resend](https://resend.com/) email (simulator fallback) | Transactional notifications |
+| **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
+| **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
+| **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
+| **Testing** | [Vitest](https://vitest.dev/) | 310 tests across 52 files |
 
 ---
 
@@ -96,42 +93,36 @@ graph TD
 
 ```
 first-eleven-cleaners/
-├── README.md                   # Platform documentation and developer guide
-├── web/                        # Next.js 16 Web Application
-│   ├── public/                 # Static assets, logos, PWA manifest
-│   ├── src/
-│   │   ├── app/                # Next.js App Router (36 routes)
-│   │   │   ├── (auth)/         # /login, /signup, /forgot-password
-│   │   │   ├── api/            # Serverless API routes (orders, driver, intake, claims, concierge, etc.)
-│   │   │   ├── book/           # 5-step customer booking flow
-│   │   │   ├── claim/          # Make It Right claim portal
-│   │   │   ├── commercial/     # Commercial B2B landing & inquiry
-│   │   │   ├── dashboard/      # Customer portal (orders, addresses, preferences)
-│   │   │   ├── mission-control/# Central ops board, intake station, archive, claims HUD
-│   │   │   ├── portal/         # Commercial B2B enterprise portal
-│   │   │   ├── pricing/        # Transparent rate card & calculator
-│   │   │   ├── staff/driver/   # Driver mobile manifest (van-isolated)
-│   │   │   └── track/          # Domino's 6-stage order tracker
-│   │   ├── components/         # Reusable UI component library & modals
-│   │   │   ├── mission-control/# KanbanBoard, DeliveredArchive, IntakeStation, Roster
-│   │   │   ├── orders/         # GarmentPassportTimeline, DominoTracker, ClaimModal
-│   │   │   └── ui/             # Button, Badge, Modal, Card, Input, Tabs
-│   │   ├── hooks/              # React Query custom hooks (useOrders, useDriver, useIntake)
-│   │   ├── lib/                # Core business logic & decoupled providers
-│   │   │   ├── ai/             # Eleven AI Concierge engine (Claude & Simulated)
-│   │   │   ├── commercial/     # Commercial rate cards & invoice service
-│   │   │   ├── growth/         # Review booster & churn win-back engine
-│   │   │   ├── messaging/      # Twilio SMS / WhatsApp / Simulator provider
-│   │   │   ├── payments/       # Square Web Payments integration
-│   │   │   ├── storage/        # Supabase Storage photo upload & CDN resolver
-│   │   │   └── supabase/       # Supabase SSR & Service-Role admin clients
-│   │   ├── stores/             # Zustand UI & booking stores
-│   │   ├── styles/             # Global CSS design tokens and variables
-│   │   └── types/              # Comprehensive TypeScript interfaces
-│   ├── supabase/               # PostgreSQL schema migrations and seed datasets
-│   │   ├── schema.sql          # 15 tables, indexes, RLS policies, and triggers
-│   │   └── seed.sql            # Dallas zones, promo codes, and time slots
-│   └── tests/                  # Vitest automated test suites (34 tests, 7 suites)
+├── README.md
+├── .github/workflows/ci.yml    # Lint, test and build on every push / PR to main
+└── web/                        # Next.js 16 application (Vercel root directory)
+    ├── public/                 # Static assets, logos, PWA manifest and icons
+    ├── src/
+    │   ├── app/                # App Router pages and API routes
+    │   │   ├── api/            # 31 route handlers (bookings, intake, driver, payments, concierge, ...)
+    │   │   ├── auth/confirm/   # Email confirmation and password-reset link handler
+    │   │   ├── book/           # Customer booking flow
+    │   │   ├── dashboard/      # Customer portal (orders, billing, addresses, preferences, profile)
+    │   │   ├── mission-control/# Operations board and intake station
+    │   │   ├── staff/driver/   # Driver manifest
+    │   │   ├── track/          # Public order tracker (private link per order)
+    │   │   └── login, signup, forgot-password, reset-password, claim, pricing, ...
+    │   ├── components/         # UI component library (booking, mission-control, orders, ui, ...)
+    │   ├── hooks/              # React Query hooks (useOrders, useDriver, useIntake, useAuth, ...)
+    │   ├── lib/                # Business logic and providers
+    │   │   ├── ai/             # Eleven concierge engines, prompt and catalog-driven price list
+    │   │   ├── messaging/      # Twilio / simulator provider and message templates
+    │   │   ├── supabase/       # Browser, server and service-role clients; auth helpers
+    │   │   ├── constants.ts    # Pricing catalog, financials, DFW zone model (source of truth)
+    │   │   ├── square.ts       # Card on file, charges, card management
+    │   │   ├── storage.ts      # Photo upload, validation and signed-link helpers
+    │   │   └── ...             # express, refunds, schedule, texas-time, rate-limiter, sanitize, ...
+    │   └── types/              # TypeScript interfaces
+    ├── supabase/
+    │   ├── schema.sql          # Full schema for a new database (17 tables, RLS, functions)
+    │   ├── seed.sql            # DFW zones, promo codes, time slots
+    │   └── migrations/         # Dated changes for existing databases, each with a rollback
+    └── tests/                  # Vitest suites
 ```
 
 ---
@@ -139,163 +130,152 @@ first-eleven-cleaners/
 ## 💻 Local Setup & Development
 
 ### 1. Prerequisites
-* [Node.js](https://nodejs.org/) (v18.18 or later)
-* [npm](https://www.npmjs.com/) (v9 or later)
-* A [Supabase](https://supabase.com/) project (PostgreSQL + Auth + Storage)
+* [Node.js](https://nodejs.org/) 22 (matches CI)
+* A [Supabase](https://supabase.com/) project
+* A [Square developer](https://developer.squareup.com/) account (sandbox credentials are free)
 
 ### 2. Installation
 ```bash
-# Clone the repository
 git clone <YOUR_REPOSITORY_URL>
 cd "first eleven cleaners/web"
-
-# Install dependencies
 npm install
 ```
 
 ### 3. Environment Configuration
-Copy the template to create your `.env.local`:
 ```bash
 cp .env.example .env.local
 ```
-
-Fill in your configuration keys in `web/.env.local`:
+Fill in `web/.env.local` (see [`web/.env.example`](web/.env.example) for every key):
 ```env
 # --- Supabase ---
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-# --- Square Payments (Sandbox / Production) ---
-NEXT_PUBLIC_SQUARE_APP_ID=your-square-app-id
-NEXT_PUBLIC_SQUARE_LOCATION_ID=your-square-location-id
-SQUARE_ACCESS_TOKEN=your-square-access-token
+# --- Square ---
+NEXT_PUBLIC_SQUARE_APP_ID=
+NEXT_PUBLIC_SQUARE_LOCATION_ID=
+SQUARE_LOCATION_ID=
+SQUARE_ACCESS_TOKEN=
 SQUARE_ENVIRONMENT=sandbox
-SQUARE_WEBHOOK_SIGNATURE_KEY=your-webhook-key
+SQUARE_WEBHOOK_SIGNATURE_KEY=
 
-# --- Twilio (Optional - defaults to Simulated HUD if empty) ---
+# --- Twilio (optional locally; simulator used if empty) ---
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_PHONE_NUMBER=
+TWILIO_MESSAGING_SERVICE_SID=
 TWILIO_WHATSAPP_NUMBER=
 
-# --- Resend Email (Optional) ---
+# --- Resend email ---
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=First Eleven Cleaners <concierge@firstelevencleaners.com>
 
-# --- Claude AI (Optional - defaults to Eleven Heuristic Engine if empty) ---
+# --- Claude (optional; heuristic engine used if empty) ---
 ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=
 
-# --- App Configuration ---
+# --- Upstash Redis (optional locally; in-memory rate limits if empty) ---
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# --- Operations ---
+ADMIN_ALERT_EMAIL=
+
+# --- App ---
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME="First Eleven Cleaners"
 ```
 
+> [!IMPORTANT]
+> **Keep payment testing in Square's sandbox.** If `.env.local` holds production Square keys, put sandbox values (`SQUARE_ENVIRONMENT=sandbox`, sandbox app ID, location ID and access token) in `web/.env.development.local`. Next.js loads it only for `npm run dev` and it overrides `.env.local`, so local testing never charges real cards. All `.env*` files except `.env.example` are gitignored.
+
 ### 4. Database Setup
-1. Open your **Supabase Project Dashboard**.
-2. In the **SQL Editor**, execute [`web/supabase/schema.sql`](web/supabase/schema.sql) to provision all 15 tables, relational indexes, RLS policies, and triggers.
-3. In the **SQL Editor**, execute [`web/supabase/seed.sql`](web/supabase/seed.sql) to seed DFW service zones, active promo codes, and 14-day operational time slots.
+* **New database:** in the Supabase **SQL Editor**, run [`web/supabase/schema.sql`](web/supabase/schema.sql), then [`web/supabase/seed.sql`](web/supabase/seed.sql).
+* **Existing database:** apply the files in [`web/supabase/migrations/`](web/supabase/migrations/) that it hasn't received yet, in date order. Each file ends with a rollback script.
 
-### 5. Supabase Storage Bucket Setup (`garment-photos`)
-The intake digital inspection station and driver proof-of-delivery system upload photos directly to Supabase Storage:
-1. In the **Supabase Dashboard**, navigate to **Storage** ➔ **New Bucket**.
-2. Name the bucket: `garment-photos`.
-3. Toggle **Public Bucket** to **ON** (this allows fast CDN image loading for the Garment Passport™ and driver proof cards).
-4. Set **File size limit** to `10MB`.
-5. Set **Allowed MIME types** to `image/jpeg, image/png, image/webp, image/heic`.
-6. Click **Save bucket**.
-7. *(Optional RLS)* Under **Storage Policies**, ensure public read is enabled (`SELECT` allowed for all users) and authenticated/service-role insert is permitted (`INSERT` allowed for authenticated staff).
+### 5. Storage Buckets
+Create two buckets in **Storage**: `garment-photos` and `claims-photos`.
+* **Public bucket: OFF.** Photos are served through short-lived signed links (1 hour on screens, 24 hours for text-message photos).
+* **File size limit:** 10 MB. **Allowed MIME types:** `image/jpeg, image/png, image/webp, image/heic`.
+* **No storage policies are needed.** All uploads go through `/api/upload` on the server, which checks file type, size and content.
 
-### 6. Running Locally
+### 6. Supabase Auth Settings
+* **Authentication → Sign In / Providers → Email:** turn **Confirm email ON**. A guest's past orders join their new account only after the email is confirmed.
+* **Passwords:** minimum length 8, with lower/upper case, digits and symbols.
+* **URL Configuration:** Site URL = your production domain. Redirect URLs = your exact domains (e.g. `https://www.firstelevencleaners.com/**`) plus `http://localhost:3000/**`. **Never add a bare `https://*.vercel.app/**` wildcard**, because anyone can host a site on `vercel.app`.
+* **SMTP:** configure custom SMTP (e.g. Resend: host `smtp.resend.com`, port `465`, user `resend`, password = a Resend API key). Supabase requires this to edit templates.
+* **Email templates:** the links must point to the app's confirm route:
+  * *Confirm signup:* `<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Confirm your email</a>`
+  * *Reset password:* `<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>`
+
+### 7. Running Locally
 ```bash
-# Start the local Next.js development server with Turbopack
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` while the dev server is running; they share the `.next` folder.
 
-### 7. Automated Testing & Verification
+### 8. Testing & Verification
 ```bash
-# Run Vitest test suite (34 tests across 7 test suites)
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run strict TypeScript type compilation check
-npx tsc --noEmit
-
-# Run ESLint validation across all pages and APIs
-npm run lint
-
-# Validate optimized production build
-npm run build
+npm test                                   # 310 Vitest tests
+npx vitest run tests/pricing.test.ts       # a single test file
+npx vitest run -t "test name"              # a single test by name
+npx tsc --noEmit                           # type check
+npm run lint                               # ESLint
+npm run build                              # production build
 ```
+CI runs lint, tests and build on every push and pull request to `main`.
 
 ---
 
-## 🚀 Vercel Production Deployment Guide
+## 🚀 Vercel Production Deployment
 
-First Eleven Cleaners is fully pre-configured for one-click deployment to **Vercel** with zero configuration conflicts.
+### 1. Project Settings
+* Import the repository in Vercel and set **Root Directory** to `web`. The framework preset is Next.js ([`web/vercel.json`](web/vercel.json)).
 
-### 1. Connect Repository
-1. Navigate to the [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New... ➔ Project**.
-2. Import your GitHub repository (`first-eleven-cleaners`).
+### 2. Environment Variables (Production)
 
-### 2. Configure Root Directory (Crucial)
-Because the Next.js application resides in the `web/` subfolder:
-1. In the **Project Configuration** screen, find **Root Directory**.
-2. Click **Edit** and choose `web`.
-3. Leave Framework Preset as **Next.js** (Vercel automatically detects Next.js 16 and uses [`web/vercel.json`](web/vercel.json)).
-
-### 3. Configure Environment Variables
-In the **Environment Variables** section in Vercel, add the following production keys:
-
-| Environment Variable | Description | Required |
+| Variable | Notes | Required |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Your live Supabase project URL (`https://<project-ref>.supabase.co`) | **Yes** |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anonymous key for client-side queries | **Yes** |
-| `SUPABASE_SERVICE_ROLE_KEY` | Secret service-role key for server routes & intake | **Yes** |
-| `NEXT_PUBLIC_SQUARE_APP_ID` | Square Application ID (Sandbox or Production) | **Yes** |
-| `NEXT_PUBLIC_SQUARE_LOCATION_ID` | Square Location ID for DFW plant checkout | **Yes** |
-| `SQUARE_ACCESS_TOKEN` | Square OAuth Access Token | **Yes** |
-| `SQUARE_ENVIRONMENT` | Set to `production` (or `sandbox` during testing) | **Yes** |
-| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Secret signature key for Square Webhook verification | Optional |
-| `TWILIO_ACCOUNT_SID` | Twilio Account SID (defaults to simulator if omitted) | Optional |
-| `TWILIO_AUTH_TOKEN` | Twilio Auth Token | Optional |
-| `TWILIO_PHONE_NUMBER` | Outbound SMS phone number | Optional |
-| `TWILIO_WHATSAPP_NUMBER` | Outbound WhatsApp sender | Optional |
-| `RESEND_API_KEY` | Resend API key for transactional emails | Optional |
-| `RESEND_FROM_EMAIL` | Verified sender (e.g. `concierge@firstelevencleaners.com`) | Optional |
-| `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet API key for Eleven AI | Optional |
-| `NEXT_PUBLIC_APP_NAME` | Set to `First Eleven Cleaners` | **Yes** |
-| `NEXT_PUBLIC_APP_URL` | Custom domain (e.g. `https://firstelevencleaners.com`), or leave unset to auto-resolve | Optional |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL and public anon key | **Yes** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key | **Yes** |
+| `NEXT_PUBLIC_SQUARE_APP_ID`, `NEXT_PUBLIC_SQUARE_LOCATION_ID`, `SQUARE_LOCATION_ID` | Production Square app and location | **Yes** |
+| `SQUARE_ACCESS_TOKEN` | Production access token. Without Square, production bookings are refused rather than created unpaid | **Yes** |
+| `SQUARE_ENVIRONMENT` | `production` | **Yes** |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | The Square webhook rejects requests in production without it | **Yes** |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` / `TWILIO_MESSAGING_SERVICE_SID`, `TWILIO_WHATSAPP_NUMBER` | The inbound SMS webhook rejects requests in production without the auth token | If SMS is used |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Sender on a verified Resend domain | **Yes** |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits across Vercel instances | Strongly recommended |
+| `ADMIN_ALERT_EMAIL` | Receives server-error, dispute and privacy-request alerts | **Yes** |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Claude for Eleven (heuristic engine if unset) | Optional |
+| `NEXT_PUBLIC_APP_NAME` | `First Eleven Cleaners` | **Yes** |
+| `NEXT_PUBLIC_APP_URL` | Custom domain; falls back to the Vercel production URL if unset | Optional |
 
-> [!TIP]
-> `NEXT_PUBLIC_APP_URL` automatically falls back to `VERCEL_PROJECT_PRODUCTION_URL` or `VERCEL_URL` if omitted, ensuring tracking links and SMS messages automatically resolve to your live Vercel domain.
+### 3. Supabase for Production
+Apply the Auth, storage and URL settings in [Local Setup](#-local-setup--development) (steps 5–6) with your production domains. Use a **separate Supabase project for development and testing**, and a plan with **restorable backups** for production.
 
-### 4. Update Supabase Redirect URLs
-1. In your **Supabase Dashboard**, navigate to **Authentication ➔ URL Configuration**.
-2. Add your live Vercel production domain (e.g. `https://firstelevencleaners.com` and `https://*.vercel.app`) to **Redirect URLs**.
-
-### 5. Configure Custom Domain in Vercel
-1. In the Vercel project dashboard, go to **Settings ➔ Domains**.
-2. Add your custom domain (e.g., `firstelevencleaners.com` and `www.firstelevencleaners.com`).
-3. Follow the DNS instructions (CNAME / A records) provided by Vercel. SSL certificates are provisioned and renewed automatically.
-
+### 4. Custom Domain
+In Vercel **Settings → Domains**, add `firstelevencleaners.com` and `www.firstelevencleaners.com` and follow the DNS instructions. SSL is automatic.
 
 ---
 
-## 🔒 Security & Regulatory Compliance
+## 🔒 Security & Compliance
 
-* **Zero Secrets in Git:** All secrets, service role keys, and environment files are strictly ignored via `.gitignore`.
-* **Row-Level Security (RLS):** All Supabase tables enforce strict RLS policies ensuring customers can only access their own orders, addresses, and claims.
-* **Driver Van Isolation:** Server-side validation strictly binds van drop actions to the authenticated driver, preventing double-claims and unauthorized cross-driver delivery completion.
-* **Service-Role Isolation:** Admin, driver manifest, and intake operations run via protected server-only routes (`createAdminClient()`).
-* **Texas Data Privacy and Security Act (TDPSA):** Compliant endpoints for consumer data deletion and portable data export (`/api/customer/data-deletion`).
-* **API Rate Limiting:** Sliding-window rate limiters protect API routes from brute force and denial of service.
+The platform went through an independent security audit and a production-readiness audit in October 2026. All findings from the security audit were fixed, each with regression tests. The detailed reports are kept private.
+
+* **Verified sessions:** every server request verifies the login token with Supabase; roles come only from the server-controlled `customers.role` column, never from email addresses or user-editable metadata.
+* **Email-verified accounts:** a guest's order history joins an account only after the email is confirmed.
+* **Row-Level Security + column grants:** customers can read only their own data, and can edit only their name, phone and SMS consent. Logged-out visitors can't write to any table.
+* **Payments:** card details are entered only into Square's secure form; the app stores Square card references and charges the final total server-side. Square and Twilio webhooks verify signatures and fail closed in production.
+* **Private photos:** storage buckets are private; screens and messages get expiring signed links.
+* **Input & output safety:** server-side validation, HTML-escaped email templates, name validation, and generic error messages (details only in server logs).
+* **Abuse protection:** shared rate limits (Upstash), per-email/phone booking caps, AI concierge size and daily limits.
+* **Security headers:** CSP (no `unsafe-eval` in production), HSTS, `X-Frame-Options: DENY`, `nosniff`.
+* **Accountability:** append-only audit log of admin actions, plus server error tracking with admin alerts.
+* **Texas Data Privacy and Security Act (TDPSA):** data request intake with admin export and anonymize tools.
+* **No secrets in git:** all environment files except `.env.example` are gitignored.
 
 ---
 
 ## 📄 License & Ownership
 Copyright © 2026 **First Eleven Cleaners** (Dallas, Texas). All rights reserved.
-
