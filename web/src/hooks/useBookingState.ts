@@ -80,6 +80,19 @@ export function useBookingState() {
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [detectedZone, setDetectedZone] = useState<ZoneConfig | null>(() => resolveZoneByZip(''));
 
+  // Prefill contact details when the signed-in customer loads. The login now arrives after
+  // the first render (P05 AR-05), so the initial values above are empty. Adjusted during
+  // render when the customer changes; never overwrites anything already typed.
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  if (user && prefilledFor !== user.id) {
+    setPrefilledFor(user.id);
+    if (!fullName) setFullName(user.full_name || '');
+    if (!email) setEmail(user.email || '');
+    if (!phone) setPhone(user.phone || '');
+    if (user.sms_consent) setSmsConsent(true);
+    if (user.sms_promotions_consent) setSmsPromotionsConsent(true);
+  }
+
   // Step 2: Services
   const [serviceType, setServiceType] = useState<'dry_clean' | 'wash_fold' | 'mixed'>('mixed');
   const [washFoldWeight, setWashFoldWeight] = useState<number>(15);

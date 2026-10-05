@@ -36,8 +36,10 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Customer | null>(getStoredCustomer);
-  const [isLoading, setIsLoading] = useState<boolean>(() => !hasFreshCachedSession());
+  // Start signed-out and loading on the server and in the browser alike, so the first
+  // render matches the server HTML; the cached login is restored right after (P05 AR-05)
+  const [user, setUser] = useState<Customer | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const updateCustomerState = useCallback((newCustomer: Customer | null) => {
     if (newCustomer && !newCustomer.role) {
@@ -135,9 +137,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Only make network call if cache was expired or missing
+    // Only make network call if cache was expired or missing; a fresh cache is restored
+    // here, after hydration, instead of during the first render (P05 AR-05)
+    let restoreTimer: ReturnType<typeof setTimeout> | null = null;
     if (!hasFresh) {
       initAuth();
+    } else {
+      restoreTimer = setTimeout(() => {
+        if (!isMounted) return;
+        loadLocalUser();
+        setIsLoading(false);
+      }, 0);
     }
 
     // Subscribe to auth state changes for real-time reactivity without polling
@@ -160,6 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isMounted = false;
+      if (restoreTimer) clearTimeout(restoreTimer);
       if (authSubscription) {
         authSubscription.unsubscribe();
       }
