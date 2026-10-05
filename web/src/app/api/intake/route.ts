@@ -236,21 +236,29 @@ export async function POST(request: Request) {
     }
 
     // 4. Insert Garment Photos (Resolving base64 to Supabase Storage CDN)
+    let unsavedPhotoCount = 0;
+    let savedPhotoUrls: string[] = [];
     if (Array.isArray(photos) && photos.length > 0) {
-      const photosToInsert = await Promise.all(
+      const resolvedPhotos = await Promise.all(
         photos.map(async (p) => {
           const resolvedUrl = await resolveAndUploadPhotoUrl(p.photo_url, order.id, 'intake');
+          if (!resolvedUrl) return null; // never store a raw data URL (PR-06)
           return {
             order_id: order.id,
             photo_type: 'intake',
-            photo_url: resolvedUrl || p.photo_url,
+            photo_url: resolvedUrl,
             condition_notes: p.condition_notes || intake_notes || 'Intake Passport Verification',
             captured_by: 'Plant Intake Specialist',
           };
         })
       );
 
-      await supabase.from('garment_photos').insert(photosToInsert);
+      const photosToInsert = resolvedPhotos.filter((p): p is NonNullable<typeof p> => p !== null);
+      unsavedPhotoCount = photos.length - photosToInsert.length;
+      savedPhotoUrls = photosToInsert.map((p) => p.photo_url);
+      if (photosToInsert.length > 0) {
+        await supabase.from('garment_photos').insert(photosToInsert);
+      }
     }
 
     // 5. Automatic Payment Capture on Card on File
@@ -369,7 +377,7 @@ export async function POST(request: Request) {
       const rawCustomer = order.customer;
       const customer = (Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer) as { full_name?: string; phone?: string; email?: string } | null;
       const origin = getAppBaseUrl();
-      const primaryPhotoUrl = photos?.[0]?.photo_url;
+      const primaryPhotoUrl = savedPhotoUrls[0];
 
       const customAlertText = isPaymentFailed
         ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but card authorization failed. Please update your payment method here to start cleaning: ${origin}/dashboard/billing`
@@ -406,9 +414,10 @@ export async function POST(request: Request) {
       payment_id: paymentId,
       subtotal,
       total: finalTotal,
-      warning: isPaymentFailed
-        ? `Automatic card authorization failed ($${finalTotal.toFixed(2)}). Order is on Payment Hold.`
-        : undefined,
+      warning: [
+        isPaymentFailed ? `Automatic card authorization failed ($${finalTotal.toFixed(2)}). Order is on Payment Hold.` : null,
+        unsavedPhotoCount > 0 ? `${unsavedPhotoCount} photo(s) could not be saved. Please retake and re-upload them.` : null,
+      ].filter(Boolean).join(' ') || undefined,
     });
   } catch (err: unknown) {
     console.error('Intake POST error:', err);

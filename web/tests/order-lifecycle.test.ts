@@ -71,7 +71,8 @@ vi.mock('@/lib/messaging', () => ({
   messagingService: { dispatchStageNotification: () => dispatch() },
 }));
 vi.mock('@/lib/storage', () => ({
-  resolveAndUploadPhotoUrl: async (url: string) => url,
+  // Mirrors lib/storage: a photo that can't be stored resolves to null (PR-06)
+  resolveAndUploadPhotoUrl: async (url: string) => (url.startsWith('data:') ? null : url),
   withSignedPhotoUrls: async <T,>(v: T) => v,
 }));
 vi.mock('@/lib/express', () => ({
@@ -288,5 +289,31 @@ describe('Intake pricing for wash & fold (PR-03)', () => {
     expect((await intake({ weight_lbs: -5, dry_clean_items: [] })).status).toBe(400);
     expect((await intake({ weight_lbs: 'heavy', dry_clean_items: [] })).status).toBe(400);
     expect(orderUpdate()).toBeUndefined();
+  });
+});
+
+describe('Driver proof photos (PR-06)', () => {
+  beforeEach(() => {
+    authCustomer = { id: 'driver-1', full_name: 'Dana Driver', role: 'driver' };
+  });
+
+  it('does not confirm a pickup when the proof photo could not be saved', async () => {
+    orderFixture = order({ status: 'booked' });
+    const res = await driver({ action: 'pickup_complete', photo_url: 'data:image/jpeg;base64,AAAA' });
+    expect(res.status).toBe(502);
+    expect(statusUpdates()).toHaveLength(0);
+    expect(writes.filter((w) => w.table === 'garment_photos')).toHaveLength(0);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('does not confirm a delivery when the proof photo could not be saved', async () => {
+    orderFixture = order({
+      status: 'out_for_delivery',
+      payment_status: 'charged',
+      events: [{ status: 'out_for_delivery', triggered_by: 'Driver (Dana Driver [driver-1])' }],
+    });
+    const res = await driver({ action: 'delivery_complete', photo_url: 'data:image/jpeg;base64,AAAA' });
+    expect(res.status).toBe(502);
+    expect(statusUpdates()).toHaveLength(0);
   });
 });

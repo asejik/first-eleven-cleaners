@@ -401,7 +401,16 @@ export async function POST(request: Request) {
         );
       }
 
-      // 1. Update order to picked_up
+      // 1. Save the mandatory proof photo first: no photo, no status change (PR-06)
+      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'pickup_proof');
+      if (!resolvedPhotoUrl) {
+        return NextResponse.json(
+          { error: 'The proof photo could not be saved. Please retake it and try again.' },
+          { status: 502 }
+        );
+      }
+
+      // 2. Update order to picked_up
       const pickupBlocked = await moveOrderStatus(supabase, order.id, 'booked', 'picked_up');
       if (pickupBlocked) return pickupBlocked;
 
@@ -413,20 +422,18 @@ export async function POST(request: Request) {
         triggered_by: driverLabel,
       });
 
-      // 3. Resolve and upload photo to Supabase Storage CDN
-      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'pickup_proof');
-
+      // 3. Record the proof photo
       await supabase.from('garment_photos').insert({
         order_id: order.id,
         photo_type: 'pickup_proof',
-        photo_url: resolvedPhotoUrl || photo_url,
+        photo_url: resolvedPhotoUrl,
         condition_notes: notes || 'Contactless pickup verification',
         captured_by: driverLabel,
       });
 
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'picked_up';
-      basePayload.photoUrl = resolvedPhotoUrl || photo_url || undefined;
+      basePayload.photoUrl = resolvedPhotoUrl;
       await messagingService.dispatchStageNotification(basePayload);
 
       return NextResponse.json({ success: true, new_status: 'picked_up' });
@@ -480,10 +487,12 @@ export async function POST(request: Request) {
       let resolvedPhotoUrl: string | null = null;
       if (photo_url && typeof photo_url === 'string' && photo_url.trim()) {
         resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'return');
+      }
+      if (resolvedPhotoUrl) {
         await supabase.from('garment_photos').insert({
           order_id: order.id,
           photo_type: 'return',
-          photo_url: resolvedPhotoUrl || photo_url,
+          photo_url: resolvedPhotoUrl,
           condition_notes: notes || 'Loaded from plant for outbound delivery route',
           captured_by: driverLabel,
         });
@@ -527,7 +536,16 @@ export async function POST(request: Request) {
         }
       }
 
-      // 1. Update order to delivered
+      // 1. Save the mandatory proof photo first: no photo, no status change (PR-06)
+      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'delivery_proof');
+      if (!resolvedPhotoUrl) {
+        return NextResponse.json(
+          { error: 'The proof photo could not be saved. Please retake it and try again.' },
+          { status: 502 }
+        );
+      }
+
+      // 2. Update order to delivered
       const deliveryBlocked = await moveOrderStatus(supabase, order.id, 'out_for_delivery', 'delivered');
       if (deliveryBlocked) return deliveryBlocked;
 
@@ -539,20 +557,18 @@ export async function POST(request: Request) {
         triggered_by: driverLabel,
       });
 
-      // 3. Resolve and upload photo to Supabase Storage CDN
-      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'delivery_proof');
-
+      // 3. Record the proof photo
       await supabase.from('garment_photos').insert({
         order_id: order.id,
         photo_type: 'delivery_proof',
-        photo_url: resolvedPhotoUrl || photo_url,
+        photo_url: resolvedPhotoUrl,
         condition_notes: notes || 'Delivery drop-off proof',
         captured_by: driverLabel,
       });
 
       // 4. Dispatch SMS/WhatsApp
       basePayload.stage = 'delivered';
-      basePayload.photoUrl = resolvedPhotoUrl || photo_url || undefined;
+      basePayload.photoUrl = resolvedPhotoUrl;
       await messagingService.dispatchStageNotification(basePayload);
 
       // 5. Check 24-Hour Express SLA (Delivered by 10:00 AM on delivery date)
