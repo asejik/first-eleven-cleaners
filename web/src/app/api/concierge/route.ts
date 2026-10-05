@@ -3,8 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { getAIEngine } from '@/lib/ai';
+import { loadConciergeContext } from '@/lib/ai/context';
 import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
-import type { Address, Order, CustomerPreferences } from '@/types';
 import { apiError } from '@/lib/api-errors';
 import { logMessages } from '@/lib/message-log';
 
@@ -78,42 +78,8 @@ export async function POST(req: Request) {
     const context: ConciergeContext = {};
 
     if (targetCustomerId && customer) {
-      context.customerId = customer.id;
-      context.customerName = customer.full_name;
-      context.customerPhone = customer.phone;
-      context.customerEmail = customer.email;
-
-      // Fetch Preferences (Eleven's Memory)
-      const { data: prefs } = await adminSupabase
-        .from('customer_preferences')
-        .select('customer_id, starch_level, fold_vs_hang, detergent_sensitivity, gate_code, delivery_instructions, special_notes')
-        .eq('customer_id', targetCustomerId)
-        .maybeSingle();
-
-      context.customerPreferences = (prefs as unknown as CustomerPreferences) || null;
-
-      // Fetch Default Address
-      const { data: address } = await adminSupabase
-        .from('addresses')
-        .select('id, street, unit, city, state, zip, delivery_notes')
-        .eq('customer_id', targetCustomerId)
-        .eq('is_default', true)
-        .maybeSingle();
-
-      context.defaultAddress = (address as unknown as Address) || null;
-
-      // Fetch Recent Orders
-      const { data: orders } = await adminSupabase
-        .from('orders')
-        .select(`
-          id, order_number, status, order_type, pickup_date, total,
-          address:addresses(street, city, zip)
-        `)
-        .eq('customer_id', targetCustomerId)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      context.recentOrders = (orders as unknown as Order[]) || [];
+      // Eleven's Memory: preferences, default address, recent orders (P05 AR-19)
+      Object.assign(context, await loadConciergeContext(adminSupabase, customer));
     }
 
     // 3. Generate AI Response
