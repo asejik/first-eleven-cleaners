@@ -11,6 +11,7 @@ import {
   resolveZoneByZip,
   getZoneMinimumGap,
   EXPRESS_EXCLUDED_GARMENTS,
+  EXPRESS_DAILY_SLOT_CAP,
   PROMO_CODE_LAUNCH,
   PROMO_DISCOUNT_PERCENT,
   computeBookingFinancials,
@@ -310,9 +311,9 @@ export async function POST(request: Request) {
           );
         }
 
-        if (isExpress && (bookedInExpress ?? 0) >= 8) {
+        if (isExpress && (bookedInExpress ?? 0) >= EXPRESS_DAILY_SLOT_CAP) {
           return NextResponse.json(
-            { error: `24-Hour Express capacity for ${validated.schedule.pickup_date} has reached its daily limit of 8 orders. Please select 48-Hour Standard pickup.` },
+            { error: `24-Hour Express capacity for ${validated.schedule.pickup_date} has reached its daily limit of ${EXPRESS_DAILY_SLOT_CAP} orders. Please select 48-Hour Standard pickup.` },
             { status: 400 }
           );
         }

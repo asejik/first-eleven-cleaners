@@ -15,12 +15,6 @@ export interface MissionControlResponse {
     all_time_revenue: number;
     total_lbs: number;
     total_pieces: number;
-    labor: {
-      estimated_cost: number;
-      target_max_pct: number;
-      current_pct: number;
-      status: 'optimal' | 'alert';
-    };
   } | null;
 }
 

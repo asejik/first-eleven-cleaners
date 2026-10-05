@@ -115,11 +115,6 @@ export async function GET(request: Request) {
       return acc + pieces;
     }, 0);
 
-    // Labor KPI Benchmark: Targeted at <= 32% of net sales
-    const baseLaborRate = 0.28; // Standard 28% efficiency benchmark
-    const estimatedLaborCost = Number((todayRevenue * baseLaborRate).toFixed(2));
-    const laborPercentage = todayRevenue > 0 ? Number(((estimatedLaborCost / todayRevenue) * 100).toFixed(1)) : 28.0;
-
     return NextResponse.json(await withSignedPhotoUrls({
       orders,
       claims: claims || [],
@@ -133,12 +128,6 @@ export async function GET(request: Request) {
         all_time_revenue: allTimeRevenue,
         total_lbs: totalLbs,
         total_pieces: totalDryCleanPieces,
-        labor: {
-          estimated_cost: estimatedLaborCost,
-          target_max_pct: 32.0,
-          current_pct: laborPercentage,
-          status: laborPercentage <= 32.0 ? 'optimal' : 'alert',
-        },
       },
     }));
   } catch (err) {

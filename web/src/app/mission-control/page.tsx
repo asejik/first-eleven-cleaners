@@ -439,15 +439,11 @@ export default function MissionControlPage() {
                 <ExpressGovernance
                   orders={orders}
                   onRefresh={refetch}
-                  onToast={addToast}
                 />
               )}
 
               {activeTab === 'zones' && (
-                <ZoneGovernance
-                  orders={orders}
-                  onToast={addToast}
-                />
+                <ZoneGovernance />
               )}
             </>
           )}
