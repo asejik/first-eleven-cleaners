@@ -125,6 +125,12 @@ export async function GET(
     }
   }
 
+  // Sample orders are for local development only (PR-31)
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[Orders] Supabase is not configured in production; refusing to serve sample orders.');
+    return NextResponse.json({ error: 'Orders are temporarily unavailable. Please try again shortly.' }, { status: 503 });
+  }
+
   // Mock comprehensive order for single order tracker view
   const order: Order = {
     id,
