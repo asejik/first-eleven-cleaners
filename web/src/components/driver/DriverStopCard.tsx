@@ -25,6 +25,26 @@ function formatTimestamp(timestamp?: string | null) {
   );
 }
 
+/** Gate code and delivery instructions the customer saved in Preferences (P05 AR-03) */
+function CustomerAccessNotes({ order }: { order: Order }) {
+  const prefs = order.customer?.preferences;
+  if (!prefs?.gate_code && !prefs?.delivery_instructions) return null;
+  return (
+    <div className={styles.notesAlert}>
+      {prefs.gate_code && (
+        <div>
+          <strong>Gate Code:</strong> {prefs.gate_code}
+        </div>
+      )}
+      {prefs.delivery_instructions && (
+        <div>
+          <strong>Customer Instructions:</strong> {prefs.delivery_instructions}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DriverStopCard({
   order,
   stopIndex,
@@ -66,6 +86,7 @@ export function DriverStopCard({
               <strong>Access / Porch Note:</strong> {address.delivery_notes}
             </div>
           )}
+          <CustomerAccessNotes order={order} />
         </div>
 
         <div className={styles.actionsGrid}>
@@ -189,6 +210,7 @@ export function DriverStopCard({
               <strong>Drop Spot:</strong> {address.delivery_notes}
             </div>
           )}
+          <CustomerAccessNotes order={order} />
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-3)' }}>
@@ -239,6 +261,7 @@ export function DriverStopCard({
               <strong>Drop Spot:</strong> {address.delivery_notes}
             </div>
           )}
+          <CustomerAccessNotes order={order} />
         </div>
 
         <div className={styles.actionsGrid}>

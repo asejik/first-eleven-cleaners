@@ -43,6 +43,17 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
     return (order.photos || []).filter((p) => p.photo_type === 'pickup_proof');
   }, [order.photos]);
 
+  // Care preferences the customer saved (P05 AR-03), shown on the ticket
+  const careNotes = useMemo(() => {
+    const prefs = order.customer?.preferences;
+    if (!prefs) return [];
+    const notes: string[] = [];
+    if (prefs.starch_level) notes.push(`Starch: ${prefs.starch_level}`);
+    if (prefs.fold_vs_hang) notes.push(prefs.fold_vs_hang === 'fold' ? 'Fold shirts' : 'Hang shirts');
+    if (prefs.detergent_sensitivity) notes.push(`Detergent: ${prefs.detergent_sensitivity}`);
+    return notes;
+  }, [order.customer?.preferences]);
+
   // Intake photos state: if viewing an order already processed, show its intake photos;
   // if order is in 'picked_up' queue awaiting initial intake, start with empty array.
   const [photos, setPhotos] = useState<Array<{ photo_url: string; preview_url?: string; condition_notes?: string }>>(() => {
@@ -210,6 +221,11 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
           <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'bold', margin: '2px 0 0', color: '#ffffff' }}>
             Order #{order.order_number || order.id.slice(0, 8)} — {order.customer?.full_name}
           </h2>
+          {careNotes.length > 0 && (
+            <p className={styles.careNotes}>
+              <strong>Customer care preferences:</strong> {careNotes.join(' • ')}
+            </p>
+          )}
           {order.updated_at && (
             <span style={{ fontSize: 'var(--text-xs)', color: '#94a3b8', display: 'block', marginTop: '3px' }}>
               ⏱️ Recorded: {new Date(order.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(order.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}

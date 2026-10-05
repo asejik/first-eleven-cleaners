@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { messagingService } from '@/lib/messaging';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
+import { withStaffPreferences } from '@/lib/care-preferences';
 import { getAppBaseUrl } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
@@ -145,7 +146,7 @@ export async function GET(request: Request) {
           delivery_window,
           notes,
           created_at,
-          customer:customers(id, full_name, phone, email),
+          customer:customers(id, full_name, phone, email, preferences:customer_preferences(gate_code, delivery_instructions)),
           address:addresses(id, street, unit, city, state, zip, delivery_notes),
           photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
           events:order_events(id, status, triggered_by, timestamp, note)
@@ -169,7 +170,7 @@ export async function GET(request: Request) {
           notes,
           created_at,
           updated_at,
-          customer:customers(id, full_name, phone, email),
+          customer:customers(id, full_name, phone, email, preferences:customer_preferences(gate_code, delivery_instructions)),
           address:addresses(id, street, unit, city, state, zip, delivery_notes),
           photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
           events:order_events(id, status, triggered_by, timestamp, note)
@@ -186,7 +187,8 @@ export async function GET(request: Request) {
       console.error('Driver GET completed orders error:', completedErr);
     }
 
-    const allActive = activeOrders || [];
+    // Gate code and delivery instructions from the customer's Preferences (P05 AR-03)
+    const allActive = (activeOrders || []).map((o) => withStaffPreferences(o, 'driver'));
     const driverCtx = getDriverContext(auth);
     const { isDriverRole, isAdminRole, matchesDriver } = driverCtx;
 
@@ -242,7 +244,8 @@ export async function GET(request: Request) {
     });
 
     // 2b. Picked Up Completed (Permanent record of customer pickups completed by THIS driver and transferred to the office/plant)
-    const allCombined = [...(allActive || []), ...(completedOrders || [])];
+    const completedWithNotes = (completedOrders || []).map((o) => withStaffPreferences(o, 'driver'));
+    const allCombined = [...(allActive || []), ...completedWithNotes];
     const pickedUpCompleted = allCombined.filter((o) => {
       if (o.status === 'booked') return false;
       const matchShift = shift === 'all' || o.pickup_window === shift;
@@ -266,7 +269,7 @@ export async function GET(request: Request) {
     });
 
     // 5. Completed Drops
-    const completed = (completedOrders || []).filter((o) => {
+    const completed = completedWithNotes.filter((o) => {
       const matchShift = shift === 'all' || !o.delivery_window || o.delivery_window === shift;
       if (!matchShift) return false;
 
