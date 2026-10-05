@@ -10,6 +10,7 @@ import { withSignedPhotoUrls } from '@/lib/storage';
 import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
 import { refundOrder } from '@/lib/refunds';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
+import { texasDate } from '@/lib/texas-time';
 
 
 export async function GET(request: Request) {
@@ -105,9 +106,10 @@ export async function GET(request: Request) {
 
     // 3. Compute KPI Summary
     const activeOrders = orders.filter((o) => o.status !== 'delivered');
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Dallas calendar day, not UTC (PR-13)
+    const todayStr = texasDate();
 
-    const todayOrders = orders.filter((o) => o.created_at?.startsWith(todayStr) || o.pickup_date === todayStr);
+    const todayOrders = orders.filter((o) => (o.created_at && texasDate(o.created_at) === todayStr) || o.pickup_date === todayStr);
     const todayRevenue = todayOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
     const allTimeRevenue = (revenueRows || []).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
 

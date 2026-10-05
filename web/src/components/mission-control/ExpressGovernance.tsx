@@ -3,6 +3,7 @@
 import { Card, Badge, Button } from '@/components/ui';
 import { EXPRESS_DAILY_SLOT_CAP } from '@/lib/constants';
 import type { Order } from '@/types';
+import { texasDate, addDaysToDate } from '@/lib/texas-time';
 
 interface ExpressGovernanceProps {
   orders: Order[];
@@ -17,9 +18,7 @@ export function ExpressGovernance({ orders, onRefresh }: ExpressGovernanceProps)
   const expressOrders = orders.filter((o) => o.express_tier === 'express_24hr');
 
   // Tomorrow calculation
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = addDaysToDate(texasDate(), 1); // Dallas calendar (PR-13)
 
   const tomorrowExpressOrders = expressOrders.filter((o) => o.pickup_date === tomorrowStr);
   const remainingTomorrowSlots = Math.max(0, slotCap - tomorrowExpressOrders.length);

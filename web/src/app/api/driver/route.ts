@@ -7,6 +7,7 @@ import { getAppBaseUrl } from '@/lib/constants';
 import { handleExpressDeliverySLA } from '@/lib/express';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
+import { texasDate } from '@/lib/texas-time';
 
 
 interface DriverContext {
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const shift = searchParams.get('shift') || 'all'; // 'morning' | 'evening' | 'all'
-  const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+  const date = searchParams.get('date') || texasDate();
 
   try {
     const supabase = createAdminClient();

@@ -17,6 +17,7 @@ import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { checkIntakeAllowed } from '@/lib/order-lifecycle';
+import { texasDate } from '@/lib/texas-time';
 
 
 const IntakeSchema = z.object({
@@ -74,8 +75,8 @@ export async function GET(request: Request) {
       (o) => o.status === 'weighed_itemized' || o.status === 'in_cleaning' || o.status === 'out_for_delivery' || o.status === 'delivered'
     );
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayIntakeCount = intakeHistory.filter((o) => o.updated_at && o.updated_at.startsWith(todayStr)).length;
+    const todayStr = texasDate(); // Dallas calendar day (PR-13)
+    const todayIntakeCount = intakeHistory.filter((o) => o.updated_at && texasDate(o.updated_at) === todayStr).length;
 
     return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount, allOrders: orders || [] }));
   } catch (err) {

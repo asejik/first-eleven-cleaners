@@ -18,6 +18,7 @@ import {
 } from '@/lib/constants';
 import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
 import { apiError } from '@/lib/api-errors';
+import { texasDate } from '@/lib/texas-time';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -234,12 +235,7 @@ export async function POST(request: Request) {
     }
 
     // 5b. Server-Side Pickup Date Validation (F005 Fix)
-    const todayTexasStr = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Chicago',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date());
+    const todayTexasStr = texasDate();
 
     if (validated.schedule.pickup_date < todayTexasStr) {
       return NextResponse.json(
@@ -279,7 +275,7 @@ export async function POST(request: Request) {
     }
 
     const deliveryDateStr = delivery.toISOString().split('T')[0];
-    const orderNumber = `F11-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const orderNumber = `F11-${todayTexasStr.slice(0, 4)}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     let isGuest = true;
 
     if (isSupabaseConfigured) {

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui';
 import { ORDER_STATUS_MAP, type OrderStatusKey } from '@/lib/constants';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/page.module.css';
+import { texasDate } from '@/lib/texas-time';
 
 interface KanbanBoardProps {
   stages: OrderStatusKey[];
@@ -93,12 +94,12 @@ export function KanbanBoard({
   }, [orders]);
 
   // Today delivered orders
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = texasDate();
   const todayDeliveredOrders = useMemo(() => {
     return allDeliveredOrders.filter((o) => {
       const deliveredEvent = o.events?.find((e) => e.status === 'delivered');
       const ts = deliveredEvent?.timestamp || o.updated_at;
-      return ts ? ts.startsWith(todayStr) : false;
+      return ts ? texasDate(ts) === todayStr : false;
     });
   }, [allDeliveredOrders, todayStr]);
 
