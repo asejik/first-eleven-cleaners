@@ -7,8 +7,10 @@ import {
 } from '@/lib/commercial';
 import type { CommercialAccount } from '@/lib/commercial/types';
 import { apiError } from '@/lib/api-errors';
+import { COMMERCIAL_PORTAL_ENABLED, portalDisabledResponse } from '@/lib/features';
 
 export async function GET(req: Request) {
+  if (!COMMERCIAL_PORTAL_ENABLED) return portalDisabledResponse(); // sample data, switched off (PR-20)
   const auth = await verifyApiAuth(['admin'], req);
   if (auth.errorResponse) return auth.errorResponse;
 
@@ -82,6 +84,7 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  if (!COMMERCIAL_PORTAL_ENABLED) return portalDisabledResponse(); // sample data, switched off (PR-20)
   try {
     const auth = await verifyApiAuth(['admin'], req);
     if (auth.errorResponse) return auth.errorResponse;
