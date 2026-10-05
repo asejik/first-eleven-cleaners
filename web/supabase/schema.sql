@@ -1,11 +1,19 @@
 -- =================================================================
 -- FIRST ELEVEN CLEANERS — DATABASE SCHEMA (SUPABASE / POSTGRESQL)
 -- =================================================================
+-- Reference snapshot for building a NEW database from scratch (e.g. a dev
+-- project). The live database is changed only through the dated files in
+-- supabase/migrations/, which are the source of truth; keep this file in step
+-- with them. Verified 2026-10-05 (P03 PR-23): this file, followed by every
+-- migration in order, runs cleanly on a fresh Postgres 16 database.
+-- =================================================================
 
 -- Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. ZONES (DFW Service Coverage)
+-- NOT USED by the app: zone rules live in ZONE_CONFIG (src/lib/constants.ts).
+-- Only /api/health reads this table. Kept for a future admin-editable version.
 CREATE TABLE IF NOT EXISTS zones (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(100) NOT NULL,
@@ -144,6 +152,7 @@ CREATE TABLE IF NOT EXISTS garment_photos (
 );
 
 -- 9. TIME SLOTS
+-- NOT USED by the app: capacity is counted from orders (src/app/api/bookings).
 CREATE TABLE IF NOT EXISTS time_slots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE NOT NULL,
@@ -182,6 +191,7 @@ CREATE TABLE IF NOT EXISTS commercial_accounts (
 );
 
 -- 12. STAFF
+-- NOT USED for access control: roles come from customers.role (SEC-02).
 CREATE TABLE IF NOT EXISTS staff (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
@@ -251,7 +261,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 ALTER FUNCTION update_timestamp_column() SET search_path = public, pg_temp; -- SEC-17
 
 CREATE TRIGGER update_customers_modtime
@@ -448,3 +458,73 @@ $function$;
 
 REVOKE EXECUTE ON FUNCTION public.reserve_promo_use(TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.reserve_promo_use(TEXT) TO service_role;
+
+
+-- =================================================================
+-- OBJECTS ADDED BY MIGRATIONS (kept here so a new database matches live)
+-- =================================================================
+-- From 20260922_production_readiness_hardening.sql
+ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE commercial_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE time_slots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY zones_public_read ON zones FOR SELECT USING (is_active = true);
+CREATE POLICY promo_codes_public_read ON promo_codes FOR SELECT USING (is_active = true);
+CREATE POLICY conversations_customer_access ON conversations
+  FOR ALL USING (customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid()));
+CREATE POLICY staff_admin_read ON staff
+  FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
+CREATE POLICY commercial_accounts_staff_access ON commercial_accounts
+  FOR ALL USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role IN ('admin', 'staff')));
+CREATE POLICY error_logs_admin_read ON error_logs
+  FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
+
+CREATE INDEX IF NOT EXISTS idx_addresses_customer_id ON addresses(customer_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_claims_order_id ON claims(order_id);
+CREATE INDEX IF NOT EXISTS idx_claims_customer_id ON claims(customer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_customer_id ON conversations(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_pickup_composite ON orders(pickup_date, pickup_window, status);
+CREATE INDEX IF NOT EXISTS idx_orders_express_lookup ON orders(pickup_date, express_tier, status);
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+  admin_email VARCHAR(255) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id VARCHAR(100) NOT NULL,
+  details JSONB DEFAULT '{}'::jsonb,
+  ip_address VARCHAR(50),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_target ON admin_audit_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
+ALTER TABLE admin_audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY admin_audit_logs_admin_view ON admin_audit_logs
+  FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
+
+-- Photo buckets: private, 10 MB images only
+-- (20261004_lock_storage_uploads.sql, 20261005_private_photo_buckets.sql)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    VALUES
+      ('garment-photos', 'garment-photos', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
+      ('claims-photos', 'claims-photos', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
+    ON CONFLICT (id) DO UPDATE
+      SET public = false, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
+  END IF;
+END $$;
+
+-- Browser roles keep only what they use (20261005_tighten_table_grants.sql)
+REVOKE TRUNCATE, TRIGGER, REFERENCES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE TRUNCATE, TRIGGER, REFERENCES ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE INSERT, UPDATE, DELETE ON TABLES FROM anon;
+GRANT UPDATE (full_name, phone, sms_consent, sms_promotions_consent, sms_consent_at) ON customers TO authenticated;
