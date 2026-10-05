@@ -15,6 +15,8 @@ interface DriverContext {
   isDriverRole: boolean;
   isAdminRole: boolean;
   driverLabel: string;
+  /** customers.id of the signed-in driver (orders.assigned_driver_id) */
+  driverCustomerId: string | null;
   matchesDriver: (capturedBy?: string | null) => boolean;
 }
 
@@ -60,7 +62,30 @@ function getDriverContext(auth: {
     return false;
   };
 
-  return { isDriverRole, isAdminRole, driverLabel, matchesDriver };
+  return { isDriverRole, isAdminRole, driverLabel, driverCustomerId: auth.customer?.id || null, matchesDriver };
+}
+
+/**
+ * Whose van holds an out-for-delivery order (P03 PR-19). orders.assigned_driver_id is the
+ * record; orders loaded before that column existed fall back to the old name match on the
+ * load event/photo.
+ */
+function vanClaim(
+  o: { assigned_driver_id?: string | null; photos?: unknown; events?: unknown },
+  ctx: Pick<DriverContext, 'isAdminRole' | 'driverCustomerId' | 'matchesDriver'>
+): { claimed: boolean; mine: boolean } {
+  if (o.assigned_driver_id) {
+    return { claimed: true, mine: ctx.isAdminRole || o.assigned_driver_id === ctx.driverCustomerId };
+  }
+  const photos = (o.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
+  const events = (o.events as Array<{ status?: string; triggered_by?: string }>) || [];
+  const loadPhoto = photos.filter((p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup').pop();
+  const loadEvent = events
+    .filter((e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control'))
+    .pop();
+  if (!loadPhoto && !loadEvent) return { claimed: false, mine: false };
+  const capturedBy = `${loadPhoto?.captured_by || ''} ${loadEvent?.triggered_by || ''}`.toLowerCase();
+  return { claimed: true, mine: ctx.isAdminRole || ctx.matchesDriver(capturedBy) };
 }
 
 /** Conditional status change: applies only if the order is still in `expected` (PR-02). */
@@ -109,6 +134,7 @@ export async function GET(request: Request) {
         .select(`
           id,
           order_number,
+          assigned_driver_id,
           customer_id,
           address_id,
           status,
@@ -131,6 +157,7 @@ export async function GET(request: Request) {
         .select(`
           id,
           order_number,
+          assigned_driver_id,
           customer_id,
           address_id,
           status,
@@ -160,7 +187,8 @@ export async function GET(request: Request) {
     }
 
     const allActive = activeOrders || [];
-    const { isDriverRole, isAdminRole, matchesDriver } = getDriverContext(auth);
+    const driverCtx = getDriverContext(auth);
+    const { isDriverRole, isAdminRole, matchesDriver } = driverCtx;
 
     // 1. Customer Pickups Scheduled
     const pickups = allActive.filter((o) => {
@@ -198,16 +226,8 @@ export async function GET(request: Request) {
       const matchShift = shift === 'all' || !o.delivery_window || o.delivery_window === shift;
       if (!isOutForDelivery || !matchShift) return false;
 
-      // Check if already claimed / loaded into a driver's van
-      const photos = (o.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-      const events = (o.events as Array<{ status?: string; triggered_by?: string }>) || [];
-      const plantLoadPhotos = photos.filter((p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup');
-      const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-      const plantLoadEvents = events.filter((e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control'));
-      const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-
-      const isClaimedByDriver = Boolean(plantLoadPhoto || plantLoadEvent);
-      return !isClaimedByDriver;
+      // Not yet loaded into any van (PR-19)
+      return !vanClaim(o, driverCtx).claimed;
     });
 
     // 4. Out on Delivery Route (Loaded into THIS driver's delivery van)
@@ -216,22 +236,9 @@ export async function GET(request: Request) {
       const matchShift = shift === 'all' || !o.delivery_window || o.delivery_window === shift;
       if (!isOutForDelivery || !matchShift) return false;
 
-      const photos = (o.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-      const events = (o.events as Array<{ status?: string; triggered_by?: string }>) || [];
-      const plantLoadPhotos = photos.filter((p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup');
-      const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-      const plantLoadEvents = events.filter((e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control'));
-      const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-
-      const isClaimed = Boolean(plantLoadPhoto || plantLoadEvent);
-      if (!isClaimed) return false;
-
-      if (isDriverRole) {
-        const capturedBy = ((plantLoadPhoto?.captured_by || '') + ' ' + (plantLoadEvent?.triggered_by || '')).toLowerCase();
-        return matchesDriver(capturedBy);
-      }
-
-      return true;
+      // In this driver's van (admins see every loaded van) (PR-19)
+      const claim = vanClaim(o, driverCtx);
+      return claim.claimed && claim.mine;
     });
 
     // 2b. Picked Up Completed (Permanent record of customer pickups completed by THIS driver and transferred to the office/plant)
@@ -332,7 +339,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminClient();
-    const { isDriverRole, isAdminRole, driverLabel, matchesDriver } = getDriverContext(auth);
+    const { isDriverRole, isAdminRole, driverLabel, driverCustomerId, matchesDriver } = getDriverContext(auth);
 
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order_id.trim());
 
@@ -343,6 +350,7 @@ export async function POST(request: Request) {
         id,
         order_number,
         status,
+        assigned_driver_id,
         express_tier,
         express_surcharge,
         express_auto_refunded,
@@ -455,31 +463,36 @@ export async function POST(request: Request) {
         );
       }
 
-      // Business rule: Check if order is already claimed/loaded into another driver's van
-      const existingEvents = (order.events as Array<{ status?: string; triggered_by?: string }>) || [];
-      const existingPhotos = (order.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-      const plantLoadEvents = existingEvents.filter(
-        (e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control')
-      );
-      const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-      const plantLoadPhotos = existingPhotos.filter(
-        (p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup'
-      );
-      const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-
-      if (plantLoadEvent || plantLoadPhoto) {
-        const capturedBy = ((plantLoadPhoto?.captured_by || '') + ' ' + (plantLoadEvent?.triggered_by || '')).toLowerCase();
-        if (!matchesDriver(capturedBy) && !isAdminRole) {
-          return NextResponse.json(
-            { error: 'This order has already been loaded into another driver\'s van.' },
-            { status: 409 }
-          );
-        }
+      // Business rule: an order rides in one van. Claim it with a single conditional update so
+      // two drivers loading at once can't both get it (PR-19).
+      const driverCtx = { isAdminRole, driverCustomerId, matchesDriver };
+      const claim = vanClaim(order, driverCtx);
+      if (claim.claimed && !claim.mine) {
+        return NextResponse.json(
+          { error: 'This order has already been loaded into another driver\'s van.' },
+          { status: 409 }
+        );
       }
-
-      // 1. Confirm the order is still out for delivery (touches updated_at)
-      const loadBlocked = await moveOrderStatus(supabase, order.id, 'out_for_delivery', 'out_for_delivery');
-      if (loadBlocked) return loadBlocked;
+      if (!driverCustomerId) {
+        return NextResponse.json({ error: 'Your staff profile could not be found. Please sign in again.' }, { status: 403 });
+      }
+      const { data: claimedRows, error: claimErr } = await supabase
+        .from('orders')
+        .update({ assigned_driver_id: driverCustomerId, updated_at: new Date().toISOString() })
+        .eq('id', order.id)
+        .eq('status', 'out_for_delivery')
+        .or(`assigned_driver_id.is.null,assigned_driver_id.eq.${driverCustomerId}`)
+        .select('id');
+      if (claimErr) {
+        console.error('Driver van claim error:', claimErr);
+        return NextResponse.json({ error: 'Could not load this order. Please try again.' }, { status: 500 });
+      }
+      if (!claimedRows || claimedRows.length === 0) {
+        return NextResponse.json(
+          { error: 'This order has already been loaded into another driver\'s van.' },
+          { status: 409 }
+        );
+      }
 
       // 2. Insert event recording who loaded it from office
       await supabase.from('order_events').insert({
@@ -521,21 +534,10 @@ export async function POST(request: Request) {
         );
       }
 
-      // Business rule: Only the driver whose van the order was loaded into (or admin) can confirm delivery
+      // Business rule: only the driver whose van holds the order (or an admin) confirms delivery (PR-19)
       if (isDriverRole && !isAdminRole) {
-        const existingEvents = (order.events as Array<{ status?: string; triggered_by?: string }>) || [];
-        const existingPhotos = (order.photos as Array<{ photo_type?: string; captured_by?: string }>) || [];
-        const plantLoadEvents = existingEvents.filter(
-          (e) => e.status === 'out_for_delivery' && e.triggered_by && !e.triggered_by.includes('Mission Control')
-        );
-        const plantLoadEvent = plantLoadEvents.length > 0 ? plantLoadEvents[plantLoadEvents.length - 1] : null;
-        const plantLoadPhotos = existingPhotos.filter(
-          (p) => p.photo_type === 'return' || p.photo_type === 'plant_pickup'
-        );
-        const plantLoadPhoto = plantLoadPhotos.length > 0 ? plantLoadPhotos[plantLoadPhotos.length - 1] : null;
-
-        const capturedBy = ((plantLoadPhoto?.captured_by || '') + ' ' + (plantLoadEvent?.triggered_by || '')).toLowerCase();
-        if (capturedBy && !matchesDriver(capturedBy)) {
+        const claim = vanClaim(order, { isAdminRole, driverCustomerId, matchesDriver });
+        if (claim.claimed && !claim.mine) {
           return NextResponse.json(
             { error: 'This order is assigned to another driver\'s van and cannot be confirmed by your account.' },
             { status: 403 }

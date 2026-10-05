@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS orders (
   square_customer_id VARCHAR(255), -- card on file charged at intake (SEC-06)
   square_card_id VARCHAR(255),
   refunded_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (refunded_amount >= 0), -- synced with Square (PR-05)
+  assigned_driver_id UUID REFERENCES customers(id) ON DELETE SET NULL, -- van holding the order (PR-19)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -570,3 +571,4 @@ CREATE TRIGGER customers_normalize_phone
 REVOKE EXECUTE ON FUNCTION public.customers_normalize_phone() FROM PUBLIC, anon, authenticated;
 
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+CREATE INDEX IF NOT EXISTS idx_orders_assigned_driver ON orders(assigned_driver_id) WHERE assigned_driver_id IS NOT NULL;
