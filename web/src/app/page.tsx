@@ -8,6 +8,15 @@ import {
 } from '@/lib/constants';
 import { Button } from '@/components/ui';
 import styles from './page.module.css';
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata = pageMetadata({
+  path: '/',
+  title: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
+  description:
+    'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex. 48-hour Match-Ready guarantee.',
+  imageAlt: 'First Eleven Cleaners - Every Garment Makes the Lineup',
+});
 
 export default function HomePage() {
   return (

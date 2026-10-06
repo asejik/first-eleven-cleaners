@@ -1,30 +1,16 @@
-import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
 import { Button, Card } from '@/components/ui';
 import { ROUTES, ZONES_LIST } from '@/lib/constants';
 import styles from './page.module.css';
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/service-areas',
-  },
+export const metadata = pageMetadata({
+  path: '/service-areas',
   title: 'DFW Pickup & Delivery Service Areas',
   description:
     'Full-coverage dry cleaning and wash-and-fold laundry pickup & delivery across Dallas, Plano, Frisco, Fort Worth, Highland Park, Southlake, and the entire DFW Metroplex.',
-  openGraph: {
-    title: 'DFW Pickup & Delivery Service Areas | First Eleven Cleaners',
-    description:
-      'Full-coverage dry cleaning and wash-and-fold laundry pickup & delivery across Dallas, Plano, Frisco, Fort Worth, Highland Park, Southlake, and the entire DFW Metroplex.',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'First Eleven Cleaners - Dallas–Fort Worth Service Areas',
-      },
-    ],
-  },
-};
+  imageAlt: 'First Eleven Cleaners - Dallas–Fort Worth Service Areas',
+});
 
 export default function ServiceAreasPage() {
   return (

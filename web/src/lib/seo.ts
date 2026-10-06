@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import {
   APP_NAME,
   DRY_CLEAN_PRICES,
@@ -13,6 +14,48 @@ import {
  * read from env, so preview and local builds never emit their own host as canonical.
  */
 export const SITE_URL = 'https://www.firstelevencleaners.com';
+
+const OG_IMAGE = { url: '/og-image.jpg', width: 1200, height: 630 };
+
+/**
+ * Metadata for a public page (P08 SEO-04): canonical plus a complete Open Graph
+ * and Twitter preview, so no page inherits the homepage's share title. Paths are
+ * resolved against metadataBase (SITE_URL). The homepage passes its full title.
+ */
+export function pageMetadata({
+  path,
+  title,
+  description,
+  imageAlt,
+}: {
+  path: string;
+  title: string;
+  description: string;
+  imageAlt: string;
+}): Metadata {
+  const isHome = path === '/';
+  const shareTitle = isHome ? title : `${title} | ${APP_NAME}`;
+  return {
+    title: isHome ? { absolute: title } : title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      siteName: APP_NAME,
+      url: path,
+      title: shareTitle,
+      description,
+      images: [{ ...OG_IMAGE, alt: imageAlt }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: shareTitle,
+      description,
+      images: [OG_IMAGE.url],
+    },
+  };
+}
 
 const phoneForSchema = (display: string) => {
   const d = display.replace(/\D/g, '');

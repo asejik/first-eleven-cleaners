@@ -1,15 +1,15 @@
-import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
 import { ROUTES, APP_NAME } from '@/lib/constants';
 import styles from './page.module.css';
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/privacy',
-  },
+export const metadata = pageMetadata({
+  path: '/privacy',
   title: 'Privacy Policy',
-  description: 'First Eleven Cleaners Privacy Policy. How we collect, use, and protect your information across Dallas-Fort Worth.',
-};
+  description:
+    'First Eleven Cleaners Privacy Policy. How we collect, use, and protect your information across Dallas-Fort Worth.',
+  imageAlt: 'First Eleven Cleaners - Privacy Policy',
+});
 
 export default function PrivacyPolicyPage() {
   return (
