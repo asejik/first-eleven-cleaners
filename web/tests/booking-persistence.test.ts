@@ -82,7 +82,7 @@ function bookingRequest() {
       address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
       services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: 15 },
       schedule: { pickup_date: nextMonday(), pickup_window: 'morning', express_tier: 'standard', frequency: 'one_time' },
-      consents: { sms_order_updates: false, sms_promotions: false },
+      consents: { sms_order_updates: false, sms_promotions: false, payment_terms: true },
     }),
   });
 }

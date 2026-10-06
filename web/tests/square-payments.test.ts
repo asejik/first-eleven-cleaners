@@ -7,6 +7,8 @@ import { fakeRpc } from './helpers/fake-create-booking';
 type Row = Record<string, unknown>;
 const writes: { table: string; op: 'insert' | 'update'; values: Row }[] = [];
 let fixtures: Record<string, Row | null> = {};
+/** Set to a create_booking refusal ('window_full', ...) to make the booking fail after the hold */
+let refuseBooking: string | null = null;
 
 function builder(table: string) {
   let op: 'select' | 'insert' | 'update' = 'select';
@@ -49,7 +51,7 @@ function builder(table: string) {
 }
 
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({ from: (table: string) => builder(table), rpc: fakeRpc(builder) }),
+  createAdminClient: () => ({ from: (table: string) => builder(table), rpc: fakeRpc(builder, { refuse: () => refuseBooking }) }),
 }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
@@ -102,6 +104,7 @@ function useSandboxSquare() {
 beforeEach(() => {
   writes.length = 0;
   fixtures = {};
+  refuseBooking = null;
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://exampleref.supabase.co';
   useSandboxSquare();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -110,6 +113,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env = { ...originalEnv };
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -123,7 +127,7 @@ function nextMonday(): string {
   return d.toISOString().split('T')[0];
 }
 
-function bookingRequest(paymentToken: string | null) {
+function bookingRequest(paymentToken: string | null, pickupDate: string = nextMonday(), acceptTerms = true) {
   return new Request('http://localhost/api/bookings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -131,9 +135,9 @@ function bookingRequest(paymentToken: string | null) {
       customer: { full_name: 'Pay Tester', email: 'pay.tester@example.com', phone: '2145550100' },
       address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
       services: { type: 'dry_clean', dry_clean_items: [{ garment_type: 'dress', quantity: 4 }], estimated_weight_lbs: 0 },
-      schedule: { pickup_date: nextMonday(), pickup_window: 'morning', express_tier: 'standard', frequency: 'one_time' },
+      schedule: { pickup_date: pickupDate, pickup_window: 'morning', express_tier: 'standard', frequency: 'one_time' },
       payment_method: { card_brand: 'visa', last_4: '1111', payment_token: paymentToken },
-      consents: { sms_order_updates: false, sms_promotions: false },
+      consents: { sms_order_updates: false, sms_promotions: false, payment_terms: acceptTerms },
     }),
   });
 }
@@ -190,21 +194,28 @@ describe('Square card-on-file helpers (SEC-06)', () => {
 });
 
 describe('Booking stores a card on file and never marks an order charged (SEC-05)', () => {
-  it('saves the card and creates the order as authorized with no payment ID', async () => {
+  it('saves the card and creates the order with no payment ID (hold scheduled for a later pickup)', async () => {
+    // Wednesday 2026-10-07, noon in Dallas; pickup the following Monday is more than 2 days out
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T12:00:00-05:00'));
     stubSquare({
       '/customers': { status: 200, body: { customer: { id: 'SQ_CUST' } } },
       '/cards': { status: 200, body: { card: { id: 'ccof:CARD' } } },
     });
-    const res = await bookingPOST(bookingRequest('cnon:card-token'));
+    const res = await bookingPOST(bookingRequest('cnon:card-token', '2026-10-12'));
     expect(res.status).toBe(200);
 
     const order = writes.find((w) => w.table === 'orders' && w.op === 'insert')?.values;
     expect(order).toMatchObject({
-      payment_status: 'authorized',
+      payment_status: 'pending',
       payment_id: null,
       square_customer_id: 'SQ_CUST',
       square_card_id: 'ccof:CARD',
+      hold_status: 'scheduled',
+      hold_payment_id: null,
+      payment_terms_version: '2026-10-06',
     });
+    expect(squareCalls.map((c) => c.path)).toEqual(['/customers', '/cards']);
     expect(writes).toContainEqual({ table: 'customers', op: 'update', values: { square_customer_id: 'SQ_CUST' } });
   });
 
@@ -216,6 +227,74 @@ describe('Booking stores a card on file and never marks an order charged (SEC-05
     const res = await bookingPOST(bookingRequest('cnon:declined'));
     expect(res.status).toBe(402);
     expect(writes.some((w) => w.table === 'orders')).toBe(false);
+  });
+
+  it('holds the estimate x 1.20 at booking when pickup is within 2 days (client 2026-10-06, Part A)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T12:00:00-05:00'));
+    stubSquare({
+      '/customers': { status: 200, body: { customer: { id: 'SQ_CUST' } } },
+      '/cards': { status: 200, body: { card: { id: 'ccof:CARD' } } },
+      '/payments': { status: 200, body: { payment: { id: 'HOLD_1', status: 'APPROVED', delayed_until: '2026-10-14T17:00:00Z' } } },
+    });
+    const res = await bookingPOST(bookingRequest('cnon:card-token', '2026-10-09'));
+    expect(res.status).toBe(200);
+
+    // 4 basic dresses at $15.99 = $63.96, + 3% fee = $65.88, + 8.25% tax = $71.32; x 1.20 = $85.58
+    const hold = squareCalls.find((c) => c.path === '/payments')?.body;
+    expect(hold).toMatchObject({ autocomplete: false, delay_action: 'CANCEL', amount_money: { amount: 8558, currency: 'USD' } });
+    const order = writes.find((w) => w.table === 'orders' && w.op === 'insert')?.values;
+    expect(order).toMatchObject({
+      payment_status: 'authorized',
+      payment_id: null,
+      hold_payment_id: 'HOLD_1',
+      hold_amount: 85.58,
+      hold_expires_at: '2026-10-14T17:00:00Z',
+      hold_status: 'held',
+    });
+    expect(order?.payment_terms_accepted_at).toEqual(expect.any(String));
+    expect(writes).toContainEqual(
+      expect.objectContaining({ table: 'order_payments', op: 'insert', values: expect.objectContaining({ kind: 'hold', square_payment_id: 'HOLD_1', amount: 85.58 }) })
+    );
+  });
+
+  it('refuses the booking when Square declines the hold', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T12:00:00-05:00'));
+    stubSquare({
+      '/customers': { status: 200, body: { customer: { id: 'SQ_CUST' } } },
+      '/cards': { status: 200, body: { card: { id: 'ccof:CARD' } } },
+      '/payments': { status: 402, body: { errors: [{ code: 'INSUFFICIENT_FUNDS', detail: 'Insufficient funds.' }] } },
+    });
+    const res = await bookingPOST(bookingRequest('cnon:card-token', '2026-10-09'));
+    expect(res.status).toBe(402);
+    expect((await res.json()).error).toContain("couldn't be authorized for the estimated total ($85.58)");
+    expect(writes.some((w) => w.table === 'orders')).toBe(false);
+  });
+
+  it('releases the hold when the booking is refused after it was placed', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T12:00:00-05:00'));
+    refuseBooking = 'window_full';
+    stubSquare({
+      '/customers': { status: 200, body: { customer: { id: 'SQ_CUST' } } },
+      '/cards': { status: 200, body: { card: { id: 'ccof:CARD' } } },
+      '/payments': { status: 200, body: { payment: { id: 'HOLD_1', status: 'APPROVED' } } },
+      '/payments/HOLD_1/cancel': { status: 200, body: { payment: { id: 'HOLD_1', status: 'CANCELED' } } },
+    });
+    const res = await bookingPOST(bookingRequest('cnon:card-token', '2026-10-09'));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('full capacity');
+    expect(squareCalls.map((c) => c.path)).toContain('/payments/HOLD_1/cancel');
+    expect(writes.some((w) => w.table === 'order_payments')).toBe(false);
+  });
+
+  it('refuses a booking without the payment terms ticked', async () => {
+    stubSquare({});
+    const res = await bookingPOST(bookingRequest('cnon:card-token', nextMonday(), false));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Please accept the payment terms to book your pickup.');
+    expect(squareCalls).toHaveLength(0);
   });
 
   it('requires a card token when Square is configured', async () => {

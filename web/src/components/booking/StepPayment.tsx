@@ -5,6 +5,8 @@ import Script from 'next/script';
 import { Card, Input, Button } from '@/components/ui';
 import { SUPPORT_PHONE } from '@/lib/constants';
 import styles from './StepPayment.module.css';
+import consentStyles from '@/components/compliance/SmsConsentBlock.module.css';
+import { PAYMENT_TERMS_TEXT, PAYMENT_TERMS_TEXT_SCHEDULED } from '@/lib/payment-hold';
 
 interface SquareCardTokenResult {
   status: 'OK' | 'Error';
@@ -47,6 +49,12 @@ interface StepPaymentProps {
   cardCvc: string;
   setCardCvc: (val: string) => void;
   total: number;
+  /** Amount held on the card for this estimate (Part A) */
+  holdAmount: number;
+  /** True when the hold is placed at booking, false when it's placed 2 days before pickup */
+  holdNow: boolean;
+  paymentTermsAccepted: boolean;
+  setPaymentTermsAccepted: (val: boolean) => void;
   isLoading: boolean;
   onBack: () => void;
   onCompleteBooking: (paymentToken?: string, cardBrand?: string, last4?: string) => void;
@@ -61,6 +69,10 @@ export function StepPayment({
   cardCvc,
   setCardCvc,
   total,
+  holdAmount,
+  holdNow,
+  paymentTermsAccepted,
+  setPaymentTermsAccepted,
   isLoading,
   onBack,
   onCompleteBooking,
@@ -147,6 +159,7 @@ export function StepPayment({
 
   const handleSubmit = async () => {
     setSquareError(null);
+    if (!paymentTermsAccepted) return;
 
     // If Square card is mounted and active, tokenize via Square
     if (isSquareReady && cardInstanceRef.current) {
@@ -193,19 +206,18 @@ export function StepPayment({
 
       <h1 className={styles.cardTitle}>Set Up Invisible Checkout</h1>
       <p className={styles.cardSubtitle}>
-        Secure card on file — charged transparently only after intake &amp; photo inspection.
+        Secure card on file. Held for the estimate, charged only when your order is weighed and itemized.
       </p>
 
       <div className={styles.seeItPayItCallout}>
-        <span className={styles.calloutIcon}>📸</span>
+        <span className={styles.calloutIcon} aria-hidden="true">📸</span>
         <div>
-          <strong>&quot;See It, Then Pay It&quot; Promise:</strong>
+          <strong>&quot;See It as You Pay It&quot;:</strong>
           <p className={styles.calloutText}>
-            {serviceType === 'mixed'
-              ? 'For Mixed Orders (Wash & Fold + Dry Cleaning), your card is vaulted securely. Our intake team counts your dry clean pieces and weighs your laundry on calibrated scales. You receive full photo verification before the single consolidated charge lands.'
-              : serviceType === 'wash_fold'
-              ? 'For Wash & Fold, your card is held securely on file. Our intake team weighs and photographs your clothes, and sends your digital photo receipt before the charge lands. Zero surprise fees.'
-              : 'Your card is vaulted securely with Square. Garments are inspected and photographed at intake under our Carvana-Standard Garment Passport™ before final processing.'}
+            {holdNow ? 'Today' : 'Two days before your pickup'} we place a temporary hold of ${holdAmount.toFixed(2)} on your card
+            (your estimate plus 20%). It shows as pending, not a charge. When our intake team{' '}
+            {serviceType === 'dry_clean' ? 'counts and photographs your garments' : 'weighs, counts and photographs your order'}, we charge
+            the actual total and release the rest. Your itemized ticket and photos arrive the moment we charge.
           </p>
         </div>
       </div>
@@ -309,6 +321,18 @@ export function StepPayment({
         )}
       </div>
 
+      <label htmlFor="f11_payment_terms" className={consentStyles.checkboxItem} style={{ marginTop: 'var(--space-4)' }}>
+        <input
+          id="f11_payment_terms"
+          type="checkbox"
+          checked={paymentTermsAccepted}
+          onChange={(e) => setPaymentTermsAccepted(e.target.checked)}
+          className={consentStyles.checkboxInput}
+          required
+        />
+        <span className={consentStyles.checkboxLabel}>{holdNow ? PAYMENT_TERMS_TEXT : PAYMENT_TERMS_TEXT_SCHEDULED}</span>
+      </label>
+
       <div className={styles.buttonSplit}>
         <Button variant="outline" onClick={onBack}>
           ← Back
@@ -318,7 +342,7 @@ export function StepPayment({
           size="lg"
           onClick={handleSubmit}
           isLoading={isLoading || isTokenizing}
-          disabled={bookingUnavailable || (hasSquareConfig && !isSquareReady && !squareError)}
+          disabled={!paymentTermsAccepted || bookingUnavailable || (hasSquareConfig && !isSquareReady && !squareError)}
         >
           Confirm Pickup (${total.toFixed(2)})
         </Button>
