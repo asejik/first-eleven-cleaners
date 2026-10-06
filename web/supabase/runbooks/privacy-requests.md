@@ -32,7 +32,7 @@ The orders stay, with their amounts, because they are tax records. Everything th
    - SMS consent
    - street, unit and delivery notes (city, state and ZIP stay)
    - preferences and gate code
-   - conversations
+   - message history (texts and Eleven chats)
    - order notes
    - the link to the saved card
    - claim descriptions

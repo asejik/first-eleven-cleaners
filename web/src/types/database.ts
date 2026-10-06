@@ -214,41 +214,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      conversations: {
-        Row: {
-          id: string;
-          customer_id: string | null;
-          channel: string;
-          messages: Json;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          customer_id?: string | null;
-          channel?: string;
-          messages?: Json;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          customer_id?: string | null;
-          channel?: string;
-          messages?: Json;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'conversations_customer_id_fkey';
-            columns: ['customer_id'];
-            isOneToOne: false;
-            referencedRelation: 'customers';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       customer_preferences: {
         Row: {
           customer_id: string;
@@ -332,21 +297,6 @@ export type Database = {
           sms_promotions_consent?: boolean;
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
-        };
-        Relationships: [];
-      };
-      customers_phone_backup_20261005: {
-        Row: {
-          id: string | null;
-          phone: string | null;
-        };
-        Insert: {
-          id?: string | null;
-          phone?: string | null;
-        };
-        Update: {
-          id?: string | null;
-          phone?: string | null;
         };
         Relationships: [];
       };
