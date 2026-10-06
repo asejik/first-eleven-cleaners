@@ -517,6 +517,50 @@ export type Database = {
           },
         ];
       };
+      order_payments: {
+        Row: {
+          id: string;
+          order_id: string;
+          square_payment_id: string | null;
+          kind: string;
+          amount: number;
+          status: string;
+          note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          square_payment_id?: string | null;
+          kind: string;
+          amount: number;
+          status: string;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          square_payment_id?: string | null;
+          kind?: string;
+          amount?: number;
+          status?: string;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'order_payments_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       orders: {
         Row: {
           id: string;
@@ -551,6 +595,15 @@ export type Database = {
           environmental_fee: number | null;
           sales_tax: number | null;
           idempotency_key: string | null;
+          hold_payment_id: string | null;
+          hold_amount: number | null;
+          hold_expires_at: string | null;
+          hold_status: string;
+          amount_due: number;
+          payment_terms_accepted_at: string | null;
+          payment_terms_version: string | null;
+          payment_needed_since: string | null;
+          payment_reminder_stage: number;
         };
         Insert: {
           id?: string;
@@ -585,6 +638,15 @@ export type Database = {
           environmental_fee?: number | null;
           sales_tax?: number | null;
           idempotency_key?: string | null;
+          hold_payment_id?: string | null;
+          hold_amount?: number | null;
+          hold_expires_at?: string | null;
+          hold_status?: string;
+          amount_due?: number;
+          payment_terms_accepted_at?: string | null;
+          payment_terms_version?: string | null;
+          payment_needed_since?: string | null;
+          payment_reminder_stage?: number;
         };
         Update: {
           id?: string;
@@ -619,6 +681,15 @@ export type Database = {
           environmental_fee?: number | null;
           sales_tax?: number | null;
           idempotency_key?: string | null;
+          hold_payment_id?: string | null;
+          hold_amount?: number | null;
+          hold_expires_at?: string | null;
+          hold_status?: string;
+          amount_due?: number;
+          payment_terms_accepted_at?: string | null;
+          payment_terms_version?: string | null;
+          payment_needed_since?: string | null;
+          payment_reminder_stage?: number;
         };
         Relationships: [
           {
