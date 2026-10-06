@@ -17,23 +17,8 @@ import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
 
 
-export async function GET(request: Request) {
-  try {
-    const auth = await verifyApiAuth(['admin'], request);
-    if (auth.errorResponse) return auth.errorResponse;
-
-    const { searchParams } = new URL(request.url);
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const offset = (page - 1) * limit;
-    const status = searchParams.get('status');
-
-    const supabase = createAdminClient();
-
-    // 1. Fetch paginated orders with specific relational projections
-    let ordersQuery = supabase
-      .from('orders')
-      .select(`
+// Columns the board, archive and Express views read
+const ORDER_COLUMNS = `
         id,
         order_number,
         customer_id,
@@ -60,10 +45,39 @@ export async function GET(request: Request) {
         items:order_items(id, order_id, garment_type, service_type, quantity, unit_price, subtotal, notes),
         photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
         events:order_events(id, order_id, status, timestamp, note, triggered_by)
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false });
+      `;
 
-    if (status) {
+// Board view sizes: active orders are bounded by daily capacity; the cap is only a safety net
+const BOARD_ACTIVE_CAP = 500;
+const BOARD_ARCHIVE_SIZE = 100;
+const ACTIVE_STATUSES = ORDER_STATUS_KEYS.filter((k) => k !== 'delivered' && k !== 'cancelled');
+
+export async function GET(request: Request) {
+  try {
+    const auth = await verifyApiAuth(['admin'], request);
+    if (auth.errorResponse) return auth.errorResponse;
+
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const offset = (page - 1) * limit;
+    const status = searchParams.get('status');
+
+    const supabase = createAdminClient();
+
+    const ordersSelect = () => supabase.from('orders').select(ORDER_COLUMNS, { count: 'exact' });
+
+    // 1. Board view: every active order plus the latest deliveries for the archive. A plain
+    // "newest 50" page hid older orders that were still being worked on. Otherwise: one page.
+    const isBoard = searchParams.get('view') === 'board';
+    let ordersQuery = isBoard
+      ? ordersSelect().in('status', ACTIVE_STATUSES).order('pickup_date', { ascending: true }).limit(BOARD_ACTIVE_CAP)
+      : ordersSelect().order('created_at', { ascending: false });
+    const deliveredQuery = isBoard
+      ? ordersSelect().eq('status', 'delivered').order('updated_at', { ascending: false }).limit(BOARD_ARCHIVE_SIZE)
+      : null;
+
+    if (status && !isBoard) {
       ordersQuery = ordersQuery.eq('status', status);
     }
 
@@ -93,11 +107,13 @@ export async function GET(request: Request) {
     const [
       { data: allOrders, count: totalOrdersCount, error: ordersErr },
       { data: claims },
-      { data: summary, error: summaryErr }
+      { data: summary, error: summaryErr },
+      delivered,
     ] = await Promise.all([
-      ordersQuery.range(offset, offset + limit - 1),
+      isBoard ? ordersQuery : ordersQuery.range(offset, offset + limit - 1),
       claimsQuery,
-      summaryQuery
+      summaryQuery,
+      deliveredQuery,
     ]);
     if (summaryErr) console.error('Mission Control summary error:', summaryErr);
 
@@ -106,7 +122,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ orders: [], stats: null, claims: [] });
     }
 
-    const orders = allOrders || [];
+    const orders = [...(allOrders || []), ...(delivered?.data || [])];
+    const activeTotal = isBoard ? (totalOrdersCount ?? 0) : null;
 
     // 3. KPI summary from mission_control_summary()
     const kpi = (summary || {}) as Record<string, unknown>;
@@ -118,6 +135,10 @@ export async function GET(request: Request) {
       page,
       limit,
       total_count: totalOrdersCount ?? orders.length,
+      ...(isBoard && {
+        active_total: activeTotal,
+        active_truncated: (activeTotal ?? 0) > BOARD_ACTIVE_CAP,
+      }),
       stats: {
         active_count: kpiNum('active_count'),
         total_count: kpiNum('total_count') || (totalOrdersCount ?? orders.length),

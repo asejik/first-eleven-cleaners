@@ -386,6 +386,12 @@ export default function MissionControlPage() {
                     </button>
                   </div>
 
+                  {data?.active_truncated && (
+                    <p role="status" style={{ color: '#fbbf24', fontSize: 'var(--text-xs)', fontWeight: 700, margin: '0 0 var(--space-3)' }}>
+                      Showing the first 500 of {data.active_total} active orders, earliest pickup first.
+                    </p>
+                  )}
+
                   {pipelineSubView === 'board' ? (
                     <KanbanBoard
                       stages={STAGES}
