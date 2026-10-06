@@ -1,8 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './not-found.module.css';
+
+export const metadata: Metadata = {
+  title: 'Page Not Found',
+};
 
 export default function NotFound() {
   return (
