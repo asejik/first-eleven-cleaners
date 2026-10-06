@@ -37,8 +37,8 @@ test.describe('Booking with a screen reader', () => {
 
     // SR-07: one announcement that names the item
     await page.getByRole('button', { name: /Dry Cleaning Only/ }).click();
-    await page.getByRole('button', { name: 'Increase Shirt / Blouse (dry clean) quantity' }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Shirt / Blouse (dry clean): 1' })).toBeAttached();
+    await page.getByRole('button', { name: 'Increase Shirt (dry clean) quantity' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Shirt (dry clean): 1' })).toBeAttached();
 
     // SR-08: no skipped heading levels inside the step
     const levels = await page.locator('main').evaluate((m) =>

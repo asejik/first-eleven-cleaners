@@ -203,18 +203,95 @@ export const TX_SALES_TAX_RATE = 0.0825; // 8.25% Texas State & Local Sales Tax
 export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Sustainability Fee
 export const FAILED_PICKUP_FEE = 15.00; // $15 Failed service attempt fee
 
-export const DRY_CLEAN_PRICES: Record<string, { label: string; price: number }> = {
-  shirt_blouse: { label: 'Shirt / Blouse (dry clean)', price: 8.99 },
-  laundered_shirt: { label: 'Laundered Shirt', price: 4.99 },
-  pants_skirt: { label: 'Pants / Skirt / Shorts / Vest', price: 8.99 },
-  dress: { label: 'Dress', price: 14.99 },
-  tie_scarf: { label: 'Tie / Scarf', price: 7.99 },
-  sweater: { label: 'Sweater', price: 11.99 },
-  jacket: { label: 'Jacket', price: 14.99 },
-  overcoat: { label: 'Overcoat', price: 20.99 },
-  jumpsuit: { label: 'Jumpsuit', price: 17.99 },
-  formal_dress: { label: 'Formal Dress', price: 23.99 },
+export type CatalogCategory = 'dry_clean' | 'household';
+
+export interface CatalogItem {
+  label: string;
+  /** Per-piece price; for a "from" item, the starting price charged unless intake quotes more */
+  price: number;
+  category: CatalogCategory;
+  /** Starting price: the final price can be quoted higher at intake */
+  fromPrice?: boolean;
+  /** Short customer-facing note shown with the item */
+  note?: string;
+  /** Price for every full dozen; the pieces left over never cost more than another dozen */
+  dozenPrice?: number;
+}
+
+/**
+ * Per-piece catalog: dry cleaning and household items (price card of 2026-10-06).
+ * Keys are stored on order items, so existing keys keep their meaning.
+ */
+export const DRY_CLEAN_PRICES: Record<string, CatalogItem> = {
+  // Dry cleaning
+  shirt_blouse: { label: 'Shirt (dry clean)', price: 8.99, category: 'dry_clean' },
+  blouse: { label: 'Blouse', price: 8.99, category: 'dry_clean' },
+  pants_skirt: { label: 'Pants / Skirt / Shorts / Vest', price: 8.99, category: 'dry_clean' },
+  jeans: { label: 'Jeans', price: 10.99, category: 'dry_clean' },
+  laundered_shirt: { label: 'Laundered Shirt (on hanger)', price: 4.99, category: 'dry_clean' },
+  laundered_shirt_boxed: { label: 'Laundered Shirt (folded / boxed)', price: 9.99, category: 'dry_clean' },
+  dress: { label: 'Dress (basic)', price: 15.99, category: 'dry_clean' },
+  formal_dress: { label: 'Dress (formal)', price: 27.99, category: 'dry_clean' },
+  evening_gown: { label: 'Evening Gown', price: 44.99, category: 'dry_clean', fromPrice: true },
+  wedding_dress: { label: 'Wedding Dress', price: 149.99, category: 'dry_clean', fromPrice: true, note: 'Final price quoted at intake' },
+  sweater: { label: 'Sweater (regular)', price: 10.99, category: 'dry_clean' },
+  sweater_heavy: { label: 'Sweater (thick / heavy)', price: 13.99, category: 'dry_clean' },
+  jacket: { label: 'Jacket / Coat', price: 22.99, category: 'dry_clean' },
+  overcoat: { label: 'Overcoat', price: 34.99, category: 'dry_clean' },
+  traditional_shirt: { label: 'Traditional / Long Shirt (agbada, kaftan, etc.)', price: 19.99, category: 'dry_clean' },
+  jersey: { label: 'Jersey / Sportswear', price: 9.99, category: 'dry_clean' },
+  hat: { label: 'Hat', price: 8.99, category: 'dry_clean' },
+  tie_scarf: { label: 'Tie / Scarf', price: 7.99, category: 'dry_clean' },
+  jumpsuit: { label: 'Jumpsuit', price: 17.99, category: 'dry_clean' },
+  apron: { label: 'Apron', price: 5.99, category: 'dry_clean' },
+  press_only: { label: 'Press Only', price: 5.99, category: 'dry_clean' },
+  // Household
+  comforter_queen: { label: 'Comforter (queen / full)', price: 39.99, category: 'household' },
+  comforter_king: { label: 'Comforter (king)', price: 45.99, category: 'household' },
+  comforter_down: { label: 'Comforter (down, any size)', price: 49.99, category: 'household' },
+  blanket: { label: 'Blanket', price: 19.99, category: 'household' },
+  pillowcase: { label: 'Pillowcase', price: 5.99, category: 'household' },
+  tablecloth_small: { label: 'Tablecloth (small, up to 6 ft)', price: 24.99, category: 'household' },
+  tablecloth_large: { label: 'Tablecloth (large)', price: 39.99, category: 'household' },
+  napkin: { label: 'Napkin', price: 5.99, category: 'household', dozenPrice: 64.99, note: '$64.99 per dozen' },
+  drapes_short: { label: 'Drapes (short panel, unlined)', price: 29.99, category: 'household', fromPrice: true, note: 'Lined drapes quoted at intake' },
+  drapes_long: { label: 'Drapes (long panel, unlined)', price: 49.99, category: 'household', fromPrice: true, note: 'Lined drapes quoted at intake' },
 };
+
+/** Catalog entries of one category, in menu order. */
+export function catalogItems(category: CatalogCategory): Array<[string, CatalogItem]> {
+  return Object.entries(DRY_CLEAN_PRICES).filter(([, item]) => item.category === category);
+}
+
+/** Price shown on menus: "$44.99", or "from $44.99" for an item quoted at intake. */
+export function catalogPriceLabel(item: CatalogItem): string {
+  return `${item.fromPrice ? 'from ' : ''}$${item.price.toFixed(2)}`;
+}
+
+/**
+ * Line total in whole cents for a quantity of one catalog item. Dozen pricing: every full
+ * dozen costs the dozen price, and the pieces left over never cost more than another dozen
+ * (so 11 napkins never cost more than 12).
+ */
+export function catalogLineCents(item: CatalogItem, quantity: number): number {
+  const pieceCents = Math.round(item.price * 100);
+  if (!item.dozenPrice) return pieceCents * quantity;
+  const dozenCents = Math.round(item.dozenPrice * 100);
+  const dozens = Math.floor(quantity / 12);
+  return dozens * dozenCents + Math.min((quantity % 12) * pieceCents, dozenCents);
+}
+
+/** Line total in dollars for a catalog item key; 0 for an unknown key. */
+export function catalogLineTotal(key: string, quantity: number): number {
+  const item = DRY_CLEAN_PRICES[key];
+  return item && quantity > 0 ? catalogLineCents(item, quantity) / 100 : 0;
+}
+
+/** Sum of catalog lines ({ key: quantity }), in dollars. */
+export function catalogSubtotal(quantities: Record<string, number>): number {
+  const cents = Object.entries(quantities).reduce((acc, [key, qty]) => acc + Math.round(catalogLineTotal(key, qty) * 100), 0);
+  return cents / 100;
+}
 
 // --- Scheduling ---
 export const PICKUP_WINDOWS = [
@@ -251,9 +328,19 @@ export const EXPRESS_EXCLUDED_GARMENTS = [
   'suede',
   'formalwear',
   'formal_dress',
+  'evening_gown',
+  'wedding_dress',
   'beaded_embellished',
   'stain_remediation',
 ] as const;
+
+/** Specialty garments and every household item need the full care timeline: no Express online. */
+export function isExpressExcluded(garmentType: string): boolean {
+  return (
+    (EXPRESS_EXCLUDED_GARMENTS as readonly string[]).includes(garmentType) ||
+    DRY_CLEAN_PRICES[garmentType]?.category === 'household'
+  );
+}
 
 // --- Routes ---
 export const ROUTES = {
@@ -471,7 +558,7 @@ export function computeBookingFinancials({
   for (const item of dryCleanItems) {
     const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
     if (priceMeta && item.quantity > 0) {
-      const lineCents = toCents(priceMeta.price) * item.quantity;
+      const lineCents = catalogLineCents(priceMeta, item.quantity);
       const lineTotal = toDollars(lineCents);
       dryCleanCents += lineCents;
       itemizedList.push({

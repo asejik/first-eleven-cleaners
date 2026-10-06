@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   DRY_CLEAN_PRICES,
+  catalogLineTotal,
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_LBS,
   WASH_FOLD_MINIMUM_PRICE,
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     for (const item of dry_clean_items) {
       const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
       if (priceMeta && item.quantity > 0) {
-        const itemTotal = priceMeta.price * item.quantity;
+        const itemTotal = catalogLineTotal(item.garment_type, item.quantity);
         dry_clean_subtotal += itemTotal;
         calculatedItems.push({
           label: priceMeta.label,

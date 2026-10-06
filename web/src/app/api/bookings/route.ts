@@ -11,7 +11,7 @@ import {
   ROUTES,
   resolveZoneByZip,
   getZoneMinimumGap,
-  EXPRESS_EXCLUDED_GARMENTS,
+  isExpressExcluded,
   EXPRESS_DAILY_SLOT_CAP,
   PROMO_CODE_LAUNCH,
   PROMO_DISCOUNT_PERCENT,
@@ -179,9 +179,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const excludedItem = validated.services.dry_clean_items.find((item) =>
-        (EXPRESS_EXCLUDED_GARMENTS as readonly string[]).includes(item.garment_type)
-      );
+      const excludedItem = validated.services.dry_clean_items.find((item) => isExpressExcluded(item.garment_type));
       if (excludedItem) {
         return NextResponse.json(
           {

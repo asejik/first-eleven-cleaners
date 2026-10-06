@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, Input, Button } from '@/components/ui';
-import { DRY_CLEAN_PRICES, ROUTES, type ZoneConfig } from '@/lib/constants';
+import { DRY_CLEAN_PRICES, ROUTES, catalogLineTotal, type ZoneConfig } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
 import type { AppliedPromo } from '@/lib/promo';
 
@@ -134,7 +134,9 @@ export function StepReview({
               <span>
                 {q}x {DRY_CLEAN_PRICES[k]?.label}
               </span>
-              <span>${((DRY_CLEAN_PRICES[k]?.price || 0) * q).toFixed(2)}</span>
+              <span>
+                {DRY_CLEAN_PRICES[k]?.fromPrice ? 'from ' : ''}${catalogLineTotal(k, q).toFixed(2)}
+              </span>
             </div>
           ))}
           <div className={styles.summaryLine}>

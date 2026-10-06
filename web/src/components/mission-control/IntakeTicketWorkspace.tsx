@@ -4,7 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useSubmitIntake } from '@/hooks/useIntake';
 import { Button, Badge } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
-import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, type OrderStatusKey } from '@/lib/constants';
+import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, catalogLineTotal, catalogPriceLabel, type OrderStatusKey } from '@/lib/constants';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/intake/page.module.css';
 import { prepareImageForUpload } from '@/lib/image-upload';
@@ -130,10 +130,10 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
   const billedWeight = isWashFold ? Math.max(WASH_FOLD_MINIMUM_LBS, Number(weightLbs) || 0) : 0;
   const washFoldSubtotal = isWashFold ? billedWeight * WASH_FOLD_PRICE_PER_LB : 0;
 
+  // Same line rules as the server (dozen pricing); unknown items fall back to $8.99 as there
   const dryCleanSubtotal = Object.keys(dryCleanCounts).reduce((acc, key) => {
     const qty = dryCleanCounts[key] || 0;
-    const price = DRY_CLEAN_PRICES[key]?.price || 8.99;
-    return acc + qty * price;
+    return acc + (DRY_CLEAN_PRICES[key] ? catalogLineTotal(key, qty) : qty * 8.99);
   }, 0);
 
   const subtotal = washFoldSubtotal + dryCleanSubtotal;
@@ -267,7 +267,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
       {/* Dry Cleaning Itemizer */}
       <div className={styles.sectionCard}>
         <h3 className={styles.sectionTitle}>
-          <span>👔</span> Dry Clean Line-Item Counter
+          <span>👔</span> Dry Clean &amp; Household Line-Item Counter
         </h3>
 
         <div className={styles.itemsGrid}>
@@ -278,7 +278,9 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
               <div key={key} className={styles.itemCounterCard}>
                 <div>
                   <span className={styles.itemLabel}>{item.label}</span>
-                  <span className={styles.itemPrice}>${item.price.toFixed(2)} / ea</span>
+                  <span className={styles.itemPrice}>
+                    {catalogPriceLabel(item)} / ea{item.dozenPrice ? ` · $${item.dozenPrice.toFixed(2)} / dozen` : ''}
+                  </span>
                 </div>
                 <div className={styles.counterActions}>
                   <button

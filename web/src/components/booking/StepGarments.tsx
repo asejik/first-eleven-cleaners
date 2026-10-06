@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Card, Badge, Button } from '@/components/ui';
-import { DRY_CLEAN_PRICES, WASH_FOLD_MINIMUM_LBS } from '@/lib/constants';
+import {
+  DRY_CLEAN_PRICES,
+  WASH_FOLD_MINIMUM_LBS,
+  catalogItems,
+  catalogPriceLabel,
+  type CatalogCategory,
+} from '@/lib/constants';
+import { SUIT_PRICE } from '@/lib/ai/price-list';
 import styles from '@/app/book/page.module.css';
 
 interface StepGarmentsProps {
@@ -34,6 +41,45 @@ export function StepGarments({
     updateDryCleanQty(key, delta);
     setQtyAnnouncement(`${DRY_CLEAN_PRICES[key].label}: ${next}`);
   };
+
+  const renderGrid = (category: CatalogCategory) => (
+    <div className={styles.garmentGrid}>
+      {catalogItems(category).map(([key, item]) => {
+        const qty = dryCleanQuantities[key] || 0;
+        return (
+          <div key={key} className={styles.garmentItem}>
+            <div>
+              <p className={styles.garmentName}>{item.label}</p>
+              <span className={styles.garmentPrice}>{catalogPriceLabel(item)}</span>
+              {item.note && <span className={styles.garmentNote}>{item.note}</span>}
+            </div>
+            <div className={styles.qtyBox}>
+              <button
+                type="button"
+                className={styles.qtyBtn}
+                onClick={() => changeQty(key, -1)}
+                disabled={qty === 0}
+                aria-label={`Decrease ${item.label} quantity`}
+              >
+                -
+              </button>
+              <span className={styles.qtyNum}>
+                {qty}
+              </span>
+              <button
+                type="button"
+                className={styles.qtyBtn}
+                onClick={() => changeQty(key, 1)}
+                aria-label={`Increase ${item.label} quantity`}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
@@ -116,21 +162,23 @@ export function StepGarments({
                 type="button"
                 onClick={() => {
                   setServiceType('mixed');
-                  updateDryCleanQty('suit', 2);
+                  // A two-piece suit is a jacket plus pants
+                  updateDryCleanQty('jacket', 1);
+                  updateDryCleanQty('pants_skirt', 1);
                 }}
                 style={{ background: 'var(--color-navy)', color: 'var(--color-gold)', padding: '8px 12px', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                + Add 2 Suits ($19.95/ea)
+                + Add a 2-Piece Suit (${SUIT_PRICE.toFixed(2)})
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setServiceType('mixed');
-                  updateDryCleanQty('shirt', 3);
+                  updateDryCleanQty('laundered_shirt', 3);
                 }}
                 style={{ background: 'var(--color-navy)', color: 'var(--color-gold)', padding: '8px 12px', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                + Add 3 Dress Shirts ($8.95/ea)
+                + Add 3 Laundered Shirts (${DRY_CLEAN_PRICES.laundered_shirt.price.toFixed(2)}/ea)
               </button>
             </div>
           </div>
@@ -145,41 +193,12 @@ export function StepGarments({
             <span className={styles.subtext}>Select item quantities</span>
           </div>
           <p className="sr-only" role="status" aria-live="polite">{qtyAnnouncement}</p>
-          <div className={styles.garmentGrid}>
-            {Object.entries(DRY_CLEAN_PRICES).map(([key, item]) => {
-              const qty = dryCleanQuantities[key] || 0;
-              return (
-                <div key={key} className={styles.garmentItem}>
-                  <div>
-                    <p className={styles.garmentName}>{item.label}</p>
-                    <span className={styles.garmentPrice}>${item.price.toFixed(2)}</span>
-                  </div>
-                  <div className={styles.qtyBox}>
-                    <button
-                      type="button"
-                      className={styles.qtyBtn}
-                      onClick={() => changeQty(key, -1)}
-                      disabled={qty === 0}
-                      aria-label={`Decrease ${item.label} quantity`}
-                    >
-                      -
-                    </button>
-                    <span className={styles.qtyNum}>
-                      {qty}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.qtyBtn}
-                      onClick={() => changeQty(key, 1)}
-                      aria-label={`Increase ${item.label} quantity`}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          {renderGrid('dry_clean')}
+          <div className={styles.sectionHeader} style={{ marginTop: 'var(--space-6)' }}>
+            <h2><span aria-hidden="true">🛏️</span> Household Items</h2>
+            <span className={styles.subtext}>Comforters, linens &amp; drapes</span>
           </div>
+          {renderGrid('household')}
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import {
   APP_NAME,
-  DRY_CLEAN_PRICES,
+  catalogItems,
   SUPPORT_EMAIL,
   SUPPORT_PHONE,
   WASH_FOLD_PRICE_PER_LB,
@@ -63,8 +63,8 @@ export function pageMetadata({
  */
 export function dryCleanFromPrice(): number {
   return Math.min(
-    ...Object.entries(DRY_CLEAN_PRICES)
-      .filter(([key]) => key !== 'laundered_shirt')
+    ...catalogItems('dry_clean')
+      .filter(([key]) => !key.startsWith('laundered_shirt'))
       .map(([, item]) => item.price),
   );
 }

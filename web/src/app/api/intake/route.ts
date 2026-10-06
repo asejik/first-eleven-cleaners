@@ -7,6 +7,7 @@ import {
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_LBS,
   DRY_CLEAN_PRICES,
+  catalogLineTotal,
   PROMO_CODE_LAUNCH,
   PROMO_DISCOUNT_PERCENT,
   calculateOrderFinancials,
@@ -188,7 +189,7 @@ export async function POST(request: Request) {
         if (qty > 0) {
           const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
           const unitPrice = priceMeta ? priceMeta.price : 8.99;
-          const itemSubtotal = qty * unitPrice;
+          const itemSubtotal = priceMeta ? catalogLineTotal(item.garment_type, qty) : Number((qty * unitPrice).toFixed(2));
           dryCleanSubtotal += itemSubtotal;
 
           orderItemsToInsert.push({

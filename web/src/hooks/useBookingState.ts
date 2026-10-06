@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  DRY_CLEAN_PRICES,
+  catalogSubtotal,
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_PRICE,
   PROMO_CODE_LAUNCH,
   calculateOrderFinancials,
-  EXPRESS_EXCLUDED_GARMENTS,
+  isExpressExcluded,
   resolveZoneByZip,
   getZoneMinimumGap,
   type ZoneConfig,
@@ -252,20 +252,15 @@ export function useBookingState() {
 
   const calculatedDryClean =
     serviceType !== 'wash_fold'
-      ? Object.entries(dryCleanQuantities).reduce((acc, [key, qty]) => {
-          const item = DRY_CLEAN_PRICES[key];
-          return acc + (item ? item.price * qty : 0);
-        }, 0)
+      ? catalogSubtotal(dryCleanQuantities)
       : 0;
 
   const subtotal = calculatedWashFold + calculatedDryClean;
 
   // Excluded Garments & Capacity for 24-Hour Express
-  const hasExcludedGarments = Array.isArray(EXPRESS_EXCLUDED_GARMENTS)
-    ? Object.keys(dryCleanQuantities).some(
-        (key) => (EXPRESS_EXCLUDED_GARMENTS as readonly string[]).includes(key) && (dryCleanQuantities[key] || 0) > 0
-      )
-    : false;
+  const hasExcludedGarments =
+    serviceType !== 'wash_fold' &&
+    Object.keys(dryCleanQuantities).some((key) => isExpressExcluded(key) && (dryCleanQuantities[key] || 0) > 0);
 
   const [py, pm, pd] = pickupDate ? pickupDate.split('-').map(Number) : [0, 0, 0];
   const selectedDay = new Date(py, pm - 1, pd).getDay();

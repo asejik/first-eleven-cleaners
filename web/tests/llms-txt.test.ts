@@ -25,10 +25,11 @@ const text = buildLlmsTxt();
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 describe('llms.txt matches the real catalog (P08 SEO-02)', () => {
-  it('lists every dry cleaning item at its catalog price', () => {
-    for (const { label, price } of Object.values(DRY_CLEAN_PRICES)) {
-      expect(text).toContain(`${label}: ${money(price)}`);
+  it('lists every dry cleaning and household item at its catalog price', () => {
+    for (const item of Object.values(DRY_CLEAN_PRICES)) {
+      expect(text).toContain(`${item.label}: ${item.fromPrice ? 'from ' : ''}${money(item.price)}`);
     }
+    expect(text).toContain('### Household (per item)');
   });
 
   it('states the wash & fold price and minimum', () => {

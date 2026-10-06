@@ -18,7 +18,7 @@ test.describe('Guest booking', () => {
     await page.getByRole('button', { name: /Continue to Garments/ }).click();
 
     await page.getByRole('button', { name: /Dry Cleaning Only/ }).click();
-    const addShirt = page.getByRole('button', { name: 'Increase Shirt / Blouse (dry clean) quantity' });
+    const addShirt = page.getByRole('button', { name: 'Increase Shirt (dry clean) quantity' });
     await addShirt.click();
     await addShirt.click();
     await page.getByRole('button', { name: 'Increase Formal Dress quantity' }).click();
