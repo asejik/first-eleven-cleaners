@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants';
 import {
@@ -22,6 +23,21 @@ import styles from './page.module.css';
 
 export default function BookingPage() {
   const b = useBookingState();
+
+  // Screen readers aren't told when the step changes, so move focus to the new
+  // step's heading (SR-01). Skipped on first load so the page doesn't grab focus.
+  const stepsRef = useRef<HTMLDivElement>(null);
+  const firstStep = useRef(true);
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false;
+      return;
+    }
+    const heading = stepsRef.current?.querySelector<HTMLElement>('h1, h2');
+    if (!heading) return;
+    heading.setAttribute('tabindex', '-1');
+    heading.focus();
+  }, [b.step]);
 
   return (
     <div className={styles.page}>
@@ -64,6 +80,8 @@ export default function BookingPage() {
         )}
 
         <BookingStepper step={b.step} />
+
+        <div ref={stepsRef}>
 
         {b.step === 1 && (
           <StepAddress
@@ -196,6 +214,7 @@ export default function BookingPage() {
             pickupWindow={b.pickupWindow}
           />
         )}
+        </div>
       </div>
     </div>
   );
