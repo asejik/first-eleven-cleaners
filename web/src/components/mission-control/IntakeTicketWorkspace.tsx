@@ -189,8 +189,8 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
       if (res.payment_status === 'failed' || res.payment_failed) {
         addToast({
           type: 'warning',
-          title: '⚠️ Payment Declined — On Hold',
-          message: `Order #${order.order_number || order.id.slice(0, 8)} weighed & itemized ($${total.toFixed(2)}), but card authorization failed. Order placed on Payment Hold.`,
+          title: '⚠️ Payment Needed',
+          message: `Order #${order.order_number || order.id.slice(0, 8)} weighed & itemized ($${total.toFixed(2)}), but the card was declined. Cleaning can go ahead; delivery waits until it's paid.`,
         });
       } else {
         addToast({
@@ -210,7 +210,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
 
   return (
     <div className={styles.formCol}>
-      {/* Payment Hold Alert Banner */}
+      {/* Payment Needed Alert Banner */}
       {order.payment_status === 'failed' && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.15)',
@@ -226,7 +226,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
         }}>
           <span style={{ fontSize: '18px' }}>⚠️</span>
           <div>
-            <strong>PAYMENT HOLD:</strong> Automatic card authorization failed for ${(order.total || total).toFixed(2)}. Garments cannot enter eco-cleaning until card is updated or Manager Override is authorized.
+            <strong>PAYMENT NEEDED:</strong> The card was declined for ${(Number(order.amount_due) > 0 ? Number(order.amount_due) : order.total || total).toFixed(2)}. Cleaning can go ahead; delivery waits until it&apos;s paid (Mission Control &gt; Payment Needed).
           </div>
         </div>
       )}
