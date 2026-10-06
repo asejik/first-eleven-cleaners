@@ -33,6 +33,12 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        // first-eleven-cleaners.vercel.app serves the production site too; only www should be indexed (P08 SEO-06)
+        source: '/:path*',
+        has: [{ type: 'host', value: '.*\\.vercel\\.app' }],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
       ...NOINDEX_SECTIONS.map((section) => ({
         source: `/${section}/:path*`,
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
