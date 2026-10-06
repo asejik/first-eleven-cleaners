@@ -155,3 +155,19 @@ describe('Square hold requests', () => {
     expect(await completeHold(config, 'pay_1')).toEqual({ ok: false, error: 'Card declined.' });
   });
 });
+
+describe('Pricing page and welcome email describe the payment model', () => {
+  it('uses the client sentence and drops the old "before any charge" promise', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { PRICING_PAYMENT_PROMISE } = await import('@/lib/payment-hold');
+    const pricing = readFileSync(join(__dirname, '..', 'src', 'app', 'pricing', 'page.tsx'), 'utf8');
+    expect(PRICING_PAYMENT_PROMISE).toBe(
+      'Your card is authorized when you book and charged only when your order is weighed, photographed, and itemized; the ticket and photos arrive the moment we charge. Not right? One tap to Make It Right.',
+    );
+    expect(pricing).toContain('{PRICING_PAYMENT_PROMISE}');
+    expect(pricing).not.toContain('before any charge is made');
+    const email = readFileSync(join(__dirname, '..', 'src', 'lib', 'resend.ts'), 'utf8');
+    expect(email).not.toContain('before your card is charged');
+  });
+});

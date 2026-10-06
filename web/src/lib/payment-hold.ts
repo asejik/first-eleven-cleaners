@@ -20,6 +20,10 @@ export const HOLD_LEAD_DAYS = 2;
 export const PAYMENT_TERMS_VERSION = '2026-10-06';
 export const PAYMENT_TERMS_TEXT =
   'Your card is authorized now for the estimated total and charged automatically once your order is weighed and itemized at Pickup. Quoted items may be confirmed up to 25% above the listed from-price; anything higher needs your OK.';
+/** Pricing page promise (client 2026-10-06; the client's dash is written as a semicolon). */
+export const PRICING_PAYMENT_PROMISE =
+  'Your card is authorized when you book and charged only when your order is weighed, photographed, and itemized; the ticket and photos arrive the moment we charge. Not right? One tap to Make It Right.';
+
 /** Same terms for a pickup more than 2 days away, whose hold is placed later. */
 export const PAYMENT_TERMS_TEXT_SCHEDULED =
   'Your card is authorized 2 days before your pickup for the estimated total and charged automatically once your order is weighed and itemized at Pickup. Quoted items may be confirmed up to 25% above the listed from-price; anything higher needs your OK.';

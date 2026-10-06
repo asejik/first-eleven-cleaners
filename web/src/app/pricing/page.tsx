@@ -18,6 +18,7 @@ import {
   type CatalogCategory,
 } from '@/lib/constants';
 import { Card, ButtonLink } from '@/components/ui';
+import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
 import styles from './page.module.css';
 
 export default function PricingPage() {
@@ -436,7 +437,7 @@ export default function PricingPage() {
                   Schedule Pickup with this Order
                 </ButtonLink>
                 <p className={styles.promiseCallout}>
-                  🔒 You see the itemized photos and final ticket before any charge is made.
+                  🔒 {PRICING_PAYMENT_PROMISE}
                 </p>
               </div>
             </Card>
