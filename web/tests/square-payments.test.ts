@@ -360,6 +360,34 @@ describe('Intake charges the saved card for the full taxed total (SEC-05, SEC-06
     expect(update).toMatchObject({ payment_status: 'charged', payment_id: 'PAY1', total: expected.finalTotal });
   });
 
+  it('captures the actual total from the card hold, lowering it first (client 2026-10-06, Part A)', async () => {
+    fixtures.orders = { ...baseOrder, hold_payment_id: 'HOLD_1', hold_amount: 500, hold_status: 'held', hold_expires_at: '2999-01-01T00:00:00Z' };
+    stubSquare({
+      '/payments/HOLD_1': { status: 200, body: { payment: { id: 'HOLD_1', version_token: 'v1' } } },
+      '/payments/HOLD_1/complete': { status: 200, body: { payment: { id: 'HOLD_1', status: 'COMPLETED' } } },
+    });
+
+    const body = await (await intakePOST(intakeRequest())).json();
+    expect(body.payment_status).toBe('charged');
+    expect(squareCalls.map((c) => c.path)).toEqual(['/payments/HOLD_1', '/payments/HOLD_1', '/payments/HOLD_1/complete']);
+    expect(squareCalls[1].body).toMatchObject({ payment: { amount_money: { amount: Math.round(body.total * 100) } } });
+
+    const update = writes.find((w) => w.table === 'orders' && w.op === 'update' && w.values.status === 'weighed_itemized')?.values;
+    expect(update).toMatchObject({ payment_status: 'charged', payment_id: 'HOLD_1', hold_status: 'captured', amount_due: 0, payment_needed_since: null });
+  });
+
+  it('marks a declined order Payment Needed with the amount owed and starts the reminder ladder', async () => {
+    fixtures.orders = { ...baseOrder };
+    stubSquare({ '/payments': { status: 402, body: { errors: [{ code: 'CARD_DECLINED', detail: 'Card declined.' }] } } });
+
+    const body = await (await intakePOST(intakeRequest())).json();
+    expect(body.payment_status).toBe('failed');
+    expect(body.warning).toContain('Payment Needed');
+    const update = writes.find((w) => w.table === 'orders' && w.op === 'update' && w.values.status === 'weighed_itemized')?.values;
+    expect(update).toMatchObject({ payment_status: 'failed', amount_due: body.total, payment_reminder_stage: 0 });
+    expect(update?.payment_needed_since).toEqual(expect.any(String));
+  });
+
   it('puts an order with no card on file on Payment Hold and never uses a test token', async () => {
     fixtures.orders = { ...baseOrder, square_customer_id: null, square_card_id: null, payment_id: 'cnon:old-token' };
     stubSquare({});

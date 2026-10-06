@@ -5,6 +5,7 @@ import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
+import { amountOwed } from '@/lib/payment-recovery';
 
 export async function GET(
   request: Request,
@@ -94,7 +95,7 @@ export async function GET(
             updated_at: dbOrder.updated_at,
             // Payment Hold: the link holder can pay the amount due (PR-04). No other money data.
             payment_hold: dbOrder.payment_status === 'failed',
-            ...(dbOrder.payment_status === 'failed' ? { amount_due: Number(dbOrder.total) || 0 } : {}),
+            ...(dbOrder.payment_status === 'failed' ? { amount_due: amountOwed(dbOrder) } : {}),
             photos: ((dbOrder.photos || []) as Array<Record<string, unknown>>).map((photo) => ({
               id: photo.id,
               photo_type: photo.photo_type,

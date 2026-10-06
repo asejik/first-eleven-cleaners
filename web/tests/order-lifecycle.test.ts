@@ -137,9 +137,16 @@ describe('Mission Control stage changes (PR-02)', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it('cannot move an uncharged order into cleaning without a manager override', async () => {
-    orderFixture = order({ status: 'weighed_itemized', payment_status: 'authorized' });
+  it('lets a Payment Needed order into cleaning: only delivery waits for payment (client 2026-10-06, Part A)', async () => {
+    orderFixture = order({ status: 'weighed_itemized', payment_status: 'failed' });
     const res = await advance({ new_stage: 'in_cleaning' });
+    expect(res.status).toBe(200);
+    expect(statusUpdates()).toHaveLength(1);
+  });
+
+  it('cannot send an unpaid order out for delivery without a manager override', async () => {
+    orderFixture = order({ status: 'in_cleaning', payment_status: 'failed' });
+    const res = await advance({ new_stage: 'out_for_delivery' });
     expect(res.status).toBe(400);
     expect(statusUpdates()).toHaveLength(0);
   });
@@ -153,8 +160,8 @@ describe('Mission Control stage changes (PR-02)', () => {
   });
 
   it('allows an uncharged order forward only with a logged manager override', async () => {
-    orderFixture = order({ status: 'weighed_itemized', payment_status: 'failed' });
-    const res = await advance({ new_stage: 'in_cleaning', manager_override: true, override_reason: 'Paid by phone' });
+    orderFixture = order({ status: 'in_cleaning', payment_status: 'failed' });
+    const res = await advance({ new_stage: 'out_for_delivery', manager_override: true, override_reason: 'Paid by phone' });
     expect(res.status).toBe(200);
     const override = writes.find((w) => w.table === 'order_events' && String(w.values.note).includes('MANAGER OVERRIDE'));
     expect(override).toBeTruthy();

@@ -400,7 +400,7 @@ export async function POST(request: Request) {
       }
       const { data: heldOrder } = await supabase
         .from('orders')
-        .select('id, order_number, total, payment_status, square_customer_id, square_card_id')
+        .select('id, order_number, total, amount_due, payment_id, payment_status, square_customer_id, square_card_id')
         .eq('id', order_id)
         .maybeSingle();
       if (!heldOrder) {

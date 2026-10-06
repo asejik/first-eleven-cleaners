@@ -100,12 +100,18 @@ export async function POST(request: Request) {
 
           const { data: matchedOrder } = await supabase
             .from('orders')
-            .select('id, payment_status')
+            .select('id, payment_status, amount_due')
             .eq('payment_id', paymentId)
             .maybeSingle();
 
-          // Never turn a refunded order back into charged
-          if (matchedOrder && matchedOrder.payment_status !== 'charged' && matchedOrder.payment_status !== 'refunded') {
+          // Never turn a refunded order back into charged, and never mark an order paid when
+          // this payment (a captured hold) left part of the total still owed (Part A)
+          if (
+            matchedOrder &&
+            matchedOrder.payment_status !== 'charged' &&
+            matchedOrder.payment_status !== 'refunded' &&
+            !(Number(matchedOrder.amount_due) > 0)
+          ) {
             await supabase
               .from('orders')
               .update({

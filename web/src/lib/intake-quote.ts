@@ -7,6 +7,8 @@ import { DRY_CLEAN_PRICES, catalogLineTotal } from '@/lib/constants';
  * price, in whole cents, up to a sanity cap. Every other item is charged its catalog price.
  */
 export const MAX_QUOTED_UNIT_PRICE = 2000;
+/** Quotes the customer pre-agreed to at checkout: up to 125% of the from-price (Part A) */
+export const QUOTE_BAND_PERCENT = 125;
 
 /** Items unknown to the catalog keep the old intake fallback price. */
 const UNKNOWN_ITEM_PRICE = 8.99;
@@ -35,6 +37,12 @@ export function priceIntakeLine(garmentType: string, quantity: number, quotedUni
   }
   if (quotedCents < Math.round(item.price * 100)) {
     return { ok: false, error: `The quoted price for ${label} can't be below its starting price of $${item.price.toFixed(2)}.` };
+  }
+  // The customer agreed at checkout to quotes up to 25% above the from-price; more needs
+  // their OK, which arrives with the quote-approval step (client 2026-10-06, Part C)
+  const bandMaxCents = Math.floor((Math.round(item.price * 100) * QUOTE_BAND_PERCENT) / 100);
+  if (quotedCents > bandMaxCents) {
+    return { ok: false, error: `The quoted price for ${label} is more than 25% above its starting price. Without the customer's OK it can be at most $${(bandMaxCents / 100).toFixed(2)}; call the customer before quoting more.` };
   }
   if (quotedCents > MAX_QUOTED_UNIT_PRICE * 100) {
     return { ok: false, error: `The quoted price for ${label} looks too high (over $${MAX_QUOTED_UNIT_PRICE}). Please re-check it.` };
