@@ -90,7 +90,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 | **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
 | **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
 | **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
-| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 504 unit tests across 85 files; 5 end-to-end smoke journeys (desktop + phone) |
+| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 517 unit tests across 87 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
 
 ---
 
@@ -229,7 +229,7 @@ Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` w
 
 ### 8. Testing & Verification
 ```bash
-npm test                                   # 504 Vitest tests
+npm test                                   # 517 Vitest tests
 npx vitest run tests/pricing.test.ts       # a single test file
 npx vitest run -t "test name"              # a single test by name
 npx tsc --noEmit                           # type check

@@ -2,6 +2,8 @@ import { test, expect, signInAs } from './fixtures';
 
 // Journey 4: customer dashboard, order detail and claim (P05 AR-13).
 test('a customer sees their orders, opens one, and reaches the claim form', async ({ page }) => {
+  // Three pages compile on first visit to a fresh dev server; slower machines need more than 30 s
+  test.setTimeout(60_000);
   await signInAs(page, 'customer');
   await page.goto('/dashboard');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome back');
