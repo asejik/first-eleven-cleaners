@@ -1,17 +1,16 @@
-import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/about',
-  },
+export const metadata = pageMetadata({
+  path: '/about',
   title: 'Our FIFA World Cup IBC Story',
   description:
-    'Every Garment Makes the Lineup. Born at the FIFA World Cup 2026 IBC in Dallas. First Eleven Cleaners is a veteran-owned, minority-certified premium dry cleaning and laundry service serving the Dallas-Fort Worth Metroplex.',
-};
+    'Born at the FIFA World Cup 2026 IBC in Dallas. A veteran-owned, minority-certified dry cleaning and laundry pickup service for Dallas-Fort Worth.',
+  imageAlt: 'First Eleven Cleaners - Our FIFA World Cup IBC Story',
+});
 
 const CERTIFICATIONS = [
   { code: 'MBE', label: 'Minority Business Enterprise', icon: '🏅' },

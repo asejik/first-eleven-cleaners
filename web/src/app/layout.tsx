@@ -8,6 +8,7 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { ToastContainer } from '@/components/ui/Toast';
 import { CookieConsent } from '@/components/ui/CookieConsent';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
+import { SITE_URL, buildSiteJsonLd } from '@/lib/seo';
 import '@/styles/globals.css';
 import '@/styles/animations.css';
 
@@ -25,10 +26,7 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://firstelevencleaners.com'),
-  alternates: {
-    canonical: '/',
-  },
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'First Eleven Cleaners | Dry Cleaning & Laundry Pickup in Dallas–Fort Worth',
     template: '%s | First Eleven Cleaners',
@@ -91,9 +89,9 @@ export const metadata: Metadata = {
   },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
-    other: {
-      'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
-    },
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION && {
+      other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION },
+    }),
   },
 };
 
@@ -108,95 +106,6 @@ export const viewport: Viewport = {
 import { AuthProvider } from '@/hooks/useAuth';
 import { DynamicConcierge } from '@/components/concierge/DynamicConcierge';
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebSite',
-      '@id': 'https://firstelevencleaners.com/#website',
-      url: 'https://firstelevencleaners.com',
-      name: 'First Eleven Cleaners',
-      description:
-        'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex.',
-      publisher: {
-        '@id': 'https://firstelevencleaners.com/#organization',
-      },
-    },
-    {
-      '@type': 'DryCleaningOrLaundryService',
-      '@id': 'https://firstelevencleaners.com/#organization',
-      name: 'First Eleven Cleaners',
-      image: [
-        'https://firstelevencleaners.com/og-image.jpg',
-        'https://firstelevencleaners.com/logo.png',
-        'https://firstelevencleaners.com/icon.png',
-      ],
-      url: 'https://firstelevencleaners.com',
-      telephone: '+1-682-200-0039',
-      email: 'support@firstelevencleaners.com',
-      priceRange: '$$',
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: 'Downtown Dallas',
-        addressLocality: 'Dallas',
-        addressRegion: 'TX',
-        postalCode: '75201',
-        addressCountry: 'US',
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: 32.7767,
-        longitude: -96.797,
-      },
-      areaServed: [
-        { '@type': 'City', name: 'Dallas' },
-        { '@type': 'City', name: 'Highland Park' },
-        { '@type': 'City', name: 'University Park' },
-        { '@type': 'City', name: 'Frisco' },
-        { '@type': 'City', name: 'Plano' },
-        { '@type': 'City', name: 'Fort Worth' },
-      ],
-      openingHoursSpecification: [
-        {
-          '@type': 'OpeningHoursSpecification',
-          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-          opens: '07:00',
-          closes: '20:00',
-        },
-      ],
-      hasOfferCatalog: {
-        '@type': 'OfferCatalog',
-        name: 'Garment Care Services',
-        itemListElement: [
-          {
-            '@type': 'Offer',
-            itemOffered: {
-              '@type': 'Service',
-              name: 'Wash & Fold Laundry Pickup & Delivery',
-              description:
-                'Weighed on digital calibrated scales, sorted by fabric color, washed, dried, hand-folded, and packaged with digital passport documentation.',
-            },
-            price: '3.00',
-            priceCurrency: 'USD',
-            unitText: 'lb',
-          },
-          {
-            '@type': 'Offer',
-            itemOffered: {
-              '@type': 'Service',
-              name: 'Match-Ready Dry Cleaning',
-              description:
-                'Individual stain pre-treatment, gentle eco-solvent cleaning, hand-finishing, and custom hanger packaging.',
-            },
-            price: '8.99',
-            priceCurrency: 'USD',
-          },
-        ],
-      },
-    },
-  ],
-};
-
 export default function RootLayout({
   children,
 }: {
@@ -207,7 +116,7 @@ export default function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(buildSiteJsonLd()) }}
         />
       </head>
       <body>

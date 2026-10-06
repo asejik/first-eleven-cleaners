@@ -1,15 +1,15 @@
-import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
 import { ROUTES, APP_NAME } from '@/lib/constants';
 import styles from './page.module.css';
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/terms',
-  },
+export const metadata = pageMetadata({
+  path: '/terms',
   title: 'Terms of Service',
-  description: 'First Eleven Cleaners Terms of Service. Governing law, garment care guarantees, liability limitations, and operational policies across Dallas-Fort Worth.',
-};
+  description:
+    'First Eleven Cleaners Terms of Service. Governing law, garment care guarantees, liability limitations, and operational policies across Dallas-Fort Worth.',
+  imageAlt: 'First Eleven Cleaners - Terms of Service',
+});
 
 export default function TermsOfServicePage() {
   return (

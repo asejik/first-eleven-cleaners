@@ -8,6 +8,15 @@ import {
 } from '@/lib/constants';
 import { Button } from '@/components/ui';
 import styles from './page.module.css';
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata = pageMetadata({
+  path: '/',
+  title: 'First Eleven Cleaners | DFW Dry Cleaning & Laundry Pickup',
+  description:
+    'Premium dry cleaning and wash & fold with free pickup and delivery across Dallas-Fort Worth. 48-hour Match-Ready turnaround. Book online in minutes.',
+  imageAlt: 'First Eleven Cleaners - Every Garment Makes the Lineup',
+});
 
 export default function HomePage() {
   return (

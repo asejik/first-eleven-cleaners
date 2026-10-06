@@ -31,7 +31,7 @@ export function Footer() {
 
           {/* Services */}
           <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Services</h4>
+            <h2 className={styles.columnTitle}>Services</h2>
             <nav className={styles.columnLinks}>
               <Link href={ROUTES.pricing}>Dry Cleaning</Link>
               <Link href={ROUTES.pricing}>Wash &amp; Fold</Link>
@@ -42,7 +42,7 @@ export function Footer() {
 
           {/* Company */}
           <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Company</h4>
+            <h2 className={styles.columnTitle}>Company</h2>
             <nav className={styles.columnLinks}>
               <Link href={ROUTES.about}>About Us</Link>
               <Link href={ROUTES.about}>FIFA World Cup Story</Link>
@@ -53,7 +53,7 @@ export function Footer() {
 
           {/* Support */}
           <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Support</h4>
+            <h2 className={styles.columnTitle}>Support</h2>
             <nav className={styles.columnLinks}>
               <a
                 href={`tel:+1${SUPPORT_PHONE.replace(/\D/g, '')}`}
@@ -104,7 +104,7 @@ export function Footer() {
 
           {/* Legal */}
           <div className={styles.column}>
-            <h4 className={styles.columnTitle}>Legal &amp; Trust</h4>
+            <h2 className={styles.columnTitle}>Legal &amp; Trust</h2>
             <nav className={styles.columnLinks}>
               <Link href={ROUTES.terms}>Terms of Service</Link>
               <Link href={ROUTES.privacy}>Privacy Policy</Link>
