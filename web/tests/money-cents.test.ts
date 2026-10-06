@@ -41,7 +41,8 @@ describe('Money in whole cents (PR-27)', () => {
       expect(cents(f.environmentalFee)).toBe(Math.round((cents(f.netSubtotal) * 3) / 100));
       expect(cents(f.salesTax)).toBe(Math.round(((cents(f.netSubtotal) + cents(f.environmentalFee)) * 825) / 10000));
     }
-  });
+    // ~40,000 assertions: about 1.5 s alone, but it hit the 5 s default on a loaded machine
+  }, 20_000);
 
   it('Express refunds use the same cents rules', () => {
     // $20 surcharge + $0.60 fee + 8.25% of $20.60 ($1.6995 -> $1.70) = $22.30
