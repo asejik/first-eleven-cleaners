@@ -407,6 +407,7 @@ export async function POST(request: Request) {
         photoUrl: primaryPhotoUrl,
         trackingUrl: `${origin}/track/${order.id}`,
         customMessage: customAlertText,
+        ...(isPaymentFailed ? { customTitle: '💳 Payment Needed' } : {}),
       };
 
       runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'intake notification');

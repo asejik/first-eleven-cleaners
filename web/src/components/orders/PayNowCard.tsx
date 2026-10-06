@@ -7,9 +7,9 @@ import { Button, Card } from '@/components/ui';
 import { SUPPORT_PHONE } from '@/lib/constants';
 
 /**
- * Lets a customer pay an order on Payment Hold with a new card (P03 PR-04). The card is
+ * Lets a customer pay an order marked Payment Needed with a new card (P03 PR-04). The card is
  * tokenized by Square's own form (card numbers never touch our servers); the server saves it
- * and charges the order's stored total.
+ * and charges what the order still owes.
  */
 interface SquareCard {
   attach: (container: HTMLElement) => Promise<void>;
@@ -89,7 +89,7 @@ export function PayNowCard({ orderId, amountDue }: { orderId: string; amountDue:
     return (
       <Card variant="bordered" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
         <strong>✅ Payment received. Thank you!</strong>
-        <p style={{ margin: 'var(--space-2) 0 0' }}>Your order is back on schedule.</p>
+        <p style={{ margin: 'var(--space-2) 0 0' }}>Your order will be delivered on schedule.</p>
       </Card>
     );
   }
@@ -98,7 +98,7 @@ export function PayNowCard({ orderId, amountDue }: { orderId: string; amountDue:
     <Card variant="bordered" padding="lg" style={{ marginBottom: 'var(--space-6)', borderColor: 'rgba(239, 68, 68, 0.45)' }}>
       <h2 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>Payment needed: ${amountDue.toFixed(2)}</h2>
       <p style={{ margin: 'var(--space-2) 0 var(--space-4)' }}>
-        Your card on file was declined, so your order is on hold. Pay securely below and we&apos;ll start cleaning right away.
+        Your card on file was declined. We&apos;re still cleaning your order; we&apos;ll deliver it as soon as it&apos;s paid. Add a new card securely below.
       </p>
 
       {appId && locationId ? (

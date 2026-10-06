@@ -182,3 +182,45 @@ export async function captureOrderPayment(
     ? { paymentStatus: 'charged', paymentId: charge.paymentId, amountDue: 0, note: `Payment of ${money(plan.amount)} charged to the card on file via Square. (Transaction ID: ${charge.paymentId})` }
     : failed(plan.amount, charge.error);
 }
+
+/**
+ * Releases an order's card hold when the order is cancelled before pickup: the pending
+ * amount disappears from the customer's card. A hold that was only scheduled is simply
+ * marked released. A failed release alerts an admin to release it in the Square Dashboard.
+ */
+export async function releaseOrderHold(
+  supabase: AdminClient,
+  order: { id: string; order_number?: string | null; hold_payment_id?: string | null; hold_status?: string | null },
+  reason: string
+): Promise<void> {
+  if (order.hold_status !== 'held' && order.hold_status !== 'scheduled') return;
+
+  if (order.hold_status === 'held' && order.hold_payment_id) {
+    const squareConfig = getSquareConfig();
+    if (squareConfig.isLive) {
+      const released = await cancelHold(squareConfig, order.hold_payment_id);
+      if (!released.ok) {
+        reportError('payments/release-hold', released.error, {
+          alert: true,
+          details: `Order ${order.order_number || order.id} was cancelled: release Square hold ${order.hold_payment_id} in the Square Dashboard`,
+        });
+        return;
+      }
+    }
+    await supabase
+      .from('order_payments')
+      .update({ status: 'canceled', note: `Released: ${reason}`, updated_at: new Date().toISOString() })
+      .eq('square_payment_id', order.hold_payment_id);
+  }
+
+  await supabase
+    .from('orders')
+    .update({ hold_status: 'released', updated_at: new Date().toISOString() })
+    .eq('id', order.id);
+  await supabase.from('order_events').insert({
+    order_id: order.id,
+    status: 'cancelled',
+    note: order.hold_status === 'held' ? `Card hold released (${reason}).` : `Scheduled card hold cancelled (${reason}).`,
+    triggered_by: 'Square Web Payments',
+  });
+}

@@ -6,6 +6,7 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
 import { amountOwed } from '@/lib/payment-recovery';
+import { releaseOrderHold } from '@/lib/payment-capture';
 
 export async function GET(
   request: Request,
@@ -291,7 +292,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid order identifier format.' }, { status: 400 });
       }
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      const query = supabase.from('orders').select('id, customer_id, status, order_number');
+      const query = supabase.from('orders').select('id, customer_id, status, order_number, hold_payment_id, hold_status');
       const { data: order, error } = isUUID
         ? await query.eq('id', id).maybeSingle()
         : await query.or(`order_number.eq.${id},id.eq.${id}`).maybeSingle();
@@ -333,6 +334,8 @@ export async function PATCH(
         triggered_by: customer.full_name || 'Customer',
         timestamp: new Date().toISOString(),
       });
+      // Nothing is charged for a cancelled pickup: release the card hold (Part A)
+      await releaseOrderHold(supabase, order, 'pickup cancelled by the customer');
 
       return NextResponse.json({ success: true, order: updatedOrder, message: 'Pickup cancelled successfully.' });
     }

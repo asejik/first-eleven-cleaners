@@ -19,6 +19,8 @@ export interface MessagePayload {
   photoUrl?: string;
   trackingUrl: string;
   customMessage?: string;
+  /** Title (email subject) for a custom message; defaults to the Express guarantee title */
+  customTitle?: string;
   smsConsent?: boolean;
   /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
   signupUrl?: string;
@@ -32,11 +34,16 @@ export interface FormattedMessage {
   mediaUrl?: string;
 }
 
+/** The booking page on the same site as a tracking link (the Delivered message's "next pickup" tap). */
+function bookUrl(trackingUrl: string): string {
+  return trackingUrl.replace(/\/track\/.*$/, '/book');
+}
+
 export function formatStageMessage(data: MessagePayload): FormattedMessage {
   if (data.customMessage) {
     return {
       stage: data.stage,
-      title: '⚡ 24-Hour Express SLA Guarantee',
+      title: data.customTitle || '⚡ 24-Hour Express SLA Guarantee',
       smsBody: data.customMessage,
       whatsappBody: data.customMessage,
       mediaUrl: data.photoUrl,
@@ -82,8 +89,10 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
       return {
         stage: 'weighed_itemized',
         title: '⚖️ Weighed & Itemized Ticket',
-        smsBody: `⚖️ First Eleven: Order #${orderNum} has been inspected and itemized (${summaryText}). Final total: ${totalFormatted}. View your Garment Passport photo intake receipt: ${data.trackingUrl}`,
-        whatsappBody: `⚖️ *GARMENT PASSPORT & INTAKE TICKET*\n\nOrder *#${orderNum}* has been verified by our plant team:\n\n🧺 *Breakdown:* ${summaryText}\n💰 *Total:* ${totalFormatted}\n\n📸 *View High-Res Intake Photos & Receipt:*\n${data.trackingUrl}`,
+        // The receipt goes out the moment we charge, with the ticket, the photos and the two
+        // taps: Looks good / Something's off (client 2026-10-06, Part A)
+        smsBody: `⚖️ First Eleven: Order #${orderNum} is weighed and itemized (${summaryText}). We've charged ${totalFormatted} to your card. Your itemized ticket and photos: ${data.trackingUrl} Tap "Looks good", or "Something's off" and we'll Make It Right today.`,
+        whatsappBody: `⚖️ *ITEMIZED TICKET & RECEIPT*\n\nOrder *#${orderNum}* is weighed and itemized:\n\n🧺 *Breakdown:* ${summaryText}\n💳 *Charged:* ${totalFormatted}\n\n📸 *Your ticket and intake photos:*\n${data.trackingUrl}\n\nTap *Looks good*, or *Something's off* and we'll Make It Right today.`,
         mediaUrl: data.photoUrl,
       };
     }
@@ -110,8 +119,8 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
       return {
         stage: 'delivered',
         title: '✅ Delivered & Match-Ready',
-        smsBody: `✅ First Eleven Cleaners: Delivered! Order #${orderNum} is fresh, pressed, and waiting at your delivery spot. View delivery proof photo: ${data.trackingUrl}. Thank you for choosing First Eleven!`,
-        whatsappBody: `✅ *DELIVERED & MATCH-READY*\n\nOrder *#${orderNum}* has been safely delivered to your designated spot.\n\n🛡️ *Backed by our 100% Make It Right Guarantee.*\n\n📸 *View Delivery Proof Photo:*\n${data.trackingUrl}`,
+        smsBody: `✅ First Eleven Cleaners: Delivered! Order #${orderNum} is fresh, pressed, and waiting at your delivery spot. View delivery proof photo: ${data.trackingUrl}. Book your next pickup: ${bookUrl(data.trackingUrl)}`,
+        whatsappBody: `✅ *DELIVERED & MATCH-READY*\n\nOrder *#${orderNum}* has been safely delivered to your designated spot.\n\n🛡️ *Backed by our 100% Make It Right Guarantee.*\n\n📸 *View Delivery Proof Photo:*\n${data.trackingUrl}\n\n🧺 *Book your next pickup:* ${bookUrl(data.trackingUrl)}`,
         mediaUrl: data.photoUrl,
       };
 

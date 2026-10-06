@@ -8,6 +8,7 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
 import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
+import { releaseOrderHold } from '@/lib/payment-capture';
 import { refundOrder } from '@/lib/refunds';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 import { texasDate } from '@/lib/texas-time';
@@ -204,7 +205,8 @@ export async function POST(request: Request) {
       // Keep "Mission Control" in the label: the driver manifest uses it to tell board moves from driver van loads
       const adminLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
 
-      // Payment Guard: an order enters cleaning or delivery only once its card is charged
+      // Payment Guard: an order goes out for delivery only once its card is charged (cleaning
+      // may start while payment is still needed: client 2026-10-06, Part A)
       const needsOverride = requiresCapturedPayment(new_stage) && order.payment_status !== 'charged';
       if (needsOverride && !manager_override) {
         return NextResponse.json(
@@ -251,6 +253,11 @@ export async function POST(request: Request) {
         note: `Stage advanced to ${new_stage} via Mission Control Ops Board.`,
         triggered_by: adminLabel,
       });
+
+      // A cancelled pickup is never charged: release its card hold (Part A)
+      if (new_stage === 'cancelled') {
+        await releaseOrderHold(supabase, order, 'pickup cancelled from Mission Control');
+      }
 
       await recordAdminAction(supabase, {
         actor: auth.customer,
