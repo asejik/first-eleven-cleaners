@@ -119,8 +119,8 @@ describe('Pricing Engine & Business Rules', () => {
     });
   });
 
-  describe('24-Hour Express Pricing (+50%, $15 min floor)', () => {
-    it('applies $15.00 minimum surcharge when 50% is under $15', () => {
+  describe('24-Hour Express Pricing (+50%, no dollar floor)', () => {
+    it('charges exactly 50% even on a small order (the $15 floor was removed 2026-10-06)', () => {
       const res = calculatePrice({
         dry_clean_items: [
           { garment_type: 'blouse', quantity: 1 }, // 8.99
@@ -130,12 +130,11 @@ describe('Pricing Engine & Business Rules', () => {
         zip: '75205',
       });
       expect(res.subtotal).toBeCloseTo(17.98, 2);
-      // 50% of 17.98 is 8.99, which is below $15 -> floor of $15.00 applies
-      expect(res.express_surcharge).toBe(15.0);
-      expect(res.total).toBeCloseTo(32.98, 2);
+      expect(res.express_surcharge).toBe(8.99);
+      expect(res.total).toBeCloseTo(26.97, 2);
     });
 
-    it('applies full +50% surcharge when greater than $15', () => {
+    it('applies the full +50% surcharge on a larger order', () => {
       const res = calculatePrice({
         weight_lbs: 20, // $60.00
         express_tier: 'express_24hr',
@@ -252,14 +251,14 @@ describe('Pricing Engine & Business Rules', () => {
       expect(result.subtotal).toBe(45.00);
     });
 
-    it('correctly applies 24-Hour Express surcharge (+50% with $15 floor) server-side', () => {
-      // Subtotal $15.99 -> 50% is $7.995, so $15 minimum floor applies
+    it('correctly applies 24-Hour Express surcharge (+50%, no floor) server-side', () => {
+      // Subtotal $15.99 -> 50% is $7.995, rounds half-up to $8.00
       const smallOrder = computeBookingFinancials({
         dryCleanItems: [{ garment_type: 'dress', quantity: 1 }], // $15.99
         isExpress: true,
       });
       expect(smallOrder.subtotal).toBe(15.99);
-      expect(smallOrder.financials.expressSurcharge).toBe(15.00);
+      expect(smallOrder.financials.expressSurcharge).toBe(8.00);
 
       // Subtotal $154.99 -> 50% is $77.495, rounds to $77.50
       const largeOrder = computeBookingFinancials({

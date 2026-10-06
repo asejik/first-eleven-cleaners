@@ -12,7 +12,6 @@ import {
   TX_SALES_TAX_RATE,
   ENVIRONMENTAL_FEE_RATE,
   FAILED_PICKUP_FEE,
-  EXPRESS_MINIMUM_SURCHARGE,
 } from '@/lib/constants';
 import { buildLlmsTxt } from '@/lib/llms';
 import { SITE_URL } from '@/lib/seo';
@@ -52,7 +51,8 @@ describe('llms.txt matches the real catalog (P08 SEO-02)', () => {
     expect(text).toContain(`${(ENVIRONMENTAL_FEE_RATE * 100).toFixed(0)}% environmental fee`);
     expect(text).toContain(`${(TX_SALES_TAX_RATE * 100).toFixed(2)}% Texas sales tax`);
     expect(text).toContain(`${money(FAILED_PICKUP_FEE)} failed pickup or delivery fee`);
-    expect(text).toContain(`${money(EXPRESS_MINIMUM_SURCHARGE)} minimum`);
+    expect(text).toContain('no separate dollar minimum; the zone order minimum applies');
+    expect(text).not.toContain('$15.00 minimum');
     expect(text).not.toMatch(/zero surprise surcharges/i);
   });
 

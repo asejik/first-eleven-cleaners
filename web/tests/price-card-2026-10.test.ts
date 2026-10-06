@@ -176,3 +176,30 @@ describe('Every screen uses the shared line rule (dozen pricing)', () => {
     for (const key of keys) expect(DRY_CLEAN_PRICES[key], key).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Client 2026-10-06: Express has no "$15 minimum". It is +50% of the order, and
+// the zone order minimum is what governs small orders.
+// ---------------------------------------------------------------------------
+describe('Express has no $15 minimum', () => {
+  it('is exactly 50% of the subtotal', async () => {
+    const { calculateExpressSurcharge } = await import('@/lib/constants');
+    expect(calculateExpressSurcharge(20, true)).toBe(10);
+    expect(calculateExpressSurcharge(45, true)).toBe(22.5);
+    expect(calculateExpressSurcharge(0, true)).toBe(0);
+    expect(calculateExpressSurcharge(45, false)).toBe(0);
+  });
+
+  it.each([
+    'app/page.tsx',
+    'app/pricing/page.tsx',
+    'components/booking/StepSchedule.tsx',
+    'components/booking/StepReview.tsx',
+    'components/mission-control/ExpressGovernance.tsx',
+    'lib/ai/price-list.ts',
+    'lib/llms.ts',
+    'lib/constants.ts',
+  ])('%s never mentions a $15 Express minimum', (file) => {
+    expect(read(file)).not.toMatch(/min(imum)? \$15|\$15 min|\$15 floor|EXPRESS_MINIMUM_SURCHARGE/);
+  });
+});

@@ -17,7 +17,6 @@ export const WASH_FOLD_PRICE_PER_LB = 3.00;
 export const WASH_FOLD_MINIMUM_LBS = 15;
 export const WASH_FOLD_MINIMUM_PRICE = WASH_FOLD_PRICE_PER_LB * WASH_FOLD_MINIMUM_LBS; // $45
 export const EXPRESS_SURCHARGE_PERCENT = 0.50; // +50% surcharge
-export const EXPRESS_MINIMUM_SURCHARGE = 15.00; // $15.00 minimum surcharge
 export const EXPRESS_DAILY_SLOT_CAP = 8; // Default 8 slots/day capacity cap
 export const EXPRESS_ENABLED = true; // 24-Hour Express ("Match-Ready Tomorrow") active
 // --- Smart Coverage Zones ---
@@ -415,14 +414,13 @@ const ENV_FEE_BASIS_POINTS = Math.round(ENVIRONMENTAL_FEE_RATE * 10000); // 300
 const SALES_TAX_BASIS_POINTS = Math.round(TX_SALES_TAX_RATE * 10000); // 825
 
 /**
- * Calculates 24-Hour Express Surcharge:
- * +50% surcharge on subtotal, with a $15.00 minimum surcharge floor.
- * Subtotal of 0 incurs 0 surcharge.
+ * Calculates 24-Hour Express Surcharge: +50% of the subtotal. There is no separate dollar
+ * floor: every order already meets its zone's order minimum.
  */
 export function calculateExpressSurcharge(subtotal: number, isExpress: boolean): number {
   const subtotalCents = toCents(subtotal);
   if (!isExpress || subtotalCents <= 0) return 0;
-  return toDollars(Math.max(applyRate(subtotalCents, EXPRESS_PERCENT, 100), toCents(EXPRESS_MINIMUM_SURCHARGE)));
+  return toDollars(applyRate(subtotalCents, EXPRESS_PERCENT, 100));
 }
 
 /** The environmental fee and sales tax charged on a net amount, in whole cents (PR-27). */

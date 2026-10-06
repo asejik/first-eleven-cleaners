@@ -245,7 +245,7 @@ export function StepSchedule({
               </label>
               <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'info'}>
                 {expressTier === 'express_24hr'
-                  ? '⚡ 24-Hour Express (+50%, min $15)'
+                  ? '⚡ 24-Hour Express (+50%)'
                   : 'Standard: 48 Hours (Included)'}
               </Badge>
             </div>
@@ -273,7 +273,7 @@ export function StepSchedule({
                 style={hasExcludedGarments || isExpressCapacityFull ? { opacity: 0.55, cursor: 'not-allowed' } : {}}
               >
                 <span className={styles.tierTitle}><span aria-hidden="true">⚡</span> 24-Hr Express</span>
-                <span className={styles.tierBadge}>+50% (min $15)</span>
+                <span className={styles.tierBadge}>+50%</span>
                 <span className={styles.tierDesc}>Match-Ready Tomorrow Morning</span>
               </button>
             </div>

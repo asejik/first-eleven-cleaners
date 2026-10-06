@@ -197,7 +197,7 @@ export default function PricingPage() {
               <div className={styles.expressDetailsBox}>
                 <div className={styles.expressPricingHighlight}>
                   <strong className={styles.expressSurchargeText}>+50% Surcharge</strong>
-                  <span className={styles.expressMinText}>(minimum $15) — shown in your total before checkout.</span>
+                  <span className={styles.expressMinText}>of your order, shown in your total before checkout. Your area&apos;s order minimum still applies.</span>
                 </div>
                 <ul className={styles.expressSpecList}>
                   <li>
@@ -379,7 +379,7 @@ export default function PricingPage() {
                       style={!calcZone?.expressEligible ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                       title={!calcZone?.expressEligible ? `24-Hour Express unavailable in ${calcZone?.name || 'this area'}` : undefined}
                     >
-                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%, min $15)' : '(Not in Zone)'}
+                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%)' : '(Not in Zone)'}
                     </button>
                   </div>
                 </div>
@@ -400,7 +400,7 @@ export default function PricingPage() {
                   )}
                   {financials.expressSurcharge > 0 && (
                     <div className={styles.breakdownRow}>
-                      <span>Express Surcharge (+50%, min $15)</span>
+                      <span>Express Surcharge (+50%)</span>
                       <span>+${financials.expressSurcharge.toFixed(2)}</span>
                     </div>
                   )}

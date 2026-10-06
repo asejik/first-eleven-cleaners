@@ -139,7 +139,7 @@ export default function HomePage() {
               <h3>24-Hour Express</h3>
               <p>
                 {EXPRESS_ENABLED
-                  ? 'Need it fast? 24-Hour Express turnaround available with +50% surcharge ($15 min). Picked up morning, delivered next morning.'
+                  ? 'Need it fast? 24-Hour Express turnaround available with a +50% surcharge. Picked up morning, delivered next morning.'
                   : 'Available soon — plant capacity confirming. Built for mission-critical fast turnaround.'}
               </p>
               <span className={styles.servicePrice}>{EXPRESS_ENABLED ? 'From +50%' : 'Available Soon'}</span>

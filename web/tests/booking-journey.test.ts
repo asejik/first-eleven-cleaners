@@ -135,13 +135,13 @@ describe('Booking Journey E2E Integration Tests', () => {
   });
 
   describe('Step 3: Schedule, Turnaround, and Express Surcharge', () => {
-    it('applies 50% Express surcharge with $15 minimum floor', () => {
+    it('applies a straight 50% Express surcharge, with no $15 floor (client 2026-10-06)', () => {
       const smallSubtotal = 20;
       const smallSurcharge = calculateOrderFinancials({
         subtotal: smallSubtotal,
         isExpress: true,
       }).expressSurcharge;
-      expect(smallSurcharge).toBe(15); // Hit $15 floor (50% of $20 = $10 < $15)
+      expect(smallSurcharge).toBe(10); // 50% of $20; the old $15 floor is gone
 
       const largeSubtotal = 100;
       const largeSurcharge = calculateOrderFinancials({

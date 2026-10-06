@@ -6,7 +6,6 @@ import {
   ENVIRONMENTAL_FEE_RATE,
   TX_SALES_TAX_RATE,
   EXPRESS_SURCHARGE_PERCENT,
-  EXPRESS_MINIMUM_SURCHARGE,
   ZONE_CONFIG,
 } from '@/lib/constants';
 
@@ -46,7 +45,7 @@ export function zoneMinimumLines(): string[] {
 }
 
 export function expressLine(): string {
-  return `24-Hour Express: +${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (minimum ${money(EXPRESS_MINIMUM_SURCHARGE)}), Monday-Friday morning pickups in eligible zones.`;
+  return `24-Hour Express: +${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (the zone order minimum still applies), Monday-Friday morning pickups in eligible zones.`;
 }
 
 /** Bullet list for chat replies. */

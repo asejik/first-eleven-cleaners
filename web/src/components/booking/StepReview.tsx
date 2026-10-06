@@ -149,7 +149,7 @@ export function StepReview({
           </div>
           {expressSurcharge > 0 && (
             <div className={styles.summaryLine}>
-              <span>Express Surcharge (+50%, min $15)</span>
+              <span>Express Surcharge (+50%)</span>
               <span style={{ color: 'var(--color-gold-text)', fontWeight: 'var(--font-bold)' }}>
                 +${expressSurcharge.toFixed(2)}
               </span>
@@ -222,7 +222,7 @@ export function StepReview({
           </div>
           {expressSurcharge > 0 && (
             <div className={styles.totalRow}>
-              <span>24-Hour Express Surcharge (+50%, min $15)</span>
+              <span>24-Hour Express Surcharge (+50%)</span>
               <span style={{ color: 'var(--color-gold-text)', fontWeight: 'bold' }}>
                 +${expressSurcharge.toFixed(2)}
               </span>
