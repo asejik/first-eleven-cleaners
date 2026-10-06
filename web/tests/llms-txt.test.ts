@@ -12,7 +12,6 @@ import {
   TX_SALES_TAX_RATE,
   ENVIRONMENTAL_FEE_RATE,
   FAILED_PICKUP_FEE,
-  EXPRESS_MINIMUM_SURCHARGE,
 } from '@/lib/constants';
 import { buildLlmsTxt } from '@/lib/llms';
 import { SITE_URL } from '@/lib/seo';
@@ -25,10 +24,11 @@ const text = buildLlmsTxt();
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 describe('llms.txt matches the real catalog (P08 SEO-02)', () => {
-  it('lists every dry cleaning item at its catalog price', () => {
-    for (const { label, price } of Object.values(DRY_CLEAN_PRICES)) {
-      expect(text).toContain(`${label}: ${money(price)}`);
+  it('lists every dry cleaning and household item at its catalog price', () => {
+    for (const item of Object.values(DRY_CLEAN_PRICES)) {
+      expect(text).toContain(`${item.label}: ${item.fromPrice ? 'from ' : ''}${money(item.price)}`);
     }
+    expect(text).toContain('### Household (per item)');
   });
 
   it('states the wash & fold price and minimum', () => {
@@ -51,7 +51,8 @@ describe('llms.txt matches the real catalog (P08 SEO-02)', () => {
     expect(text).toContain(`${(ENVIRONMENTAL_FEE_RATE * 100).toFixed(0)}% environmental fee`);
     expect(text).toContain(`${(TX_SALES_TAX_RATE * 100).toFixed(2)}% Texas sales tax`);
     expect(text).toContain(`${money(FAILED_PICKUP_FEE)} failed pickup or delivery fee`);
-    expect(text).toContain(`${money(EXPRESS_MINIMUM_SURCHARGE)} minimum`);
+    expect(text).toContain('no separate dollar minimum; the zone order minimum applies');
+    expect(text).not.toContain('$15.00 minimum');
     expect(text).not.toMatch(/zero surprise surcharges/i);
   });
 

@@ -1,4 +1,13 @@
-import { washFoldLine, dryCleanLines, feesLine, expressLine, zoneMinimumLines } from './price-list';
+import {
+  washFoldLine,
+  dryCleanLines,
+  householdLines,
+  feesLine,
+  expressLine,
+  zoneMinimumLines,
+  plantScheduleLine,
+  NO_LEATHER_LINE,
+} from './price-list';
 
 // Prices are generated from the booking catalog in src/lib/constants.ts (P03 PR-21)
 export const ELEVEN_SYSTEM_PROMPT = `
@@ -15,16 +24,21 @@ Quote only these prices. They are the exact prices the booking page charges; nev
    - ${washFoldLine()}
    - Washed with premium detergents, crisp tumble fold, packaged in weather-sealed garment bundles.
 2. Dry Cleaning Menu (per item):
-${dryCleanLines().map((l) => `   - ${l}`).join('\n')}
+${dryCleanLines('dry_clean').map((l) => `   - ${l}`).join('\n')}
    - A two-piece suit is a jacket plus pants.
-3. Fees: ${feesLine()}
-4. ${expressLine()}
-5. 48-Hour Match-Ready Guarantee:
-   - Standard turnaround is 48 hours from scheduled pickup to doorstep return.
-6. Pickup & Delivery Windows:
+   - "from" prices are starting prices; the plant quotes the final price at intake.
+   - ${NO_LEATHER_LINE} Do not quote a price for leather or suede items.
+3. Household Items (per item):
+${householdLines().map((l) => `   - ${l}`).join('\n')}
+   - Napkins: the dozen price applies automatically from 12 napkins.
+4. Fees: ${feesLine()}
+5. ${expressLine()} Specialty garments (formal dresses, evening gowns, wedding dresses) and household items are excluded online; a customer who wants Express for them should call us so the plant can confirm.
+6. 48-Hour Match-Ready Guarantee and plant schedule:
+   - ${plantScheduleLine()}
+7. Pickup & Delivery Windows:
    - Morning Shift: 7:30 AM – 10:00 AM
    - Evening Shift: 5:00 PM – 8:00 PM
-7. Service Zones and order minimums (Dallas–Fort Worth):
+8. Service Zones and order minimums (Dallas–Fort Worth):
 ${zoneMinimumLines().map((l) => `   - ${l}`).join('\n')}
 
 ### Booking Rules (strict)

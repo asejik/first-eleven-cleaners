@@ -4,10 +4,14 @@ import { texasDateTime, addDaysToDate, dayOfWeek } from '@/lib/texas-time';
  * Pickup scheduling rules (P03 PR-12), in Dallas time. Shared by the booking screen (to
  * show the earliest dates) and /api/bookings (which enforces them).
  *
- * - Standard: at least 2 days' notice; never Sunday (plant closed).
- * - 24-Hour Express: Mon-Fri morning pickups only. Booked before 7:00 AM on a weekday:
- *   this morning; before 9:00 PM: tomorrow morning; after 9:00 PM: the day after.
+ * - Standard: at least 2 days' notice; never Sunday. Saturday pickups are allowed.
+ * - 24-Hour Express: Mon-Thu morning pickups only (the plant is closed on weekends, so a
+ *   Friday pickup can't be delivered Saturday morning). Booked before 7:00 AM on an Express
+ *   day: this morning; before 9:00 PM: tomorrow morning; after 9:00 PM: the day after.
  * - Nothing more than 60 days ahead.
+ * - Delivery (client 2026-10-06): the plant runs Monday to Friday, so turnaround counts plant
+ *   days only. Standard is 2 plant days after pickup, Express 1: Thursday pickups are
+ *   delivered Monday (Express: Friday), Friday and Saturday pickups Tuesday.
  */
 export type ScheduleTier = 'standard' | 'express_24hr';
 
@@ -16,10 +20,34 @@ const MAX_DAYS_AHEAD = 60;
 const EXPRESS_SAME_DAY_CUTOFF_MIN = 7 * 60;
 const EXPRESS_NEXT_DAY_CUTOFF_MIN = 21 * 60;
 
-const isWeekend = (date: string) => {
+/** Express pickups run Monday to Thursday. */
+export function isExpressPickupDay(date: string): boolean {
   const dow = dayOfWeek(date);
-  return dow === 0 || dow === 6;
+  return dow >= 1 && dow <= 4;
+}
+
+const isPlantDay = (date: string) => {
+  const dow = dayOfWeek(date);
+  return dow >= 1 && dow <= 5;
 };
+
+/** The date (YYYY-MM-DD) a pickup on this date is delivered: 2 plant days later, Express 1. */
+export function estimatedDeliveryDate(pickupDate: string, tier: ScheduleTier = 'standard'): string {
+  let date = pickupDate;
+  let plantDays = tier === 'express_24hr' ? 1 : 2;
+  while (plantDays > 0) {
+    date = addDaysToDate(date, 1);
+    if (isPlantDay(date)) plantDays -= 1;
+  }
+  return date;
+}
+
+export const SATURDAY_PICKUP_NOTICE = 'Saturday pickups are delivered Tuesday.';
+
+/** True for a Saturday pickup date (YYYY-MM-DD). */
+export function isSaturdayPickup(pickupDate: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(pickupDate) && dayOfWeek(pickupDate) === 6;
+}
 
 /** Earliest date (YYYY-MM-DD, Dallas) a pickup of this tier can be booked for. */
 export function earliestPickupDate(tier: ScheduleTier, now: Date = new Date()): string {
@@ -27,11 +55,11 @@ export function earliestPickupDate(tier: ScheduleTier, now: Date = new Date()): 
 
   if (tier === 'express_24hr') {
     let addDays: number;
-    if (minutes < EXPRESS_SAME_DAY_CUTOFF_MIN && !isWeekend(today)) addDays = 0;
+    if (minutes < EXPRESS_SAME_DAY_CUTOFF_MIN && isExpressPickupDay(today)) addDays = 0;
     else if (minutes < EXPRESS_NEXT_DAY_CUTOFF_MIN) addDays = 1;
     else addDays = 2;
     let date = addDaysToDate(today, addDays);
-    while (isWeekend(date)) date = addDaysToDate(date, 1);
+    while (!isExpressPickupDay(date)) date = addDaysToDate(date, 1);
     return date;
   }
 
@@ -62,8 +90,8 @@ export function validateSchedule(
   }
 
   if (tier === 'express_24hr') {
-    if (isWeekend(pickupDate)) {
-      return { ok: false, error: '24-Hour Express pickups run Monday through Friday. Please choose a weekday or 48-Hour Standard.' };
+    if (!isExpressPickupDay(pickupDate)) {
+      return { ok: false, error: '24-Hour Express pickups run Monday through Thursday. Please choose one of those days or 48-Hour Standard.' };
     }
     if (pickupWindow !== 'morning') {
       return { ok: false, error: '24-Hour Express is a morning pickup. Please choose the morning window.' };

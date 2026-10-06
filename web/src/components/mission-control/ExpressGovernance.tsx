@@ -79,7 +79,7 @@ export function ExpressGovernance({ orders, onRefresh }: ExpressGovernanceProps)
               </span>
             </div>
             <p style={{ color: '#e2e8f0', fontSize: '13px', marginTop: '6px', margin: 0, lineHeight: '1.5' }}>
-              Turnaround: Mon–Fri Morning Pickup → Next Morning 7:30–10:00 AM Delivery (<strong style={{ color: 'var(--color-gold)' }}>+50% surcharge, min $15 floor</strong>).
+              Turnaround: Mon–Thu Morning Pickup → Next Morning 7:30–10:00 AM Delivery (<strong style={{ color: 'var(--color-gold)' }}>+50% surcharge</strong>).
             </p>
           </div>
 
@@ -144,7 +144,7 @@ export function ExpressGovernance({ orders, onRefresh }: ExpressGovernanceProps)
             </p>
             <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#e2e8f0', lineHeight: '1.5' }}>
               <div>
-                <strong style={{ color: 'var(--color-gold)' }}>1.</strong> Refunds the Express surcharge (<span style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>$15 min / +50%</span>), plus its fee and tax, to the customer&apos;s card through Square.
+                <strong style={{ color: 'var(--color-gold)' }}>1.</strong> Refunds the Express surcharge (<span style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>+50%</span>), plus its fee and tax, to the customer&apos;s card through Square.
               </div>
               <div>
                 <strong style={{ color: 'var(--color-gold)' }}>2.</strong> Once Square accepts the refund, sends the customer: <em style={{ color: '#ffffff', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px' }}>&ldquo;Your Express delivery ran past our window. The Express fee has been refunded automatically — that&apos;s our guarantee.&rdquo;</em>

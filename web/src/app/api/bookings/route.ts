@@ -11,7 +11,7 @@ import {
   ROUTES,
   resolveZoneByZip,
   getZoneMinimumGap,
-  EXPRESS_EXCLUDED_GARMENTS,
+  isExpressExcluded,
   EXPRESS_DAILY_SLOT_CAP,
   PROMO_CODE_LAUNCH,
   PROMO_DISCOUNT_PERCENT,
@@ -20,7 +20,7 @@ import {
 import { getSquareConfig, saveCardOnFile, type SavedCard } from '@/lib/square';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
-import { validateSchedule } from '@/lib/schedule';
+import { validateSchedule, estimatedDeliveryDate } from '@/lib/schedule';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
 import { phoneSchema } from '@/lib/phone';
@@ -179,9 +179,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const excludedItem = validated.services.dry_clean_items.find((item) =>
-        (EXPRESS_EXCLUDED_GARMENTS as readonly string[]).includes(item.garment_type)
-      );
+      const excludedItem = validated.services.dry_clean_items.find((item) => isExpressExcluded(item.garment_type));
       if (excludedItem) {
         return NextResponse.json(
           {
@@ -294,19 +292,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Calculate Delivery Date (24 hours next-day for Express, 48 hours standard, skip Sunday)
-    const delivery = new Date(pickup);
-    if (isExpress) {
-      delivery.setDate(delivery.getDate() + 1); // 24 hours: next morning
-    } else {
-      delivery.setDate(delivery.getDate() + 2); // 48 hours standard
-    }
-
-    if (delivery.getDay() === 0) {
-      delivery.setDate(delivery.getDate() + 1); // If Sunday, deliver Monday
-    }
-
-    const deliveryDateStr = delivery.toISOString().split('T')[0];
+    // 6. Delivery date: 2 plant days after pickup (Express: 1); the plant runs Mon-Fri
+    const deliveryDateStr = estimatedDeliveryDate(validated.schedule.pickup_date, isExpress ? 'express_24hr' : 'standard');
     const orderNumber = `F11-${todayTexasStr.slice(0, 4)}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     let isGuest = true;
 

@@ -11,6 +11,11 @@ import {
   calculateOrderFinancials,
   resolveZoneByZip,
   getZoneMinimumGap,
+  catalogItems,
+  catalogPriceLabel,
+  catalogLineTotal,
+  catalogSubtotal,
+  type CatalogCategory,
 } from '@/lib/constants';
 import { Card, ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
@@ -41,10 +46,7 @@ export default function PricingPage() {
       ? Math.max(WASH_FOLD_MINIMUM_PRICE, washFoldWeight * WASH_FOLD_PRICE_PER_LB)
       : 0;
 
-  const calculatedDryClean = Object.entries(dryCleanQuantities).reduce((acc, [key, qty]) => {
-    const item = DRY_CLEAN_PRICES[key];
-    return acc + (item ? item.price * qty : 0);
-  }, 0);
+  const calculatedDryClean = catalogSubtotal(dryCleanQuantities);
 
   const subtotal = calculatedWashFold + calculatedDryClean;
   const calcZone = resolveZoneByZip(calcZip);
@@ -57,6 +59,43 @@ export default function PricingPage() {
   });
 
   const totalDryCleanItems = Object.values(dryCleanQuantities).reduce((a, b) => a + b, 0);
+
+  const renderMenu = (category: CatalogCategory) => (
+    <div className={styles.menuGrid}>
+      {catalogItems(category).map(([key, item]) => {
+        const qty = dryCleanQuantities[key] || 0;
+        return (
+          <div key={key} className={styles.menuRow}>
+            <div className={styles.itemInfo}>
+              <span className={styles.itemName}>{item.label}</span>
+              <span className={styles.itemPrice}>{catalogPriceLabel(item)}</span>
+              {item.note && <span className={styles.itemNote}>{item.note}</span>}
+            </div>
+            <div className={styles.quantityControls}>
+              <button
+                type="button"
+                className={styles.qtyBtn}
+                onClick={() => updateQuantity(key, -1)}
+                disabled={qty === 0}
+                aria-label={`Decrease ${item.label}`}
+              >
+                -
+              </button>
+              <span className={styles.qtyValue}>{qty}</span>
+              <button
+                type="button"
+                className={styles.qtyBtn}
+                onClick={() => updateQuantity(key, 1)}
+                aria-label={`Increase ${item.label}`}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className={styles.page}>
@@ -123,39 +162,24 @@ export default function PricingPage() {
                 Individual inspection, specialty stain treatment, eco-friendly solvents, and hand-pressed finishing.
               </p>
 
-              <div className={styles.menuGrid}>
-                {Object.entries(DRY_CLEAN_PRICES).map(([key, item]) => {
-                  const qty = dryCleanQuantities[key] || 0;
-                  return (
-                    <div key={key} className={styles.menuRow}>
-                      <div className={styles.itemInfo}>
-                        <span className={styles.itemName}>{item.label}</span>
-                        <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
-                      </div>
-                      <div className={styles.quantityControls}>
-                        <button
-                          type="button"
-                          className={styles.qtyBtn}
-                          onClick={() => updateQuantity(key, -1)}
-                          disabled={qty === 0}
-                          aria-label={`Decrease ${item.label}`}
-                        >
-                          -
-                        </button>
-                        <span className={styles.qtyValue}>{qty}</span>
-                        <button
-                          type="button"
-                          className={styles.qtyBtn}
-                          onClick={() => updateQuantity(key, 1)}
-                          aria-label={`Increase ${item.label}`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+              {renderMenu('dry_clean')}
+            </Card>
+
+            {/* Household Menu */}
+            <Card variant="bordered" padding="lg" className={styles.priceCard}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <span className={styles.cardIcon}>🛏️</span>
+                  <h2 className={styles.cardTitle}>Household Items</h2>
+                </div>
+                <span className={styles.perItemBadge}>Published Rate Card</span>
               </div>
+
+              <p className={styles.cardDescription}>
+                Comforters, blankets, table linens, and drapes, cleaned and returned ready to use. Napkins are $64.99 per dozen; the dozen price applies automatically.
+              </p>
+
+              {renderMenu('household')}
             </Card>
 
             {/* 24-Hour Express Card */}
@@ -173,13 +197,13 @@ export default function PricingPage() {
               <div className={styles.expressDetailsBox}>
                 <div className={styles.expressPricingHighlight}>
                   <strong className={styles.expressSurchargeText}>+50% Surcharge</strong>
-                  <span className={styles.expressMinText}>(minimum $15) — shown in your total before checkout.</span>
+                  <span className={styles.expressMinText}>of your order, shown in your total before checkout. Your area&apos;s order minimum still applies.</span>
                 </div>
                 <ul className={styles.expressSpecList}>
                   <li>
                     <span>📅</span>
                     <div>
-                      <strong>Monday–Friday pickups</strong> · Limited daily slots · Excludes specialty &amp; leather care.
+                      <strong>Monday–Thursday pickups</strong> · Limited daily slots · Excludes specialty garments and household items.
                     </div>
                   </li>
                   <li>
@@ -307,7 +331,7 @@ export default function PricingPage() {
                 {/* Dry Clean Summary */}
                 <div className={styles.calcSection}>
                   <div className={styles.calcRowHeader}>
-                    <span>Dry Clean Garments:</span>
+                    <span>Dry Cleaning &amp; Household:</span>
                     <span>{totalDryCleanItems} items</span>
                   </div>
                   {totalDryCleanItems > 0 ? (
@@ -320,13 +344,15 @@ export default function PricingPage() {
                             <span>
                               {qty}x {item.label}
                             </span>
-                            <span>${(qty * item.price).toFixed(2)}</span>
+                            <span>
+                              {item.fromPrice ? 'from ' : ''}${catalogLineTotal(key, qty).toFixed(2)}
+                            </span>
                           </li>
                         );
                       })}
                     </ul>
                   ) : (
-                    <p className={styles.emptyNote}>Use the + buttons on the left to add dry cleaning items.</p>
+                    <p className={styles.emptyNote}>Use the + buttons on the left to add dry cleaning or household items.</p>
                   )}
                 </div>
 
@@ -353,7 +379,7 @@ export default function PricingPage() {
                       style={!calcZone?.expressEligible ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                       title={!calcZone?.expressEligible ? `24-Hour Express unavailable in ${calcZone?.name || 'this area'}` : undefined}
                     >
-                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%, min $15)' : '(Not in Zone)'}
+                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%)' : '(Not in Zone)'}
                     </button>
                   </div>
                 </div>
@@ -368,13 +394,13 @@ export default function PricingPage() {
                   )}
                   {calculatedDryClean > 0 && (
                     <div className={styles.breakdownRow}>
-                      <span>Dry Cleaning ({totalDryCleanItems} items)</span>
+                      <span>Dry Cleaning &amp; Household ({totalDryCleanItems} items)</span>
                       <span>${calculatedDryClean.toFixed(2)}</span>
                     </div>
                   )}
                   {financials.expressSurcharge > 0 && (
                     <div className={styles.breakdownRow}>
-                      <span>Express Surcharge (+50%, min $15)</span>
+                      <span>Express Surcharge (+50%)</span>
                       <span>+${financials.expressSurcharge.toFixed(2)}</span>
                     </div>
                   )}

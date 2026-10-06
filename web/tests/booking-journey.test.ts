@@ -110,7 +110,7 @@ describe('Booking Journey E2E Integration Tests', () => {
       const weightLbs = 20;
       const washFoldSubtotal = weightLbs * WASH_FOLD_PRICE_PER_LB; // 20 * $3 = $60
       const dryCleanItems = [
-        { garment_type: 'jacket', quantity: 2 }, // 2 * $14.99 = $29.98
+        { garment_type: 'jacket', quantity: 2 }, // 2 * $22.99 = $45.98
         { garment_type: 'laundered_shirt', quantity: 4 }, // 4 * $4.99 = $19.96
       ];
 
@@ -120,8 +120,8 @@ describe('Booking Journey E2E Integration Tests', () => {
 
       const totalSubtotal = Number((washFoldSubtotal + dryCleanSubtotal).toFixed(2));
       expect(washFoldSubtotal).toBe(60);
-      expect(Number(dryCleanSubtotal.toFixed(2))).toBe(49.94);
-      expect(totalSubtotal).toBe(109.94);
+      expect(Number(dryCleanSubtotal.toFixed(2))).toBe(65.94);
+      expect(totalSubtotal).toBe(125.94);
     });
 
     it('enforces 15 lb minimum price on small wash & fold loads', () => {
@@ -135,13 +135,13 @@ describe('Booking Journey E2E Integration Tests', () => {
   });
 
   describe('Step 3: Schedule, Turnaround, and Express Surcharge', () => {
-    it('applies 50% Express surcharge with $15 minimum floor', () => {
+    it('applies a straight 50% Express surcharge, with no $15 floor (client 2026-10-06)', () => {
       const smallSubtotal = 20;
       const smallSurcharge = calculateOrderFinancials({
         subtotal: smallSubtotal,
         isExpress: true,
       }).expressSurcharge;
-      expect(smallSurcharge).toBe(15); // Hit $15 floor (50% of $20 = $10 < $15)
+      expect(smallSurcharge).toBe(10); // 50% of $20; the old $15 floor is gone
 
       const largeSubtotal = 100;
       const largeSurcharge = calculateOrderFinancials({
@@ -223,12 +223,12 @@ describe('Booking Journey E2E Integration Tests', () => {
         promoDiscountPercent: PROMO_DISCOUNT_PERCENT,
       });
 
-      // 20 lbs * $3 = $60 + 2 jackets * $14.99 = $29.98 -> subtotal = $89.98
-      expect(recomputed.subtotal).toBe(89.98);
-      // Express 50% on 89.98 = $44.99
-      expect(recomputed.financials.expressSurcharge).toBe(44.99);
-      // 10% frequency discount on 89.98 = $9.00
-      expect(recomputed.financials.frequencyDiscount).toBe(9.00);
+      // 20 lbs * $3 = $60 + 2 jackets * $22.99 = $45.98 -> subtotal = $105.98
+      expect(recomputed.subtotal).toBe(105.98);
+      // Express 50% on 105.98 = $52.99
+      expect(recomputed.financials.expressSurcharge).toBe(52.99);
+      // 10% frequency discount on 105.98 = $10.598 -> $10.60
+      expect(recomputed.financials.frequencyDiscount).toBe(10.60);
       expect(recomputed.financials.finalTotal).toBeGreaterThan(0);
 
       const validPayload = {

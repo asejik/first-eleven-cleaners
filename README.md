@@ -28,8 +28,8 @@ graph TD
 ## 🚀 Key System Features
 
 ### 1. 🧺 Customer Experience PWA (`/`, `/book`, `/dashboard`, `/track/[orderId]`)
-* **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning item selector, and morning/evening pickup windows. First-time customers book without creating an account.
-* **Server-Checked Schedule (Dallas time):** Standard pickups need 2 days' notice, never on Sunday, up to 60 days ahead. **24-Hour Express** is Mon-Fri, morning window only, with 7 AM (same-day) and 9 PM (next-day) cutoffs, a +50% surcharge ($15 minimum), and specialty items excluded. Window and Express capacity are enforced.
+* **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning and household item selector (napkins have a dozen price; "from" items such as wedding dresses and drapes are quoted at intake), and morning/evening pickup windows. First-time customers book without creating an account.
+* **Server-Checked Schedule (Dallas time):** Standard pickups need 2 days' notice, never on Sunday, up to 60 days ahead. The plant runs Monday to Friday, so delivery is 2 plant days after pickup (Thursday pickups come back Monday; Friday and Saturday pickups Tuesday, and Saturday bookings say so). **24-Hour Express** is Mon-Thu, morning window only, delivered the next plant day, with 7 AM (same-day) and 9 PM (next-day) cutoffs, a +50% surcharge, and specialty garments and household items excluded. Window and Express capacity are enforced.
 * **Safe Checkout:** Prices are recomputed on the server in whole cents. Each booking (order, items, promo use) is saved in one database transaction, and a double-click or retry returns the first order instead of booking twice.
 * **Card on File, Charged After Weighing:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and charged the final, itemized, taxed total after intake inspection.
 * **Live Order Tracker:** Visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*, with readable dates and a Dallas-time "delayed" check. Cancelled pickups show a clear cancelled panel, and a failed load offers *Try Again* instead of "not found". Tracking links are private to the customer.
@@ -90,7 +90,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 | **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
 | **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
 | **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
-| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 517 unit tests across 87 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
+| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 593 unit tests across 91 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
 
 ---
 
@@ -229,7 +229,7 @@ Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` w
 
 ### 8. Testing & Verification
 ```bash
-npm test                                   # 517 Vitest tests
+npm test                                   # 593 Vitest tests
 npx vitest run tests/pricing.test.ts       # a single test file
 npx vitest run -t "test name"              # a single test by name
 npx tsc --noEmit                           # type check

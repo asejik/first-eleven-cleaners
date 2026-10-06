@@ -21,6 +21,9 @@ import { checkIntakeAllowed } from '@/lib/order-lifecycle';
 import { texasDate, texasDayStartUtc } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
+import { priceIntakeLine } from '@/lib/intake-quote';
+import { recordAdminAction } from '@/lib/audit-log';
+import { getClientIp } from '@/lib/rate-limiter';
 
 
 const IntakeSchema = z.object({
@@ -32,6 +35,8 @@ const IntakeSchema = z.object({
         garment_type: z.string().min(1).max(100),
         quantity: z.number().int().min(0).max(500),
         notes: z.string().max(500).optional(),
+        /** Staff quote for a "from" item (lib/intake-quote.ts checks it) */
+        quoted_unit_price: z.number({ message: 'The quoted price must be a number' }).positive().optional(),
       })
     )
     .max(100)
@@ -182,25 +187,31 @@ export async function POST(request: Request) {
       });
     }
 
-    if (Array.isArray(dry_clean_items)) {
-      dry_clean_items.forEach((item) => {
-        const qty = item.quantity;
-        if (qty > 0) {
-          const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
-          const unitPrice = priceMeta ? priceMeta.price : 8.99;
-          const itemSubtotal = qty * unitPrice;
-          dryCleanSubtotal += itemSubtotal;
+    // Catalog prices, or a staff quote for "from" items, checked before the card is charged
+    const intakeQuotes: Array<{ item: string; quantity: number; listed: number; quoted: number }> = [];
+    for (const item of dry_clean_items) {
+      const qty = item.quantity;
+      if (qty <= 0) continue;
+      const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
+      const line = priceIntakeLine(item.garment_type, qty, item.quoted_unit_price);
+      if (!line.ok) {
+        return NextResponse.json({ error: line.error }, { status: 400 });
+      }
+      dryCleanSubtotal += line.subtotal;
+      const label = priceMeta ? priceMeta.label : item.garment_type;
+      if (line.quote) intakeQuotes.push({ item: label, quantity: qty, ...line.quote });
+      const quoteNote = line.quote
+        ? `Quoted at intake: $${line.quote.quoted.toFixed(2)} each (from $${line.quote.listed.toFixed(2)})`
+        : '';
 
-          orderItemsToInsert.push({
-            order_id: order.id,
-            garment_type: priceMeta ? priceMeta.label : item.garment_type,
-            service_type: 'dry_clean',
-            quantity: qty,
-            unit_price: unitPrice,
-            subtotal: itemSubtotal,
-            notes: item.notes || undefined,
-          });
-        }
+      orderItemsToInsert.push({
+        order_id: order.id,
+        garment_type: label,
+        service_type: 'dry_clean',
+        quantity: qty,
+        unit_price: line.unitPrice,
+        subtotal: line.subtotal,
+        notes: [quoteNote, item.notes].filter(Boolean).join(' · ') || undefined,
       });
     }
 
@@ -373,6 +384,18 @@ export async function POST(request: Request) {
         { error: 'This order changed while intake was running. Refresh the queue and check the order before retrying.' },
         { status: 409 }
       );
+    }
+
+    // Staff-quoted prices are money decisions: record who quoted what (PR-24)
+    if (intakeQuotes.length > 0) {
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: 'order.intake_price_quote',
+        targetType: 'order',
+        targetId: order.id,
+        details: { order_number: order.order_number, quotes: intakeQuotes, subtotal },
+        ip: getClientIp(request),
+      });
     }
 
     // 7. Log Timeline Events

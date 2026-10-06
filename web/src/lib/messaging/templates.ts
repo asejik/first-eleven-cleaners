@@ -1,5 +1,6 @@
 import type { OrderStatusKey } from '@/lib/constants';
 import { greetingFirstName } from '@/lib/sanitize';
+import { isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
 
 export interface MessagePayload {
   orderId: string;
@@ -51,14 +52,17 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
   const dWindow = data.deliveryWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : 'Evening (5:00–8:00 PM)';
 
   switch (data.stage) {
-    case 'booked':
+    case 'booked': {
+      // Client 2026-10-06: the plant runs Mon-Fri, so Saturday pickups say when they come back
+      const saturday = data.pickupDate && isSaturdayPickup(data.pickupDate) ? ` ${SATURDAY_PICKUP_NOTICE}` : '';
       return {
         stage: 'booked',
         title: '📋 Order Confirmation',
-        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window. Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
-        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
+        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${saturday} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
+        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${saturday ? `\n🚚${saturday}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
         mediaUrl: data.photoUrl,
       };
+    }
 
     case 'picked_up':
       return {

@@ -5,7 +5,7 @@ import type {
   ConciergeContext,
   IAIEngineProvider,
 } from './types';
-import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE } from './price-list';
+import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE, NO_LEATHER_LINE, plantScheduleLine } from './price-list';
 import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB } from '@/lib/constants';
 
 export * from './types';
@@ -171,6 +171,26 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
           label: '⚙️ Setup Preferences',
           url: '/dashboard/preferences',
         },
+      };
+    }
+
+    // 5a. Leather and suede: not cleaned (client 2026-10-06)
+    if (/\b(leather|suede|cuero|gamuza)\b/i.test(raw)) {
+      return {
+        content: isSpanish
+          ? 'Lo sentimos: no limpiamos cuero ni gamuza. Con gusto atendemos el resto de sus prendas.'
+          : `Sorry: ${NO_LEATHER_LINE} We're happy to take care of the rest of your wardrobe.`,
+        intent: 'general_faq',
+        detectedLanguage: isSpanish ? 'es' : 'en',
+      };
+    }
+
+    // 5b. Operating days and delivery days (the plant runs Mon-Fri)
+    if (/\b(saturday|sunday|weekend|weekday|what days|which days|turnaround|s[aá]bado|domingo|fin de semana)\b/i.test(raw)) {
+      return {
+        content: plantScheduleLine(isSpanish ? 'es' : 'en'),
+        intent: 'general_faq',
+        detectedLanguage: isSpanish ? 'es' : 'en',
       };
     }
 
