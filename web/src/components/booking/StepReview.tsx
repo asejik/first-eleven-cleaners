@@ -95,7 +95,7 @@ export function StepReview({
       <div className={styles.reviewSummary}>
         {/* Pickup info */}
         <div className={styles.summarySection}>
-          <h4><span aria-hidden="true">📍</span> Pickup &amp; Delivery Schedule</h4>
+          <h2><span aria-hidden="true">📍</span> Pickup &amp; Delivery Schedule</h2>
           <p>
             <strong>Address:</strong> {street} {unit && `(${unit})`}, {city}, TX {zip}
           </p>
@@ -122,7 +122,7 @@ export function StepReview({
 
         {/* Itemized breakdown */}
         <div className={styles.summarySection}>
-          <h4><span aria-hidden="true">🧺</span> Garment Breakdown</h4>
+          <h2><span aria-hidden="true">🧺</span> Garment Breakdown</h2>
           {serviceType !== 'dry_clean' && (
             <div className={styles.summaryLine}>
               <span>Wash & Fold (~{washFoldWeight} lbs)</span>

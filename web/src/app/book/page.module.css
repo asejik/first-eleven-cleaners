@@ -350,7 +350,7 @@
   margin-bottom: var(--space-3);
 }
 
-.sectionHeader h3 {
+.sectionHeader h2 {
   font-size: var(--text-base);
   font-weight: var(--font-bold);
   color: var(--color-navy);
@@ -639,7 +639,7 @@
   border: 1px solid var(--color-gray-200);
 }
 
-.summarySection h4 {
+.summarySection h2 {
   font-size: var(--text-sm);
   font-weight: var(--font-bold);
   color: var(--color-navy);
@@ -827,7 +827,7 @@
   text-align: left;
 }
 
-.trackerContainer h3 {
+.trackerContainer h2 {
   font-size: var(--text-base);
   font-weight: var(--font-bold);
   color: var(--color-navy);

@@ -48,7 +48,7 @@ export function StepConfirmation({
 
       {/* Domino's Style 6-Stage Progress Indicator */}
       <div className={styles.trackerContainer}>
-        <h3>48-Hour Match-Ready Tracker</h3>
+        <h2>48-Hour Match-Ready Tracker</h2>
         <div className={styles.stageTimeline}>
           {STAGES.map((stg) => (
             <div

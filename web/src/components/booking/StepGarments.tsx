@@ -72,7 +72,7 @@ export function StepGarments({
       {serviceType !== 'dry_clean' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h3><span aria-hidden="true">🧺</span> Wash & Fold (Everyday Laundry)</h3>
+            <h2><span aria-hidden="true">🧺</span> Wash & Fold (Everyday Laundry)</h2>
             <Badge variant="success">$3.00 / lb</Badge>
           </div>
           <div className={styles.weightSelector}>
@@ -141,7 +141,7 @@ export function StepGarments({
       {serviceType !== 'wash_fold' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h3><span aria-hidden="true">👔</span> Professional Dry Cleaning Items</h3>
+            <h2><span aria-hidden="true">👔</span> Professional Dry Cleaning Items</h2>
             <span className={styles.subtext}>Select item quantities</span>
           </div>
           <p className="sr-only" role="status" aria-live="polite">{qtyAnnouncement}</p>
