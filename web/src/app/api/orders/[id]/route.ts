@@ -97,6 +97,10 @@ export async function GET(
             // Payment Hold: the link holder can pay the amount due (PR-04). No other money data.
             payment_hold: dbOrder.payment_status === 'failed',
             ...(dbOrder.payment_status === 'failed' ? { amount_due: amountOwed(dbOrder) } : {}),
+            // Card hold declined 2 days before pickup: the link holder can add a new card (Part A)
+            ...(dbOrder.status === 'booked' && dbOrder.hold_status === 'declined'
+              ? { card_needed: true, hold_amount: Number(dbOrder.hold_amount) || 0 }
+              : {}),
             photos: ((dbOrder.photos || []) as Array<Record<string, unknown>>).map((photo) => ({
               id: photo.id,
               photo_type: photo.photo_type,

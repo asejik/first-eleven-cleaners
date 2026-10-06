@@ -107,6 +107,9 @@ export interface Order {
   /** Public tracking view only: order is on Payment Hold, and the amount the link holder can pay (PR-04) */
   payment_hold?: boolean;
   amount_due?: number;
+  /** Public tracking: the card hold was declined before pickup and a new card is needed (Part A) */
+  card_needed?: boolean;
+  hold_amount?: number | null;
   notes: string | null;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
   created_at: string;

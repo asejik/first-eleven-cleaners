@@ -17,7 +17,17 @@ interface SquareCard {
   destroy: () => Promise<void>;
 }
 
-export function PayNowCard({ orderId, amountDue }: { orderId: string; amountDue: number }) {
+export function PayNowCard({
+  orderId,
+  amountDue,
+  mode = 'pay',
+}: {
+  orderId: string;
+  amountDue: number;
+  /** 'hold': a new card for an upcoming pickup whose hold was declined (Part A); nothing is charged */
+  mode?: 'pay' | 'hold';
+}) {
+  const isHold = mode === 'hold';
   const appId = process.env.NEXT_PUBLIC_SQUARE_APP_ID || '';
   const locationId = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || '';
   const sdkUrl = appId.startsWith('sandbox-')
@@ -69,7 +79,7 @@ export function PayNowCard({ orderId, amountDue }: { orderId: string; amountDue:
       if (tokenResult.status !== 'OK' || !tokenResult.token) {
         throw new Error(tokenResult.errors?.[0]?.message || 'Please check your card details.');
       }
-      const res = await fetch(`/api/orders/${orderId}/pay`, {
+      const res = await fetch(`/api/orders/${orderId}/${isHold ? 'hold-card' : 'pay'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ card_token: tokenResult.token }),
@@ -88,17 +98,23 @@ export function PayNowCard({ orderId, amountDue }: { orderId: string; amountDue:
   if (paid) {
     return (
       <Card variant="bordered" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-        <strong>✅ Payment received. Thank you!</strong>
-        <p style={{ margin: 'var(--space-2) 0 0' }}>Your order will be delivered on schedule.</p>
+        <strong>{isHold ? "✅ Card updated. You're all set for your pickup." : '✅ Payment received. Thank you!'}</strong>
+        <p style={{ margin: 'var(--space-2) 0 0' }}>
+          {isHold ? 'Nothing is charged until your order is weighed and itemized.' : 'Your order will be delivered on schedule.'}
+        </p>
       </Card>
     );
   }
 
   return (
     <Card variant="bordered" padding="lg" style={{ marginBottom: 'var(--space-6)', borderColor: 'rgba(239, 68, 68, 0.45)' }}>
-      <h2 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>Payment needed: ${amountDue.toFixed(2)}</h2>
+      <h2 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>
+        {isHold ? 'New card needed before pickup' : `Payment needed: $${amountDue.toFixed(2)}`}
+      </h2>
       <p style={{ margin: 'var(--space-2) 0 var(--space-4)' }}>
-        Your card on file was declined. We&apos;re still cleaning your order; we&apos;ll deliver it as soon as it&apos;s paid. Add a new card securely below.
+        {isHold
+          ? `We couldn't place the $${amountDue.toFixed(2)} hold for your estimate on your card. Add a new card below; it is held, not charged, until your order is weighed and itemized.`
+          : "Your card on file was declined. We're still cleaning your order; we'll deliver it as soon as it's paid. Add a new card securely below."}
       </p>
 
       {appId && locationId ? (
@@ -106,7 +122,7 @@ export function PayNowCard({ orderId, amountDue }: { orderId: string; amountDue:
           <Script src={sdkUrl} strategy="afterInteractive" onLoad={() => setSdkLoaded(true)} onReady={() => setSdkLoaded(true)} />
           <div ref={containerRef} style={{ minHeight: '90px' }} aria-label="Secure card form" />
           <Button variant="primary" fullWidth onClick={handlePay} disabled={!ready || isPaying} style={{ marginTop: 'var(--space-3)' }}>
-            {isPaying ? 'Processing…' : `Pay $${amountDue.toFixed(2)}`}
+            {isPaying ? 'Processing…' : isHold ? 'Save card for pickup' : `Pay $${amountDue.toFixed(2)}`}
           </Button>
         </>
       ) : (
