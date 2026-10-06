@@ -2,9 +2,9 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata = pageMetadata({
   path: '/commercial',
-  title: 'Commercial B2B Laundry & Dry Cleaning',
+  title: 'Commercial Laundry & Dry Cleaning',
   description:
-    'SLA-backed B2B dry cleaning and commercial laundry programs for Dallas–Fort Worth businesses, hotels, salons, and athletic facilities. Certified MBE, SDVOSB, Veteran-HUB, DBE.',
+    'SLA-backed dry cleaning and laundry programs for DFW hotels, salons, gyms and offices. Certified MBE, SDVOSB, Texas Veteran-HUB and DBE.',
   imageAlt: 'First Eleven Cleaners - Commercial B2B Laundry & Dry Cleaning Programs',
 });
 
