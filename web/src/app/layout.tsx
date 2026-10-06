@@ -8,6 +8,7 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { ToastContainer } from '@/components/ui/Toast';
 import { CookieConsent } from '@/components/ui/CookieConsent';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
+import { SITE_URL } from '@/lib/seo';
 import '@/styles/globals.css';
 import '@/styles/animations.css';
 
@@ -25,7 +26,7 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://firstelevencleaners.com'),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: '/',
   },
@@ -113,25 +114,25 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'WebSite',
-      '@id': 'https://firstelevencleaners.com/#website',
-      url: 'https://firstelevencleaners.com',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
       name: 'First Eleven Cleaners',
       description:
         'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex.',
       publisher: {
-        '@id': 'https://firstelevencleaners.com/#organization',
+        '@id': `${SITE_URL}/#organization`,
       },
     },
     {
       '@type': 'DryCleaningOrLaundryService',
-      '@id': 'https://firstelevencleaners.com/#organization',
+      '@id': `${SITE_URL}/#organization`,
       name: 'First Eleven Cleaners',
       image: [
-        'https://firstelevencleaners.com/og-image.jpg',
-        'https://firstelevencleaners.com/logo.png',
-        'https://firstelevencleaners.com/icon.png',
+        `${SITE_URL}/og-image.jpg`,
+        `${SITE_URL}/logo.png`,
+        `${SITE_URL}/icon.png`,
       ],
-      url: 'https://firstelevencleaners.com',
+      url: SITE_URL,
       telephone: '+1-682-200-0039',
       email: 'support@firstelevencleaners.com',
       priceRange: '$$',

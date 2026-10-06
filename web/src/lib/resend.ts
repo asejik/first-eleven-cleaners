@@ -4,6 +4,7 @@
 
 import { escapeHtml, greetingFirstName } from '@/lib/sanitize';
 import { SUPPORT_PHONE } from '@/lib/constants';
+import { SITE_URL } from '@/lib/seo';
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -237,7 +238,7 @@ export function buildWelcomeEmailHtml({
 
       <!-- CTA -->
       <div style="text-align: center; margin: 32px 0 16px;">
-        <a href="https://firstelevencleaners.com/book" style="background-color: #0B1F3A; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
+        <a href="${SITE_URL}/book" style="background-color: #0B1F3A; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
           Schedule Your First Pickup &rarr;
         </a>
       </div>

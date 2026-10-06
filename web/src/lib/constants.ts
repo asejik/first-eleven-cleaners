@@ -519,7 +519,7 @@ export function getAppBaseUrl(): string {
     return `https://${process.env.VERCEL_URL}`;
   }
   if (process.env.NODE_ENV === 'production') {
-    return 'https://firstelevencleaners.com';
+    return 'https://www.firstelevencleaners.com';
   }
   return 'http://localhost:3000';
 }
