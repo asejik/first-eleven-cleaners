@@ -1,6 +1,5 @@
 import { pageMetadata } from '@/lib/seo';
-import Link from 'next/link';
-import { Button } from '@/components/ui';
+import { ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -99,12 +98,8 @@ export default function AboutPage() {
           and we brought every lesson home to Dallas.
         </p>
         <div className={styles.heroActions}>
-          <Link href={ROUTES.book}>
-            <Button variant="primary" size="lg">Schedule a Pickup</Button>
-          </Link>
-          <Link href={ROUTES.commercial}>
-            <Button variant="outlineLight" size="lg">For Business</Button>
-          </Link>
+          <ButtonLink href={ROUTES.book} variant="primary" size="lg">Schedule a Pickup</ButtonLink>
+          <ButtonLink href={ROUTES.commercial} variant="outlineLight" size="lg">For Business</ButtonLink>
         </div>
       </section>
 
@@ -318,12 +313,8 @@ export default function AboutPage() {
             48-hour turnaround. Every step tracked. Every price visible. No surprises — ever.
           </p>
           <div className={styles.ctaActions}>
-            <Link href={ROUTES.book}>
-              <Button variant="primary" size="lg">Schedule Your First Pickup</Button>
-            </Link>
-            <Link href={ROUTES.commercial}>
-              <Button variant="outlineGold" size="lg">Enquire for Business</Button>
-            </Link>
+            <ButtonLink href={ROUTES.book} variant="primary" size="lg">Schedule Your First Pickup</ButtonLink>
+            <ButtonLink href={ROUTES.commercial} variant="outlineGold" size="lg">Enquire for Business</ButtonLink>
           </div>
           <p className={styles.ctaPromo}>
             First order? Use code <strong>KICKOFF15</strong> for 15% off.

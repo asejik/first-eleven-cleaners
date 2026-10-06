@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import Image from 'next/image';
-import { Button } from '@/components/ui';
+import { ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './not-found.module.css';
 
@@ -26,16 +25,12 @@ export default function NotFound() {
           The page you are looking for has been moved, substituted, or does not exist.
         </p>
         <div className={styles.actions}>
-          <Link href={ROUTES.home}>
-            <Button variant="primary" size="lg">
-              Return to Home Pitch
-            </Button>
-          </Link>
-          <Link href={ROUTES.book}>
-            <Button variant="outline" size="lg">
-              Schedule a Pickup
-            </Button>
-          </Link>
+          <ButtonLink href={ROUTES.home} variant="primary" size="lg">
+            Return to Home Pitch
+          </ButtonLink>
+          <ButtonLink href={ROUTES.book} variant="outline" size="lg">
+            Schedule a Pickup
+          </ButtonLink>
         </div>
       </div>
     </div>

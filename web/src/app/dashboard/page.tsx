@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomerOrders } from '@/hooks/useOrders';
 import { useCustomerClaims } from '@/hooks/useClaims';
-import { Button, Card, Badge, Skeleton, RefreshButton } from '@/components/ui';
+import { Button, Card, Badge, Skeleton, RefreshButton, ButtonLink } from '@/components/ui';
 import { CreditCard, MapPin, User as UserIcon, Plus } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
@@ -66,11 +66,9 @@ export default function DashboardPage() {
               }}
             >
               <span>⚡ <strong>Administrator Mode:</strong> You are viewing the customer portal preview.</span>
-              <Link href={ROUTES.missionControl}>
-                <Button variant="outline" size="sm" style={{ borderColor: 'var(--color-gold)', color: 'var(--color-gold)' }}>
-                  Return to Mission Control →
-                </Button>
-              </Link>
+              <ButtonLink href={ROUTES.missionControl} variant="outline" size="sm" style={{ borderColor: 'var(--color-gold)', color: 'var(--color-gold)' }}>
+                Return to Mission Control →
+              </ButtonLink>
             </div>
           )}
 
@@ -90,30 +88,22 @@ export default function DashboardPage() {
                   variant="outline"
                 />
               </div>
-              <Link href={ROUTES.billing} className={styles.actionItem}>
-                <Button variant="outline" size="sm" className={styles.actionBtn}>
-                  <CreditCard size={14} strokeWidth={1.8} className={styles.btnIcon} />
-                  Billing &amp; Cards
-                </Button>
-              </Link>
-              <Link href={ROUTES.addresses} className={styles.actionItem}>
-                <Button variant="outline" size="sm" className={styles.actionBtn}>
-                  <MapPin size={14} strokeWidth={1.8} className={styles.btnIcon} />
-                  Addresses
-                </Button>
-              </Link>
-              <Link href={ROUTES.profile} className={styles.actionItem}>
-                <Button variant="outline" size="sm" className={styles.actionBtn}>
-                  <UserIcon size={14} strokeWidth={1.8} className={styles.btnIcon} />
-                  Profile
-                </Button>
-              </Link>
-              <Link href={ROUTES.book} className={styles.actionItem}>
-                <Button variant="primary" size="sm" className={styles.actionBtn}>
-                  <Plus size={14} strokeWidth={2.2} className={styles.btnIcon} />
-                  Schedule Pickup
-                </Button>
-              </Link>
+              <ButtonLink href={ROUTES.billing} variant="outline" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
+                <CreditCard size={14} strokeWidth={1.8} className={styles.btnIcon} />
+                Billing &amp; Cards
+              </ButtonLink>
+              <ButtonLink href={ROUTES.addresses} variant="outline" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
+                <MapPin size={14} strokeWidth={1.8} className={styles.btnIcon} />
+                Addresses
+              </ButtonLink>
+              <ButtonLink href={ROUTES.profile} variant="outline" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
+                <UserIcon size={14} strokeWidth={1.8} className={styles.btnIcon} />
+                Profile
+              </ButtonLink>
+              <ButtonLink href={ROUTES.book} variant="primary" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
+                <Plus size={14} strokeWidth={2.2} className={styles.btnIcon} />
+                Schedule Pickup
+              </ButtonLink>
             </div>
           </div>
 
@@ -200,11 +190,9 @@ export default function DashboardPage() {
                 <span className={styles.emptyIcon}>🧺</span>
                 <h3>No Active Pickups Right Now</h3>
                 <p>Your laundry basket looking full? Schedule a pickup in under 60 seconds.</p>
-                <Link href={ROUTES.book}>
-                  <Button variant="primary" style={{ marginTop: 'var(--space-3)' }}>
-                    Schedule a Pickup
-                  </Button>
-                </Link>
+                <ButtonLink href={ROUTES.book} variant="primary" style={{ marginTop: 'var(--space-3)' }}>
+                  Schedule a Pickup
+                </ButtonLink>
               </Card>
             ) : (
               <div className={styles.ordersList}>
@@ -303,11 +291,9 @@ export default function DashboardPage() {
                       </div>
 
                       <div className={styles.orderActions}>
-                        <Link href={ROUTES.orderDetail(order.id)}>
-                          <Button variant="primary" size="sm">
-                            Live Tracker & Photos →
-                          </Button>
-                        </Link>
+                        <ButtonLink href={ROUTES.orderDetail(order.id)} variant="primary" size="sm">
+                          Live Tracker & Photos →
+                        </ButtonLink>
                       </div>
                     </Card>
                   );
@@ -347,17 +333,13 @@ export default function DashboardPage() {
                     </div>
                     <div className={styles.orderActions}>
                       {order.payment_status === 'failed' && (
-                        <Link href={ROUTES.billing}>
-                          <Button variant="outline" size="sm" style={{ borderColor: '#ef4444', color: '#f87171' }}>
-                            Settle Payment
-                          </Button>
-                        </Link>
+                        <ButtonLink href={ROUTES.billing} variant="outline" size="sm" style={{ borderColor: '#ef4444', color: '#f87171' }}>
+                          Settle Payment
+                        </ButtonLink>
                       )}
-                      <Link href={ROUTES.orderDetail(order.id)}>
-                        <Button variant="outline" size="sm">
-                          View Garment Passport
-                        </Button>
-                      </Link>
+                      <ButtonLink href={ROUTES.orderDetail(order.id)} variant="outline" size="sm">
+                        View Garment Passport
+                      </ButtonLink>
                     </div>
                   </Card>
                 ))}

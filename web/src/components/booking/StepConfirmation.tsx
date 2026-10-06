@@ -1,7 +1,6 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, Badge, Button } from '@/components/ui';
+import { Card, Badge, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
 
@@ -68,36 +67,28 @@ export function StepConfirmation({
 
       <div className={styles.confActions} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         {/* Direct Public Tracking Link (No login required) */}
-        <Link href={ROUTES.track(confirmedOrder.id)}>
-          <Button variant="primary" size="lg" fullWidth>
-            Track Order Live 🔍
-          </Button>
-        </Link>
+        <ButtonLink href={ROUTES.track(confirmedOrder.id)} variant="primary" size="lg" fullWidth>
+          Track Order Live 🔍
+        </ButtonLink>
 
         {user ? (
-          <Link href={ROUTES.dashboard}>
-            <Button variant="outline" fullWidth>
-              View in Customer Dashboard
-            </Button>
-          </Link>
+          <ButtonLink href={ROUTES.dashboard} variant="outline" fullWidth>
+            View in Customer Dashboard
+          </ButtonLink>
         ) : (
           <div style={{ marginTop: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-500)', textAlign: 'center' }}>
               Want 1-click rebooking, saved addresses, and photo receipts in one place?
             </p>
-            <Link href={ROUTES.signup}>
-              <Button variant="outline" fullWidth>
-                Create Account to Save Details
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.signup} variant="outline" fullWidth>
+              Create Account to Save Details
+            </ButtonLink>
           </div>
         )}
 
-        <Link href={ROUTES.home}>
-          <Button variant="ghost" fullWidth>
-            Return to Home
-          </Button>
-        </Link>
+        <ButtonLink href={ROUTES.home} variant="ghost" fullWidth>
+          Return to Home
+        </ButtonLink>
       </div>
     </Card>
   );

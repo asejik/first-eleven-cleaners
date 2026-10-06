@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import {
   ROUTES,
   APP_TAGLINE,
@@ -6,7 +5,7 @@ import {
   PROMO_DISCOUNT_PERCENT,
   EXPRESS_ENABLED,
 } from '@/lib/constants';
-import { Button } from '@/components/ui';
+import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
 
@@ -46,16 +45,12 @@ export default function HomePage() {
             Every step tracked.
           </p>
           <div className={styles.heroActions}>
-            <Link href={ROUTES.book}>
-              <Button variant="primary" size="lg">
-                Schedule a Pickup
-              </Button>
-            </Link>
-            <Link href={ROUTES.pricing}>
-              <Button variant="outlineLight" size="lg">
-                See Pricing
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.book} variant="primary" size="lg">
+              Schedule a Pickup
+            </ButtonLink>
+            <ButtonLink href={ROUTES.pricing} variant="outlineLight" size="lg">
+              See Pricing
+            </ButtonLink>
           </div>
         </div>
       </section>
@@ -194,11 +189,9 @@ export default function HomePage() {
             Clean clothes. More time. Less stress.
           </p>
           <div className={styles.ctaActions}>
-            <Link href={ROUTES.book}>
-              <Button variant="primary" size="lg">
-                Schedule Your First Pickup
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.book} variant="primary" size="lg">
+              Schedule Your First Pickup
+            </ButtonLink>
           </div>
           <p className={styles.ctaPromo}>
             Use code <strong>{PROMO_CODE_LAUNCH}</strong> for{' '}

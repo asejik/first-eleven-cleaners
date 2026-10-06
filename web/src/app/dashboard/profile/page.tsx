@@ -10,7 +10,7 @@ import { useCustomerPreferences } from '@/hooks/usePreferences';
 import { useCustomerClaims } from '@/hooks/useClaims';
 import { useCustomerProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Card, Badge, Input, Modal } from '@/components/ui';
+import { Button, Card, Badge, Input, Modal, ButtonLink } from '@/components/ui';
 import { ROUTES, SUPPORT_EMAIL } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from './page.module.css';
@@ -482,11 +482,9 @@ export default function ProfilePage() {
             <Link href={ROUTES.dashboard} className={styles.backLink}>
               ← Back to Dashboard
             </Link>
-            <Link href={ROUTES.book}>
-              <Button variant="primary" size="sm">
-                + Schedule Pickup
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.book} variant="primary" size="sm">
+              + Schedule Pickup
+            </ButtonLink>
           </div>
 
           {/* Profile Header Banner */}
@@ -521,11 +519,9 @@ export default function ProfilePage() {
             <Card variant="bordered" padding="lg" className={styles.card}>
               <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitle}>📍 Saved Addresses ({addresses.length})</h2>
-                <Link href={ROUTES.addresses}>
-                  <Button variant="outline" size="sm">
-                    Manage Addresses →
-                  </Button>
-                </Link>
+                <ButtonLink href={ROUTES.addresses} variant="outline" size="sm">
+                  Manage Addresses →
+                </ButtonLink>
               </div>
               <div className={styles.cardBody}>
                 {defaultAddr ? (
@@ -553,11 +549,9 @@ export default function ProfilePage() {
                   </p>
                 )}
 
-                <Link href={ROUTES.addresses} style={{ marginTop: 'auto' }}>
-                  <Button variant="outline" size="sm" fullWidth>
-                    + Add New Address (e.g. Office / Home)
-                  </Button>
-                </Link>
+                <ButtonLink href={ROUTES.addresses} style={{ marginTop: 'auto' }} variant="outline" size="sm" fullWidth>
+                  + Add New Address (e.g. Office / Home)
+                </ButtonLink>
               </div>
             </Card>
 
@@ -565,11 +559,9 @@ export default function ProfilePage() {
             <Card variant="bordered" padding="lg" className={styles.card}>
               <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitle}>🤖 Eleven&apos;s Memory</h2>
-                <Link href={ROUTES.preferences}>
-                  <Button variant="outline" size="sm">
-                    Edit Preferences →
-                  </Button>
-                </Link>
+                <ButtonLink href={ROUTES.preferences} variant="outline" size="sm">
+                  Edit Preferences →
+                </ButtonLink>
               </div>
               <div className={styles.cardBody}>
                 <div className={styles.prefPillGrid}>
@@ -617,11 +609,9 @@ export default function ProfilePage() {
                     <span>All orders in good standing</span>
                   </div>
                 )}
-                <Link href={ROUTES.dashboard} style={{ marginTop: 'auto' }}>
-                  <Button variant="ghost" size="sm" fullWidth>
-                    View Order History in Dashboard
-                  </Button>
-                </Link>
+                <ButtonLink href={ROUTES.dashboard} style={{ marginTop: 'auto' }} variant="ghost" size="sm" fullWidth>
+                  View Order History in Dashboard
+                </ButtonLink>
               </div>
             </Card>
 

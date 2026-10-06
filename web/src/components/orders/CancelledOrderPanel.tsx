@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui';
+import { ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './CancelledOrderPanel.module.css';
 
@@ -28,11 +27,9 @@ export function CancelledOrderPanel({ pickupDate }: { pickupDate?: string | null
           Your card was not charged.
         </p>
       </div>
-      <Link href={ROUTES.book} className={styles.action}>
-        <Button variant="primary" size="sm">
-          Book a New Pickup
-        </Button>
-      </Link>
+      <ButtonLink href={ROUTES.book} variant="primary" size="sm" className={styles.action}>
+        Book a New Pickup
+      </ButtonLink>
     </div>
   );
 }

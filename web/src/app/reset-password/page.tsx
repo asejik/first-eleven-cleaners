@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Input, Card } from '@/components/ui';
+import { Button, Input, Card, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from '../forgot-password/page.module.css';
@@ -75,11 +75,9 @@ export default function ResetPasswordPage() {
             <div className={styles.successIcon}>⏱️</div>
             <h3>Link Expired</h3>
             <p>This password reset link is no longer valid. Request a new one to continue.</p>
-            <Link href="/forgot-password">
-              <Button variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
-                Request a New Link
-              </Button>
-            </Link>
+            <ButtonLink href="/forgot-password" variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
+              Request a New Link
+            </ButtonLink>
           </div>
         ) : (
           <>

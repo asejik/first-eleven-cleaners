@@ -1,7 +1,7 @@
 // ============================================
 // FIRST ELEVEN CLEANERS — UI Component Barrel
 // ============================================
-export { Button } from './Button';
+export { Button, ButtonLink } from './Button';
 export { Input } from './Input';
 export { Card } from './Card';
 export { Badge } from './Badge';
