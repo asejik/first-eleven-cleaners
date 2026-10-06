@@ -4,7 +4,8 @@ import { useState, useMemo, useRef } from 'react';
 import { useSubmitIntake } from '@/hooks/useIntake';
 import { Button, Badge } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
-import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, catalogLineTotal, catalogPriceLabel, type OrderStatusKey } from '@/lib/constants';
+import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, catalogPriceLabel, type OrderStatusKey } from '@/lib/constants';
+import { priceIntakeLine } from '@/lib/intake-quote';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/intake/page.module.css';
 import { prepareImageForUpload } from '@/lib/image-upload';
@@ -34,6 +35,18 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
     return counts;
   });
   const [intakeNotes, setIntakeNotes] = useState<string>(() => order.notes || '');
+  // Staff quotes for "from" items (evening gown, wedding dress, drapes), as typed
+  // (a re-intake keeps an earlier quote above the starting price)
+  const [quotedPrices, setQuotedPrices] = useState<Record<string, string>>(() => {
+    const quotes: Record<string, string> = {};
+    (order.items || []).forEach((item) => {
+      const key = Object.keys(DRY_CLEAN_PRICES).find((k) => DRY_CLEAN_PRICES[k].label === item.garment_type);
+      if (key && DRY_CLEAN_PRICES[key].fromPrice && Number(item.unit_price) > DRY_CLEAN_PRICES[key].price) {
+        quotes[key] = Number(item.unit_price).toFixed(2);
+      }
+    });
+    return quotes;
+  });
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,11 +143,16 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
   const billedWeight = isWashFold ? Math.max(WASH_FOLD_MINIMUM_LBS, Number(weightLbs) || 0) : 0;
   const washFoldSubtotal = isWashFold ? billedWeight * WASH_FOLD_PRICE_PER_LB : 0;
 
-  // Same line rules as the server (dozen pricing); unknown items fall back to $8.99 as there
-  const dryCleanSubtotal = Object.keys(dryCleanCounts).reduce((acc, key) => {
-    const qty = dryCleanCounts[key] || 0;
-    return acc + (DRY_CLEAN_PRICES[key] ? catalogLineTotal(key, qty) : qty * 8.99);
-  }, 0);
+  // Same line rules as the server (dozen pricing, intake quotes for "from" items)
+  const quoteFor = (key: string): number | undefined => {
+    const typed = (quotedPrices[key] || '').trim();
+    return typed && DRY_CLEAN_PRICES[key]?.fromPrice ? Number(typed) : undefined;
+  };
+  const linePrices = Object.keys(dryCleanCounts)
+    .filter((key) => (dryCleanCounts[key] || 0) > 0)
+    .map((key) => ({ key, line: priceIntakeLine(key, dryCleanCounts[key], quoteFor(key)) }));
+  const quoteErrors = linePrices.flatMap(({ line }) => (line.ok ? [] : [line.error]));
+  const dryCleanSubtotal = linePrices.reduce((acc, { line }) => acc + (line.ok ? line.subtotal : 0), 0);
 
   const subtotal = washFoldSubtotal + dryCleanSubtotal;
   const discount = order.discount_amount || 0;
@@ -146,13 +164,14 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
     order.status === 'delivered';
 
   const handleFinalizeIntake = async () => {
-    if (isAlreadyFinalized) return;
+    if (isAlreadyFinalized || quoteErrors.length > 0) return;
 
     const dryCleanItemsArray = Object.keys(dryCleanCounts)
       .filter((k) => dryCleanCounts[k] > 0)
       .map((k) => ({
         garment_type: k,
         quantity: dryCleanCounts[k],
+        ...(quoteFor(k) !== undefined ? { quoted_unit_price: quoteFor(k) } : {}),
       }));
 
     try {
@@ -282,6 +301,22 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
                     {catalogPriceLabel(item)} / ea{item.dozenPrice ? ` · $${item.dozenPrice.toFixed(2)} / dozen` : ''}
                   </span>
                 </div>
+                {item.fromPrice && qty > 0 && (
+                  <label className={styles.itemPrice} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Quoted price each $
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={item.price}
+                      step="0.01"
+                      placeholder={item.price.toFixed(2)}
+                      value={quotedPrices[key] || ''}
+                      onChange={(e) => setQuotedPrices((prev) => ({ ...prev, [key]: e.target.value }))}
+                      aria-label={`Quoted price for each ${item.label}`}
+                      style={{ width: '90px' }}
+                    />
+                  </label>
+                )}
                 <div className={styles.counterActions}>
                   <button
                     type="button"
@@ -445,12 +480,17 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+          {quoteErrors.map((err) => (
+            <span key={err} role="alert" style={{ fontSize: 'var(--text-xs)', color: '#fca5a5' }}>
+              {err}
+            </span>
+          ))}
           <Button
             variant="primary"
             size="lg"
             onClick={handleFinalizeIntake}
             isLoading={submitIntake.isPending}
-            disabled={submitIntake.isPending || isAlreadyFinalized}
+            disabled={submitIntake.isPending || isAlreadyFinalized || quoteErrors.length > 0}
           >
             {isAlreadyFinalized
               ? '✓ Intake Completed & Payment Settled'

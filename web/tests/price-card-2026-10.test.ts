@@ -160,7 +160,8 @@ describe('Every screen uses the shared line rule (dozen pricing)', () => {
     'app/api/intake/route.ts',
     'app/api/pricing/calculate/route.ts',
   ])('%s', (file) => {
-    expect(read(file)).toMatch(/catalog(LineTotal|Subtotal)\(/);
+    // Intake prices lines through priceIntakeLine (lib/intake-quote.ts), which uses catalogLineTotal
+    expect(read(file)).toMatch(/catalog(LineTotal|Subtotal)\(|priceIntakeLine\(/);
     expect(read(file)).not.toMatch(/\.price \* qty|qty \* item\.price|priceMeta\.price \* item\.quantity/);
   });
 

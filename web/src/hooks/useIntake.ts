@@ -48,7 +48,7 @@ export function useSubmitIntake() {
     mutationFn: async (payload: {
       order_id: string;
       weight_lbs: number;
-      dry_clean_items: Array<{ garment_type: string; quantity: number; notes?: string }>;
+      dry_clean_items: Array<{ garment_type: string; quantity: number; notes?: string; quoted_unit_price?: number }>;
       photos: Array<{ photo_url: string; condition_notes?: string }>;
       advance_to_cleaning?: boolean;
       intake_notes?: string;
