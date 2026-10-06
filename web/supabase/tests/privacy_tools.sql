@@ -21,7 +21,6 @@ VALUES ('00000000-0000-0000-0000-0000000000e1', 'delivery_proof', 'https://x.sup
 INSERT INTO claims (order_id, customer_id, issue_type, description, photo_urls)
 VALUES ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000c1', 'damage', 'My name is Privacy Check, call 214-555-0111',
         ARRAY['https://x.supabase.co/storage/v1/object/public/claims-photos/e1/tear.jpg']);
-INSERT INTO conversations (customer_id, channel, messages) VALUES ('00000000-0000-0000-0000-0000000000c1', 'sms', '[{"role":"user","content":"hi"}]');
 INSERT INTO messages (customer_id, channel, direction, body) VALUES ('00000000-0000-0000-0000-0000000000c1', 'sms', 'inbound', 'Is my suit ready?');
 
 DO $$
@@ -34,7 +33,8 @@ BEGIN
   IF ex->'preferences'->>'gate_code' <> '1234#' THEN RAISE EXCEPTION '1: preferences'; END IF;
   IF jsonb_array_length(ex->'addresses') <> 1 OR jsonb_array_length(ex->'orders') <> 1 THEN RAISE EXCEPTION '1: addresses/orders'; END IF;
   IF jsonb_array_length(ex->'orders'->0->'items') <> 1 OR jsonb_array_length(ex->'orders'->0->'photos') <> 1 THEN RAISE EXCEPTION '1: items/photos'; END IF;
-  IF jsonb_array_length(ex->'claims') <> 1 OR jsonb_array_length(ex->'conversations') <> 1 THEN RAISE EXCEPTION '1: claims/conversations'; END IF;
+  IF jsonb_array_length(ex->'claims') <> 1 THEN RAISE EXCEPTION '1: claims'; END IF;
+  IF ex ? 'conversations' THEN RAISE EXCEPTION '1: export still reads the dropped conversations table'; END IF;
   IF ex->'messages'->0->>'body' <> 'Is my suit ready?' THEN RAISE EXCEPTION '1: messages %', ex->'messages'; END IF;
 
   -- 2. refuses while an order is in progress
@@ -55,7 +55,6 @@ BEGIN
     RAISE EXCEPTION '3: customer not cleared %', to_jsonb(c);
   END IF;
   IF EXISTS (SELECT 1 FROM customer_preferences WHERE customer_id = cid) THEN RAISE EXCEPTION '3: preferences kept'; END IF;
-  IF EXISTS (SELECT 1 FROM conversations WHERE customer_id = cid) THEN RAISE EXCEPTION '3: conversations kept'; END IF;
   IF EXISTS (SELECT 1 FROM messages WHERE customer_id = cid) THEN RAISE EXCEPTION '3: messages kept'; END IF;
   IF EXISTS (SELECT 1 FROM garment_photos WHERE order_id = '00000000-0000-0000-0000-0000000000e1') THEN RAISE EXCEPTION '3: photo rows kept'; END IF;
   IF NOT EXISTS (SELECT 1 FROM addresses WHERE customer_id = cid AND street = '[removed]' AND unit IS NULL AND delivery_notes IS NULL AND zip = '75201') THEN

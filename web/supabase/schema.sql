@@ -205,17 +205,6 @@ CREATE TABLE IF NOT EXISTS staff (
   is_active BOOLEAN NOT NULL DEFAULT true
 );
 
--- 13. CONVERSATIONS (Eleven Memory)
--- NO LONGER WRITTEN: messages are stored one per row in the messages table (PR-26).
-CREATE TABLE IF NOT EXISTS conversations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-  channel VARCHAR(50) NOT NULL DEFAULT 'web' CHECK (channel IN ('web', 'sms', 'whatsapp')),
-  messages JSONB NOT NULL DEFAULT '[]'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 -- 14. CLAIMS (Make It Right)
 CREATE TABLE IF NOT EXISTS claims (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -473,14 +462,11 @@ ALTER TABLE zones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 ALTER TABLE commercial_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE time_slots ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY zones_public_read ON zones FOR SELECT USING (is_active = true);
 CREATE POLICY promo_codes_public_read ON promo_codes FOR SELECT USING (is_active = true);
-CREATE POLICY conversations_customer_access ON conversations
-  FOR ALL USING (customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid()));
 CREATE POLICY staff_admin_read ON staff
   FOR SELECT USING (EXISTS (SELECT 1 FROM customers WHERE customers.auth_id = auth.uid() AND customers.role = 'admin'));
 CREATE POLICY commercial_accounts_staff_access ON commercial_accounts
@@ -492,7 +478,6 @@ CREATE INDEX IF NOT EXISTS idx_addresses_customer_id ON addresses(customer_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_claims_order_id ON claims(order_id);
 CREATE INDEX IF NOT EXISTS idx_claims_customer_id ON claims(customer_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_customer_id ON conversations(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_pickup_composite ON orders(pickup_date, pickup_window, status);
 CREATE INDEX IF NOT EXISTS idx_orders_express_lookup ON orders(pickup_date, express_tier, status);
 
@@ -752,8 +737,8 @@ $function$;
 REVOKE EXECUTE ON FUNCTION public.create_booking(JSONB) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_booking(JSONB) TO service_role;
 
--- One row per message; replaces the conversations.messages array
--- (20261005_messages_table.sql, PR-26). conversations is no longer written.
+-- One row per message; replaced the old conversations.messages array
+-- (20261005_messages_table.sql, PR-26; conversations dropped in 20261006).
 CREATE TABLE IF NOT EXISTS messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -812,8 +797,6 @@ BEGIN
       FROM orders o WHERE o.customer_id = p_customer_id), '[]'::jsonb),
     'claims', coalesce((SELECT jsonb_agg(to_jsonb(cl) ORDER BY cl.created_at)
                         FROM claims cl WHERE cl.customer_id = p_customer_id), '[]'::jsonb),
-    'conversations', coalesce((SELECT jsonb_agg(to_jsonb(cv) ORDER BY cv.created_at)
-                               FROM conversations cv WHERE cv.customer_id = p_customer_id), '[]'::jsonb),
     'messages', coalesce((SELECT jsonb_agg(to_jsonb(ms) ORDER BY ms.created_at)
                           FROM messages ms WHERE ms.customer_id = p_customer_id), '[]'::jsonb)
   ) INTO v_result;
@@ -853,7 +836,6 @@ BEGIN
   DELETE FROM garment_photos g USING orders o WHERE o.id = g.order_id AND o.customer_id = p_customer_id;
   UPDATE claims SET description = '[removed at customer request]', photo_urls = '{}', updated_at = now()
   WHERE customer_id = p_customer_id;
-  DELETE FROM conversations WHERE customer_id = p_customer_id;
   DELETE FROM messages WHERE customer_id = p_customer_id;
   DELETE FROM customer_preferences WHERE customer_id = p_customer_id;
 
