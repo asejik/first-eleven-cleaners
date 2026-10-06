@@ -60,9 +60,9 @@ export function buildLlmsTxt(): string {
     '',
     '### 24-Hour Express ("Match-Ready Tomorrow")',
     `- Picked up in the morning window (${morning.start}-${morning.end}) and delivered the next morning by ${morning.end}.`,
-    '- Monday-Friday pickups only, limited daily slots. Book by 9 PM for next-morning pickup, or by 7 AM for same-day morning pickup.',
+    '- Monday-Thursday pickups only (the plant is closed on weekends), limited daily slots. Book by 9 PM for next-morning pickup, or by 7 AM for same-day morning pickup.',
     `- Surcharge: +${percent(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (no separate dollar minimum; the zone order minimum applies).`,
-    `- Available in ${expressZones} only. Leather, suede, formal wear and other specialty items are excluded.`,
+    `- Available in ${expressZones} only. Formal wear, evening gowns, wedding dresses, household items and other specialty items are excluded.`,
     `- If an Express delivery misses the ${morning.end} window, the Express surcharge is refunded.`,
     '',
     '### Fees shown at checkout',
@@ -75,7 +75,7 @@ export function buildLlmsTxt(): string {
     `- Laundry and dry cleaning programs for businesses. Request a rate card: ${SITE_URL}/commercial`,
     '',
     '## Service Area',
-    `Standard turnaround: ${PROCESSING_HOURS} hours. Pickup windows: ${windows}. Details: ${SITE_URL}/service-areas`,
+    `Standard turnaround: ${PROCESSING_HOURS} hours, counted on plant days (the plant runs Monday to Friday): Thursday pickups are delivered Monday, Friday and Saturday pickups Tuesday. Pickup windows: ${windows}. Details: ${SITE_URL}/service-areas`,
     '',
     ...zones.map(
       (z) =>

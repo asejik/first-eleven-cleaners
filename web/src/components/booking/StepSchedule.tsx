@@ -1,5 +1,6 @@
 import { Card, Input, Badge, Button } from '@/components/ui';
 import type { ZoneConfig } from '@/lib/constants';
+import { isExpressPickupDay, isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
 import styles from '@/app/book/page.module.css';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -63,9 +64,7 @@ export function StepSchedule({
   onBack,
   onContinue,
 }: StepScheduleProps) {
-  const [py, pm, pd] = pickupDate ? pickupDate.split('-').map(Number) : [0, 0, 0];
-  const selectedDay = new Date(py, pm - 1, pd).getDay();
-  const isPickupMonFri = selectedDay >= 1 && selectedDay <= 5;
+  const isExpressDay = Boolean(pickupDate) && isExpressPickupDay(pickupDate);
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>When Should We Pick Up?</h1>
@@ -139,6 +138,11 @@ export function StepSchedule({
               <strong style={{ fontSize: '14px', color: 'var(--color-navy)', display: 'block', marginTop: '2px' }}>
                 Pickup: {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? 'Morning 7:30–10 AM' : 'Evening 5–8 PM'}) → Delivery: {getEstimatedDeliveryDate(pickupDate, expressTier)} ({expressTier === 'express_24hr' ? 'Morning 7:30–10 AM' : (pickupWindow === 'morning' ? 'Morning' : 'Evening')})
               </strong>
+              {isSaturdayPickup(pickupDate) && (
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', display: 'block', marginTop: '2px' }}>
+                  {SATURDAY_PICKUP_NOTICE} Our plant runs Monday to Friday.
+                </span>
+              )}
             </div>
             <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'success'}>
               {expressTier === 'express_24hr' ? '⚡ Match-Ready Tomorrow' : '🛡️ 48-Hr Match-Ready'}
@@ -223,7 +227,7 @@ export function StepSchedule({
         </div>
 
         {/* Express Tier Turnaround Speed Selector:
-            Offered ONLY in Express-eligible zones (Zone 1 & 2), on Monday–Friday morning windows. */}
+            Offered ONLY in Express-eligible zones (Zone 1 & 2), on Monday-Thursday morning windows. */}
         {!detectedZone?.expressEligible ? (
           <div style={{
             background: '#f8fafc',
@@ -237,7 +241,7 @@ export function StepSchedule({
           }}>
             <strong>⏱️ Standard 48-Hour Care for {detectedZone?.name || 'Your Area'}:</strong> 24-Hour Express is not offered in this zone to protect route consistency and logistics. All pickups in your area receive our signature 48-hour match-ready turnaround.
           </div>
-        ) : pickupWindow === 'morning' && isPickupMonFri ? (
+        ) : pickupWindow === 'morning' && isExpressDay ? (
           <div className={styles.expressOptionBox}>
             <div className={styles.expressHeader}>
               <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
@@ -300,7 +304,7 @@ export function StepSchedule({
           </div>
         ) : (
           <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)' }}>
-            ℹ️ Standard 48-hour care applies. 24-Hour Express is offered on Monday–Friday morning pickup windows.
+            ℹ️ Standard 48-hour care applies. 24-Hour Express is offered on Monday to Thursday morning pickup windows.
           </div>
         )}
       </div>

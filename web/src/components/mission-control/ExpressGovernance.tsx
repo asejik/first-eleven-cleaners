@@ -79,7 +79,7 @@ export function ExpressGovernance({ orders, onRefresh }: ExpressGovernanceProps)
               </span>
             </div>
             <p style={{ color: '#e2e8f0', fontSize: '13px', marginTop: '6px', margin: 0, lineHeight: '1.5' }}>
-              Turnaround: Mon–Fri Morning Pickup → Next Morning 7:30–10:00 AM Delivery (<strong style={{ color: 'var(--color-gold)' }}>+50% surcharge</strong>).
+              Turnaround: Mon–Thu Morning Pickup → Next Morning 7:30–10:00 AM Delivery (<strong style={{ color: 'var(--color-gold)' }}>+50% surcharge</strong>).
             </p>
           </div>
 

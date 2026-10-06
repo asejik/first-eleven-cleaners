@@ -203,7 +203,7 @@ export default function PricingPage() {
                   <li>
                     <span>📅</span>
                     <div>
-                      <strong>Monday–Friday pickups</strong> · Limited daily slots · Excludes specialty &amp; leather care.
+                      <strong>Monday–Thursday pickups</strong> · Limited daily slots · Excludes specialty garments and household items.
                     </div>
                   </li>
                   <li>

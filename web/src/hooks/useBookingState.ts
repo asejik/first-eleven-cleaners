@@ -15,7 +15,7 @@ import {
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
-import { earliestPickupDate } from '@/lib/schedule';
+import { earliestPickupDate, estimatedDeliveryDate, isExpressPickupDay } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
 
 // Helper to format local date to YYYY-MM-DD (avoiding UTC timezone shift)
@@ -44,20 +44,10 @@ export function getMinPickupDate(tier: 'standard' | 'express_24hr' = 'standard')
   return earliestPickupDate(tier);
 }
 
-// Helper to calculate estimated delivery date based on pickup date and tier
+// Estimated delivery date: the same plant-day rule the server stores (Mon-Fri plant)
 export function getEstimatedDeliveryDate(pickupDateStr: string, tier: 'standard' | 'express_24hr' = 'standard') {
   if (!pickupDateStr) return '';
-  const [y, m, d] = pickupDateStr.split('-').map(Number);
-  const delivery = new Date(y, m - 1, d);
-  if (tier === 'express_24hr') {
-    delivery.setDate(delivery.getDate() + 1); // 24 hours: next morning
-  } else {
-    delivery.setDate(delivery.getDate() + 2); // 48 hours: standard turnaround
-  }
-  if (delivery.getDay() === 0) {
-    delivery.setDate(delivery.getDate() + 1); // Skip Sunday delivery to Monday
-  }
-  return formatDisplayDate(formatLocalDate(delivery));
+  return formatDisplayDate(estimatedDeliveryDate(pickupDateStr, tier));
 }
 
 export function useBookingState() {
@@ -262,15 +252,14 @@ export function useBookingState() {
     serviceType !== 'wash_fold' &&
     Object.keys(dryCleanQuantities).some((key) => isExpressExcluded(key) && (dryCleanQuantities[key] || 0) > 0);
 
-  const [py, pm, pd] = pickupDate ? pickupDate.split('-').map(Number) : [0, 0, 0];
-  const selectedDay = new Date(py, pm - 1, pd).getDay();
-  const isPickupMonFri = selectedDay >= 1 && selectedDay <= 5;
+  // Express pickups run Monday to Thursday (client 2026-10-06)
+  const isExpressDay = Boolean(pickupDate) && isExpressPickupDay(pickupDate);
   const isExpressCapacityFull = slotData?.express_available === false;
   const isExpressEligible =
     Boolean(detectedZone?.expressEligible) &&
     !hasExcludedGarments &&
     pickupWindow === 'morning' &&
-    isPickupMonFri &&
+    isExpressDay &&
     !isExpressCapacityFull;
   const isExpressActive = expressTier === 'express_24hr' && isExpressEligible;
   const effectiveExpressTier: 'standard' | 'express_24hr' = isExpressActive ? 'express_24hr' : 'standard';

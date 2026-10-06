@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, Input, Button } from '@/components/ui';
 import { DRY_CLEAN_PRICES, ROUTES, catalogLineTotal, type ZoneConfig } from '@/lib/constants';
+import { isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
 import styles from '@/app/book/page.module.css';
 import type { AppliedPromo } from '@/lib/promo';
 
@@ -105,6 +106,7 @@ export function StepReview({
           <p>
             <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier)} ({isExpress24 ? 'Morning 7:30 - 10:00 AM' : (pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM')})
           </p>
+          {isSaturdayPickup(pickupDate) && <p>{SATURDAY_PICKUP_NOTICE}</p>}
           {isExpress24 && (
             <p style={{ color: 'var(--color-gold-text)', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
               ⚡ 24-Hour Guarantee: Delivered by 10:00 AM or your Express surcharge is refunded automatically.
