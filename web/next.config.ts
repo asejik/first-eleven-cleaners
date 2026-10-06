@@ -3,6 +3,20 @@ import type { NextConfig } from "next";
 // 'unsafe-eval' is only needed by the dev server (React Refresh); production omits it (SEC-23)
 const scriptEval = process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'";
 
+// Private sections: keep out of search even if a page's own noindex meta is lost (P08 SEO-05)
+const NOINDEX_SECTIONS = [
+  'dashboard',
+  'mission-control',
+  'staff',
+  'claim',
+  'portal',
+  'track',
+  'login',
+  'signup',
+  'forgot-password',
+  'reset-password',
+];
+
 const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -19,6 +33,10 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      ...NOINDEX_SECTIONS.map((section) => ({
+        source: `/${section}/:path*`,
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      })),
       {
         source: '/:file*(og-image.jpg|og-image.png|icon.png|logo.png|favicon.ico)',
         headers: [
