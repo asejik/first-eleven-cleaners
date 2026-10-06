@@ -38,7 +38,7 @@ export function StepGarments({
           onClick={() => setServiceType('mixed')}
           aria-pressed={serviceType === 'mixed'}
         >
-          🧺 + 👔 Both (Wash &amp; Fold + Dry Cleaning)
+          <span aria-hidden="true">🧺 + 👔</span> Both (Wash &amp; Fold + Dry Cleaning)
         </button>
         <button
           type="button"
@@ -46,7 +46,7 @@ export function StepGarments({
           onClick={() => setServiceType('wash_fold')}
           aria-pressed={serviceType === 'wash_fold'}
         >
-          🧺 Wash &amp; Fold Only
+          <span aria-hidden="true">🧺</span> Wash &amp; Fold Only
         </button>
         <button
           type="button"
@@ -54,7 +54,7 @@ export function StepGarments({
           onClick={() => setServiceType('dry_clean')}
           aria-pressed={serviceType === 'dry_clean'}
         >
-          👔 Dry Cleaning Only
+          <span aria-hidden="true">👔</span> Dry Cleaning Only
         </button>
       </div>
 
@@ -62,7 +62,7 @@ export function StepGarments({
       {serviceType !== 'dry_clean' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h3>🧺 Wash & Fold (Everyday Laundry)</h3>
+            <h3><span aria-hidden="true">🧺</span> Wash & Fold (Everyday Laundry)</h3>
             <Badge variant="success">$3.00 / lb</Badge>
           </div>
           <div className={styles.weightSelector}>
@@ -131,7 +131,7 @@ export function StepGarments({
       {serviceType !== 'wash_fold' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h3>👔 Professional Dry Cleaning Items</h3>
+            <h3><span aria-hidden="true">👔</span> Professional Dry Cleaning Items</h3>
             <span className={styles.subtext}>Select item quantities</span>
           </div>
           <div className={styles.garmentGrid}>
