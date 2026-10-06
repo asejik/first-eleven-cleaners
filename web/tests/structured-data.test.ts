@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, SUPPORT_EMAIL } from '@/lib/constants';
-import { buildSiteJsonLd, SITE_URL } from '@/lib/seo';
+import { WASH_FOLD_PRICE_PER_LB, SUPPORT_EMAIL } from '@/lib/constants';
+import { buildSiteJsonLd, dryCleanFromPrice, SITE_URL } from '@/lib/seo';
 
 // ---------------------------------------------------------------------------
 // P08 SEO-03: structured data may only state real, visible facts. The business
@@ -33,8 +33,7 @@ describe('Structured data states only confirmed facts (P08 SEO-03)', () => {
   it('takes prices and contact details from the catalog', () => {
     const offers = business.hasOfferCatalog.itemListElement;
     expect(offers[0].price).toBe(WASH_FOLD_PRICE_PER_LB.toFixed(2));
-    const lowest = Math.min(...Object.values(DRY_CLEAN_PRICES).map((p) => p.price));
-    expect(offers[1].priceSpecification?.minPrice).toBe(lowest.toFixed(2));
+    expect(offers[1].priceSpecification?.minPrice).toBe(dryCleanFromPrice().toFixed(2));
     expect(offers[1].price).toBeUndefined();
     expect(business.telephone).toBe('+1-682-200-0039');
     expect(business.email).toBe(SUPPORT_EMAIL);

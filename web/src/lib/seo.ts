@@ -57,6 +57,18 @@ export function pageMetadata({
   };
 }
 
+/**
+ * Published "dry cleaning from" price (P08 SEO-13): the cheapest dry-cleaned
+ * item. The laundered shirt is washed and pressed, not dry cleaned, so it's excluded.
+ */
+export function dryCleanFromPrice(): number {
+  return Math.min(
+    ...Object.entries(DRY_CLEAN_PRICES)
+      .filter(([key]) => key !== 'laundered_shirt')
+      .map(([, item]) => item.price),
+  );
+}
+
 const phoneForSchema = (display: string) => {
   const d = display.replace(/\D/g, '');
   return `+1-${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
@@ -68,7 +80,6 @@ const phoneForSchema = (display: string) => {
  * aren't confirmed, so none are published. Prices come from the catalog.
  */
 export function buildSiteJsonLd() {
-  const fromPrice = Math.min(...Object.values(DRY_CLEAN_PRICES).map((p) => p.price));
   return {
     '@context': 'https://schema.org',
     '@graph': [
@@ -134,7 +145,7 @@ export function buildSiteJsonLd() {
               },
               priceSpecification: {
                 '@type': 'PriceSpecification',
-                minPrice: fromPrice.toFixed(2),
+                minPrice: dryCleanFromPrice().toFixed(2),
                 priceCurrency: 'USD',
               },
             },
