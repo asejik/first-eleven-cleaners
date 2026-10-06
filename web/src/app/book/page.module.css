@@ -381,7 +381,7 @@
 .weightBadge {
   font-size: var(--text-base);
   font-weight: var(--font-bold);
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   background-color: var(--color-cream);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-md);
@@ -545,7 +545,7 @@
 
 .windowCard span {
   font-size: var(--text-xs);
-  color: var(--color-gray-500);
+  color: var(--color-text-secondary);
 }
 
 .expressOptionBox {
@@ -610,13 +610,13 @@
 
 .tierBadge {
   font-size: 10px;
-  color: var(--color-gold-dark);
+  color: var(--color-gold-text);
   font-weight: var(--font-bold);
 }
 
 .tierDesc {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--color-text-secondary);
 }
 
 .expressNote {

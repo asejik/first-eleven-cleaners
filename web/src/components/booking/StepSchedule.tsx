@@ -133,7 +133,7 @@ export function StepSchedule({
             marginBottom: 'var(--space-4)',
           }}>
             <div>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-gold-dark)', fontWeight: 'bold', display: 'block' }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-gold-text)', fontWeight: 'bold', display: 'block' }}>
                 {expressTier === 'express_24hr' ? '⚡ 24-Hour Express Guarantee Timeline' : '✨ Match-Ready Guarantee Timeline'}
               </span>
               <strong style={{ fontSize: '14px', color: 'var(--color-navy)', display: 'block', marginTop: '2px' }}>
