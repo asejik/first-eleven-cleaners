@@ -264,7 +264,7 @@ CI runs lint, unit tests and the build, plus the Playwright smoke tests in mock 
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` / `TWILIO_MESSAGING_SERVICE_SID`, `TWILIO_WHATSAPP_NUMBER` | The inbound SMS webhook rejects requests in production without the auth token | If SMS is used |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Sender on a verified Resend domain | **Yes** |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits across Vercel instances | Strongly recommended |
-| `ADMIN_ALERT_EMAIL` | Receives server-error, dispute and privacy-request alerts | **Yes** |
+| `ADMIN_ALERT_EMAIL` | Receives server-error and card-dispute alerts; if unset they go to `support@firstelevencleaners.com`. (Privacy requests always go to `privacy@firstelevencleaners.com`.) | Recommended |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Claude for Eleven (heuristic engine if unset) | Optional |
 | `NEXT_PUBLIC_APP_NAME` | `First Eleven Cleaners` | **Yes** |
 | `NEXT_PUBLIC_APP_URL` | `https://www.firstelevencleaners.com` (used in emails, links and the sitemap); falls back to the Vercel production URL if unset | Optional |
