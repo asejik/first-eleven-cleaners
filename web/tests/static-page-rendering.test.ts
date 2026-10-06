@@ -15,7 +15,7 @@ describe('Static public pages render their content inline (P08 SEO-07)', () => {
     expect(existsSync(join(APP, 'loading.tsx'))).toBe(false);
   });
 
-  it.each(['about', 'service-areas', 'privacy', 'terms', 'commercial', 'pricing'])(
+  it.each(['about', 'service-areas', 'privacy', 'terms', 'commercial', 'pricing', 'book'])(
     '/%s has no loading screen of its own',
     (route) => {
       expect(existsSync(join(APP, route, 'loading.tsx'))).toBe(false);

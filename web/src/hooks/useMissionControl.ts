@@ -16,6 +16,9 @@ export interface MissionControlResponse {
     total_lbs: number;
     total_pieces: number;
   } | null;
+  /** Board view: how many active orders exist, and whether more exist than were loaded */
+  active_total?: number;
+  active_truncated?: boolean;
 }
 
 export function useMissionControl(options?: { page?: number; limit?: number; status?: string }) {
@@ -27,6 +30,8 @@ export function useMissionControl(options?: { page?: number; limit?: number; sta
     queryKey: ['mission_control', { page, limit, status }],
     queryFn: async () => {
       const params = new URLSearchParams();
+      // The board needs every active order, not one page of the newest orders
+      params.set('view', 'board');
       params.set('page', String(page));
       params.set('limit', String(limit));
       if (status) params.set('status', status);
