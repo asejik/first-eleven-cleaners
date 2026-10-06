@@ -71,7 +71,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 * **Promo Codes (`/api/promo/validate`):** Date windows, usage caps reserved atomically, fixed-dollar or percentage discounts, and one use per customer per code, checked before the card step (a first-order code already used is removed on the Review step with a clear message).
 * **Texas Data Privacy (TDPSA):** Customer data requests (`/api/customer/data-deletion`) with admin export and anonymize tools; see the [privacy request runbook](web/supabase/runbooks/privacy-requests.md).
 * **SMS Compliance:** E.164 phone storage, STOP/START handling across all records, and consent that fails closed.
-* **Local SEO:** Dynamic `/robots.txt`, `/sitemap.xml`, JSON-LD `DryCleaningOrLaundryService` schema, and a maskable PWA manifest.
+* **Search & Discoverability:** every public page names `https://www.firstelevencleaners.com` as its canonical address (`SITE_URL` in `web/src/lib/seo.ts`) and has its own title, description and share preview (`pageMetadata()`), with a 1200x630 share image. JSON-LD `DryCleaningOrLaundryService` data and the AI-assistant summary at `/llms.txt` are generated from the price catalog, so they can't drift from what customers are charged. `/robots.txt` blocks only `/api/`; private screens (dashboard, tracking, claims, staff, login) send `noindex` in both the page and an `X-Robots-Tag` header, as does any `*.vercel.app` host. `/sitemap.xml` lists the 8 public pages.
 
 ---
 
@@ -90,7 +90,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 | **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
 | **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
 | **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
-| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 419 unit tests across 72 files; 5 end-to-end smoke journeys (desktop + phone) |
+| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 504 unit tests across 85 files; 5 end-to-end smoke journeys (desktop + phone) |
 
 ---
 
@@ -101,13 +101,14 @@ first-eleven-cleaners/
 ├── README.md
 ├── .github/workflows/ci.yml    # Lint, unit tests, build + end-to-end smoke tests on pushes / PRs to main
 └── web/                        # Next.js 16 application (Vercel root directory)
-    ├── public/                 # Static assets, logos, PWA manifest and icons
+    ├── public/                 # Static assets, logos, share image (og-image.jpg), PWA manifest and icons
     ├── src/
     │   ├── app/                # App Router pages and API routes
     │   │   ├── api/            # 31 route handlers (bookings, intake, driver, payments, concierge, ...)
     │   │   ├── auth/confirm/   # Email confirmation and password-reset link handler
     │   │   ├── book/           # Customer booking flow
     │   │   ├── dashboard/      # Customer portal (orders, billing, addresses, preferences, profile)
+    │   │   ├── llms.txt/       # AI-assistant summary, built from the price catalog
     │   │   ├── mission-control/# Operations board and intake station
     │   │   ├── staff/driver/   # Driver manifest
     │   │   ├── track/          # Public order tracker (private link per order)
@@ -121,6 +122,7 @@ first-eleven-cleaners/
     │   │   ├── constants.ts    # Pricing catalog, financials, DFW zone model (source of truth)
     │   │   ├── square.ts       # Card on file, charges, card management
     │   │   ├── storage.ts      # Photo upload, validation and signed-link helpers
+    │   │   ├── seo.ts          # Site URL, per-page metadata and JSON-LD (search and share previews)
     │   │   └── ...             # express, refunds, schedule, texas-time, rate-limiter, sanitize, ...
     │   ├── proxy.ts            # Session refresh for pages (Next 16 proxy; API routes check auth themselves)
     │   └── types/              # TypeScript interfaces; database.ts = typed Supabase schema
@@ -227,7 +229,7 @@ Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` w
 
 ### 8. Testing & Verification
 ```bash
-npm test                                   # 419 Vitest tests
+npm test                                   # 504 Vitest tests
 npx vitest run tests/pricing.test.ts       # a single test file
 npx vitest run -t "test name"              # a single test by name
 npx tsc --noEmit                           # type check
@@ -236,6 +238,9 @@ npm run build                              # production build
 npm run test:e2e                           # Playwright smoke tests (starts the dev server in mock mode)
 ```
 CI runs lint, unit tests and the build, plus the Playwright smoke tests in mock mode, on every push to `main` and every pull request into `main`. Every smoke test fails on a page error or a React hydration error.
+
+> [!NOTE]
+> The smoke tests expect **mock mode**. If your `.env.local` points at a real Supabase project, force mock mode for the run: `NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co npm run test:e2e` (PowerShell: `$env:NEXT_PUBLIC_SUPABASE_URL='https://your-project.supabase.co'; npm run test:e2e`).
 
 **Database types:** all Supabase clients use `web/src/types/database.ts`. After a migration that changes columns or functions, update it (`npx supabase gen types typescript --project-id <ref> --schema public`, which needs the Developer role on the project).
 
@@ -259,22 +264,32 @@ CI runs lint, unit tests and the build, plus the Playwright smoke tests in mock 
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` / `TWILIO_MESSAGING_SERVICE_SID`, `TWILIO_WHATSAPP_NUMBER` | The inbound SMS webhook rejects requests in production without the auth token | If SMS is used |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Sender on a verified Resend domain | **Yes** |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits across Vercel instances | Strongly recommended |
-| `ADMIN_ALERT_EMAIL` | Receives server-error, dispute and privacy-request alerts | **Yes** |
+| `ADMIN_ALERT_EMAIL` | Receives server-error and card-dispute alerts; if unset they go to `support@firstelevencleaners.com`. (Privacy requests always go to `privacy@firstelevencleaners.com`.) | Recommended |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Claude for Eleven (heuristic engine if unset) | Optional |
 | `NEXT_PUBLIC_APP_NAME` | `First Eleven Cleaners` | **Yes** |
-| `NEXT_PUBLIC_APP_URL` | Custom domain; falls back to the Vercel production URL if unset | Optional |
+| `NEXT_PUBLIC_APP_URL` | `https://www.firstelevencleaners.com` (used in emails, links and the sitemap); falls back to the Vercel production URL if unset | Optional |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, `NEXT_PUBLIC_BING_SITE_VERIFICATION` | Only if Search Console / Bing are verified with an HTML tag instead of DNS | Optional |
 
 ### 3. Supabase for Production
 Apply the Auth, storage and URL settings in [Local Setup](#-local-setup--development) (steps 5–6) with your production domains. Use a **separate Supabase project for development and testing**, and a plan with **restorable backups** for production.
 
 ### 4. Custom Domain
 In Vercel **Settings → Domains**, add `firstelevencleaners.com` and `www.firstelevencleaners.com` and follow the DNS instructions. SSL is automatic.
+* **`www.firstelevencleaners.com` is the main address** (connected to Production). Every other domain redirects to it with **308 Permanent Redirect**: `firstelevencleaners.com`, `first11cleaners.com`, `www.first11cleaners.com` and `first-eleven-cleaners.vercel.app`.
+* Canonicals, share previews and structured data are hard-wired to `SITE_URL` in `web/src/lib/seo.ts`. If the main address ever changes, update that constant and the Vercel redirects together.
+
+### 5. Search Engines
+* **Google Search Console** (client's Google account): the site has no verification tag, so verify by DNS (a Domain property covers www and the bare domain). Submit `https://www.firstelevencleaners.com/sitemap.xml`.
+* **Google Business Profile** (client's account): a service-area business (pickup and delivery, no storefront). Keep the name, phone and website identical to the site.
+* **Bing Webmaster Tools:** not set up yet; it can import the Search Console property.
+* **After changing titles, descriptions or the share image:** refresh cached previews with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) (also WhatsApp) and the [LinkedIn Post Inspector](https://www.linkedin.com/post-inspector/).
+* **Business hours** are deliberately left out of the structured data until they are confirmed; add them to the site and to `buildSiteJsonLd()` together.
 
 ---
 
 ## 🔒 Security & Compliance
 
-The platform went through an independent security audit, a production-readiness audit and an architecture & product-quality review in October 2026. All findings from the security audit and the architecture review, and all code findings from the production-readiness audit, were fixed, each with regression tests. The remaining production-readiness items are owner actions: a separate development database, a Supabase plan with tested restorable backups, and a photo retention period. The detailed reports are kept private.
+The platform went through four independent audits in October 2026: security, production readiness, architecture & product quality, and SEO & discoverability. All findings from the security, architecture and SEO audits, and all code findings from the production-readiness audit, were fixed, each with regression tests. The remaining production-readiness items are owner actions: a separate development database, a Supabase plan with tested restorable backups, and a photo retention period. The detailed reports are kept private.
 
 * **Verified sessions:** every server request verifies the login token with Supabase; roles come only from the server-controlled `customers.role` column, never from email addresses or user-editable metadata.
 * **Email-verified accounts:** a guest's order history joins an account only after the email is confirmed.
