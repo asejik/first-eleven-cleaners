@@ -118,7 +118,7 @@ export default function TermsOfServicePage() {
               <strong>High-Risk Fabrics:</strong> Certain luxury or delicate materials possess inherent characteristics that may react unpredictably to standard solvent or aqueous cleaning.
             </div>
             <p className={styles.paragraph}>
-              Items accepted at owner risk include: genuine leather, suede, natural furs, silks with unstable dyes, sequined or beaded garments, antique/vintage garments (over 10 years old), and garments lacking permanent FTC care labels.
+              Items accepted at owner risk include: natural furs, silks with unstable dyes, sequined or beaded garments, antique/vintage garments (over 10 years old), and garments lacking permanent FTC care labels.
             </p>
           </section>
 
