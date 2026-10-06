@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader, Button } from '@/components/ui';
+import { Loader, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import type { UserRole } from '@/types';
 
@@ -58,16 +57,12 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
             Your account role (<strong className={styles.roleHighlight}>{userRole.toUpperCase()}</strong>) does not have permission to view this operational area.
           </p>
           <div className={styles.actionButtons}>
-            <Link href={roleDestination.href}>
-              <Button variant="primary" fullWidth size="md">
-                {roleDestination.label} →
-              </Button>
-            </Link>
-            <Link href={ROUTES.home}>
-              <Button variant="ghost" fullWidth size="sm">
-                Return to Home Pitch
-              </Button>
-            </Link>
+            <ButtonLink href={roleDestination.href} variant="primary" fullWidth size="md">
+              {roleDestination.label} →
+            </ButtonLink>
+            <ButtonLink href={ROUTES.home} variant="ghost" fullWidth size="sm">
+              Return to Home Pitch
+            </ButtonLink>
           </div>
         </div>
       </div>

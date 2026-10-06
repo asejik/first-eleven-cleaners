@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_PRICE_PER_LB,
@@ -13,7 +12,7 @@ import {
   resolveZoneByZip,
   getZoneMinimumGap,
 } from '@/lib/constants';
-import { Button, Card } from '@/components/ui';
+import { Card, ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 
 export default function PricingPage() {
@@ -407,11 +406,9 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                <Link href={ROUTES.book}>
-                  <Button variant="primary" fullWidth size="lg">
-                    Schedule Pickup with this Order
-                  </Button>
-                </Link>
+                <ButtonLink href={ROUTES.book} variant="primary" fullWidth size="lg">
+                  Schedule Pickup with this Order
+                </ButtonLink>
                 <p className={styles.promiseCallout}>
                   🔒 You see the itemized photos and final ticket before any charge is made.
                 </p>

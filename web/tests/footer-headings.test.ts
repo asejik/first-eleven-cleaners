@@ -11,6 +11,13 @@ const footer = readFileSync(join(__dirname, '..', 'src', 'components', 'layout',
 describe('Footer heading levels (P08 SEO-12)', () => {
   it('column titles are h2, not h4', () => {
     expect(footer).not.toContain('<h4');
-    expect(footer.match(/<h2 className=\{styles\.columnTitle\}>/g)).toHaveLength(4);
+    expect(footer.match(/<h2 [^>]*className=\{styles\.columnTitle\}>/g)).toHaveLength(4);
+  });
+
+  it('each footer nav is labelled by its heading (SR-09)', () => {
+    for (const id of ['footer-services', 'footer-company', 'footer-support', 'footer-legal']) {
+      expect(footer).toContain(`<h2 id="${id}"`);
+      expect(footer).toContain(`aria-labelledby="${id}"`);
+    }
   });
 });

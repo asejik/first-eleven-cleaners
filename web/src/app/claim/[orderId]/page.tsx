@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims, useSubmitClaim } from '@/hooks/useClaims';
-import { Button, Card, Badge, Loader } from '@/components/ui';
+import { Button, Card, Badge, Loader, ButtonLink } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
@@ -245,11 +245,9 @@ export default function ClaimPage() {
           )}
 
           <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-            <Link href={ROUTES.dashboard}>
-              <Button variant="ghost" size="sm">
-                Return to Dashboard
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.dashboard} variant="ghost" size="sm">
+              Return to Dashboard
+            </ButtonLink>
           </div>
         </Card>
       </div>

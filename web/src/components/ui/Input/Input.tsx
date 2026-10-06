@@ -38,7 +38,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label htmlFor={inputId} className={styles.label}>
             {label}
-            {props.required && <span className={styles.required}>*</span>}
+            {/* Hidden from screen readers: the input's required attribute already says it (SR-10) */}
+            {props.required && <span className={styles.required} aria-hidden="true">*</span>}
           </label>
         )}
         <div className={`${styles.inputWrapper} ${error ? styles.hasError : ''}`}>

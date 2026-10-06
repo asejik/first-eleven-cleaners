@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input, Card } from '@/components/ui';
+import { Button, Input, Card, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -56,11 +56,9 @@ export default function ForgotPasswordPage() {
             <p>
               We&apos;ve sent password reset instructions to <strong>{email}</strong> if an account exists with that address.
             </p>
-            <Link href={ROUTES.login}>
-              <Button variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
-                Return to Log In
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.login} variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
+              Return to Log In
+            </ButtonLink>
           </div>
         ) : (
           <>

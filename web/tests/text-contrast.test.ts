@@ -61,11 +61,22 @@ describe('Text contrast meets WCAG AA (AR-07)', () => {
     ['src/app/privacy/page.module.css', '.contactLink'],
     ['src/app/terms/page.module.css', '.contactLink'],
     ['src/app/dashboard/preferences/page.module.css', '.optionDesc'],
+    // Screen-reader pass SR-05: booking states the AR-07 scan didn't reach
+    ['src/app/book/page.module.css', '.weightBadge'],
+    ['src/app/book/page.module.css', '.windowCard span'],
+    ['src/app/book/page.module.css', '.tierBadge'],
+    ['src/app/book/page.module.css', '.tierDesc'],
   ];
 
   it.each(lightBackgroundText)('%s %s uses an AA text colour, not brand gold or light grey', (file, selector) => {
     const color = ruleColor(file, selector);
     expect(color).not.toMatch(/--color-gold\)|--color-gold-dark|--color-gray-400|--color-gray-500/);
+  });
+
+  it('booking steps have no inline gold-dark text on their light cards (SR-05)', () => {
+    for (const f of ['StepSchedule', 'StepReview', 'StepGarments', 'StepAddress']) {
+      expect(src(`src/components/booking/${f}.tsx`), f).not.toContain("color: 'var(--color-gold-dark)'");
+    }
   });
 
   it('upcoming tracker stages are no longer faded to 2.2:1', () => {

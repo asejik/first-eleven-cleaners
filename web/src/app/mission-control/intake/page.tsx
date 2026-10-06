@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useIntakeQueue } from '@/hooks/useIntake';
-import { Button, Badge, Loader, Modal, RefreshButton } from '@/components/ui';
+import { Button, Badge, Loader, Modal, RefreshButton, ButtonLink } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/lib/constants';
@@ -54,16 +53,12 @@ export default function CentralIntakePage() {
               />
               {isAdmin ? (
                 <>
-                  <Link href={ROUTES.missionControl}>
-                    <Button variant="outlineLight" size="sm">
-                      ← Mission Control Ops
-                    </Button>
-                  </Link>
-                  <Link href={`${ROUTES.dashboard}?view=customer`}>
-                    <Button variant="ghostLight" size="sm">
-                      Customer View
-                    </Button>
-                  </Link>
+                  <ButtonLink href={ROUTES.missionControl} variant="outlineLight" size="sm">
+                    ← Mission Control Ops
+                  </ButtonLink>
+                  <ButtonLink href={`${ROUTES.dashboard}?view=customer`} variant="ghostLight" size="sm">
+                    Customer View
+                  </ButtonLink>
                 </>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, Input, Button } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { resolveZoneByZip, type ZoneConfig } from '@/lib/constants';
@@ -70,6 +71,29 @@ export function StepAddress({
 
   const cleanedZip = (zip || '').trim().replace(/[^\d]/g, '');
 
+  // Continue stays enabled: a dimmed button gives screen-reader users no reason. On
+  // press, missing fields show an error (announced by Input) and get focus (SR-02).
+  const [showErrors, setShowErrors] = useState(false);
+  const fieldErrors: [id: string, message: string | null][] = [
+    ['booking-full-name', fullName.trim() ? null : 'Enter your full name.'],
+    ['booking-email', email.trim() ? null : 'Enter your email address.'],
+    ['booking-phone', phone.trim() ? null : 'Enter your mobile phone number.'],
+    ['booking-street', street.trim() ? null : 'Enter your street address.'],
+    ['booking-city', city.trim() ? null : 'Enter your city.'],
+    ['booking-zip', cleanedZip.length < 5 ? 'Enter your 5-digit ZIP code.' : detectedZone ? null : 'We don\u2019t serve this ZIP code yet.'],
+  ];
+  const errorFor = (id: string) => (showErrors ? fieldErrors.find(([f]) => f === id)?.[1] ?? undefined : undefined);
+
+  const handleContinue = () => {
+    if (isValid) {
+      onContinue();
+      return;
+    }
+    setShowErrors(true);
+    const firstInvalid = fieldErrors.find(([, message]) => message)?.[0];
+    if (firstInvalid) requestAnimationFrame(() => document.getElementById(firstInvalid)?.focus());
+  };
+
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>Where Should We Pick Up?</h1>
@@ -79,14 +103,18 @@ export function StepAddress({
 
       <div className={styles.formGrid}>
         <Input
+          id="booking-full-name"
           label="Full Name"
+          error={errorFor('booking-full-name')}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           placeholder="Dr. Alex Morgan"
           required
         />
         <Input
+          id="booking-email"
           label="Email"
+          error={errorFor('booking-email')}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -95,7 +123,9 @@ export function StepAddress({
         />
         <div>
           <Input
+            id="booking-phone"
             label="Mobile Phone"
+            error={errorFor('booking-phone')}
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -112,7 +142,9 @@ export function StepAddress({
           />
         </div>
         <Input
+          id="booking-street"
           label="Street Address"
+          error={errorFor('booking-street')}
           value={street}
           onChange={(e) => setStreet(e.target.value)}
           placeholder="4514 Travis St"
@@ -126,7 +158,9 @@ export function StepAddress({
             placeholder="Apt 304, Gate #1100"
           />
           <Input
+            id="booking-city"
             label="City"
+            error={errorFor('booking-city')}
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="Dallas"
@@ -141,7 +175,9 @@ export function StepAddress({
             required
           />
           <Input
+            id="booking-zip"
             label="ZIP Code"
+            error={errorFor('booking-zip')}
             value={zip}
             onChange={(e) => handleZipChange(e.target.value)}
             placeholder="75205"
@@ -237,8 +273,7 @@ export function StepAddress({
         <Button
           variant="primary"
           size="lg"
-          onClick={onContinue}
-          disabled={!isValid}
+          onClick={handleContinue}
         >
           Continue to Garments →
         </Button>

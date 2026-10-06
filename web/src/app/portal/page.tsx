@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   useCommercialAccount,
   useCommercialInvoices,
   useUpdateCommercialSchedule,
   usePayCommercialInvoice,
 } from '@/hooks/useCommercial';
-import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { Button, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useUIStore } from '@/stores/ui-store';
 import type { CommercialInvoice, RecurringSchedule } from '@/lib/commercial/types';
@@ -195,11 +194,9 @@ export default function CommercialPortalPage() {
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gold)' }}>
               🚚 Route Assignment: <strong>DFW Commercial Route #2 (Marcus Sterling)</strong>
             </span>
-            <Link href="/commercial">
-              <Button variant="outlineLight" size="sm">
-                + Register New Corporate Facility
-              </Button>
-            </Link>
+            <ButtonLink href="/commercial" variant="outlineLight" size="sm">
+              + Register New Corporate Facility
+            </ButtonLink>
           </div>
         </div>
 

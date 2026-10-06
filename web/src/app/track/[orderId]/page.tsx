@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useOrderDetail, isNotFoundError } from '@/hooks/useOrders';
-import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
+import { Button, Card, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
 import { ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
 import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
@@ -212,16 +212,12 @@ export default function PublicTrackingPage() {
 
             {/* Quick Actions */}
             <div className={styles.actionsBox}>
-              <Link href={ROUTES.claim(orderId)}>
-                <Button variant="outline" fullWidth>
-                  🛡️ Have an issue? Make It Right Claim
-                </Button>
-              </Link>
-              <Link href={ROUTES.home}>
-                <Button variant="ghost" fullWidth>
-                  First Eleven Cleaners Home
-                </Button>
-              </Link>
+              <ButtonLink href={ROUTES.claim(orderId)} variant="outline" fullWidth>
+                🛡️ Have an issue? Make It Right Claim
+              </ButtonLink>
+              <ButtonLink href={ROUTES.home} variant="ghost" fullWidth>
+                First Eleven Cleaners Home
+              </ButtonLink>
             </div>
           </Card>
         ) : isError && !isNotFoundError(error) ? (
@@ -239,9 +235,7 @@ export default function PublicTrackingPage() {
           <Card variant="surface" padding="lg" className={styles.notFoundCard}>
             <h3>Order Not Found</h3>
             <p>Could not locate active status for order #{orderId}.</p>
-            <Link href={ROUTES.home}>
-              <Button variant="primary">Return to Home</Button>
-            </Link>
+            <ButtonLink href={ROUTES.home} variant="primary">Return to Home</ButtonLink>
           </Card>
         )}
 

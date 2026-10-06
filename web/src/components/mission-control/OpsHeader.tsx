@@ -1,6 +1,5 @@
-import Link from 'next/link';
 import Image from 'next/image';
-import { Button, RefreshButton } from '@/components/ui';
+import { RefreshButton, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from '@/app/mission-control/page.module.css';
 
@@ -34,21 +33,15 @@ export function OpsHeader({ onRefresh }: OpsHeaderProps) {
             variant="glass"
           />
         )}
-        <Link href={ROUTES.intake}>
-          <Button variant="primary" size="sm">
-            ⚖️ Central Intake Station
-          </Button>
-        </Link>
-        <Link href={ROUTES.staffDriver}>
-          <Button variant="outlineLight" size="sm">
-            🚐 Driver Mobile App
-          </Button>
-        </Link>
-        <Link href={`${ROUTES.dashboard}?view=customer`}>
-          <Button variant="ghostLight" size="sm">
-            Customer View
-          </Button>
-        </Link>
+        <ButtonLink href={ROUTES.intake} variant="primary" size="sm">
+          ⚖️ Central Intake Station
+        </ButtonLink>
+        <ButtonLink href={ROUTES.staffDriver} variant="outlineLight" size="sm">
+          🚐 Driver Mobile App
+        </ButtonLink>
+        <ButtonLink href={`${ROUTES.dashboard}?view=customer`} variant="ghostLight" size="sm">
+          Customer View
+        </ButtonLink>
       </div>
     </div>
   );

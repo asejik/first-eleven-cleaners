@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, Badge, Button } from '@/components/ui';
 import { DRY_CLEAN_PRICES, WASH_FOLD_MINIMUM_LBS } from '@/lib/constants';
 import styles from '@/app/book/page.module.css';
@@ -25,6 +26,15 @@ export function StepGarments({
   onBack,
   onContinue,
 }: StepGarmentsProps) {
+  // One announcement naming the item ("Shirt / Blouse (dry clean): 2"), instead of each
+  // counter announcing a bare number (SR-07)
+  const [qtyAnnouncement, setQtyAnnouncement] = useState('');
+  const changeQty = (key: string, delta: number) => {
+    const next = Math.max(0, (dryCleanQuantities[key] || 0) + delta);
+    updateDryCleanQty(key, delta);
+    setQtyAnnouncement(`${DRY_CLEAN_PRICES[key].label}: ${next}`);
+  };
+
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>What Are We Cleaning?</h1>
@@ -38,7 +48,7 @@ export function StepGarments({
           onClick={() => setServiceType('mixed')}
           aria-pressed={serviceType === 'mixed'}
         >
-          🧺 + 👔 Both (Wash &amp; Fold + Dry Cleaning)
+          <span aria-hidden="true">🧺 + 👔</span> Both (Wash &amp; Fold + Dry Cleaning)
         </button>
         <button
           type="button"
@@ -46,7 +56,7 @@ export function StepGarments({
           onClick={() => setServiceType('wash_fold')}
           aria-pressed={serviceType === 'wash_fold'}
         >
-          🧺 Wash &amp; Fold Only
+          <span aria-hidden="true">🧺</span> Wash &amp; Fold Only
         </button>
         <button
           type="button"
@@ -54,7 +64,7 @@ export function StepGarments({
           onClick={() => setServiceType('dry_clean')}
           aria-pressed={serviceType === 'dry_clean'}
         >
-          👔 Dry Cleaning Only
+          <span aria-hidden="true">👔</span> Dry Cleaning Only
         </button>
       </div>
 
@@ -62,7 +72,7 @@ export function StepGarments({
       {serviceType !== 'dry_clean' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h3>🧺 Wash & Fold (Everyday Laundry)</h3>
+            <h2><span aria-hidden="true">🧺</span> Wash & Fold (Everyday Laundry)</h2>
             <Badge variant="success">$3.00 / lb</Badge>
           </div>
           <div className={styles.weightSelector}>
@@ -131,9 +141,10 @@ export function StepGarments({
       {serviceType !== 'wash_fold' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h3>👔 Professional Dry Cleaning Items</h3>
+            <h2><span aria-hidden="true">👔</span> Professional Dry Cleaning Items</h2>
             <span className={styles.subtext}>Select item quantities</span>
           </div>
+          <p className="sr-only" role="status" aria-live="polite">{qtyAnnouncement}</p>
           <div className={styles.garmentGrid}>
             {Object.entries(DRY_CLEAN_PRICES).map(([key, item]) => {
               const qty = dryCleanQuantities[key] || 0;
@@ -147,19 +158,19 @@ export function StepGarments({
                     <button
                       type="button"
                       className={styles.qtyBtn}
-                      onClick={() => updateDryCleanQty(key, -1)}
+                      onClick={() => changeQty(key, -1)}
                       disabled={qty === 0}
                       aria-label={`Decrease ${item.label} quantity`}
                     >
                       -
                     </button>
-                    <span className={styles.qtyNum} aria-live="polite" aria-atomic="true">
+                    <span className={styles.qtyNum}>
                       {qty}
                     </span>
                     <button
                       type="button"
                       className={styles.qtyBtn}
-                      onClick={() => updateDryCleanQty(key, 1)}
+                      onClick={() => changeQty(key, 1)}
                       aria-label={`Increase ${item.label} quantity`}
                     >
                       +

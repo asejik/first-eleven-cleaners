@@ -133,7 +133,7 @@ export function StepSchedule({
             marginBottom: 'var(--space-4)',
           }}>
             <div>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-gold-dark)', fontWeight: 'bold', display: 'block' }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-gold-text)', fontWeight: 'bold', display: 'block' }}>
                 {expressTier === 'express_24hr' ? '⚡ 24-Hour Express Guarantee Timeline' : '✨ Match-Ready Guarantee Timeline'}
               </span>
               <strong style={{ fontSize: '14px', color: 'var(--color-navy)', display: 'block', marginTop: '2px' }}>
@@ -161,7 +161,7 @@ export function StepSchedule({
               onClick={() => setPickupWindow('morning')}
               aria-pressed={pickupWindow === 'morning'}
             >
-              <span className={styles.winIcon}>🌅</span>
+              <span className={styles.winIcon} aria-hidden="true">🌅</span>
               <strong>Morning Window</strong>
               <span>7:30 AM – 10:00 AM</span>
             </button>
@@ -173,7 +173,7 @@ export function StepSchedule({
               disabled={expressTier === 'express_24hr'}
               title={expressTier === 'express_24hr' ? '24-Hour Express is a morning pickup' : undefined}
             >
-              <span className={styles.winIcon}>🌆</span>
+              <span className={styles.winIcon} aria-hidden="true">🌆</span>
               <strong>Evening Window</strong>
               <span>5:00 PM – 8:00 PM</span>
             </button>
@@ -184,7 +184,7 @@ export function StepSchedule({
         <div className={styles.expressOptionBox} style={{ marginBottom: 'var(--space-4)' }}>
           <div className={styles.expressHeader}>
             <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-              🔄 Pickup Frequency &amp; Savings:
+              <span aria-hidden="true">🔄</span> Pickup Frequency &amp; Savings:
             </label>
             <Badge variant="success">Cancel or Skip Anytime</Badge>
           </div>
@@ -195,7 +195,7 @@ export function StepSchedule({
               onClick={() => setFrequency('one_time')}
               aria-pressed={frequency === 'one_time'}
             >
-              <span className={styles.tierTitle}>🎯 One-Time</span>
+              <span className={styles.tierTitle}><span aria-hidden="true">🎯</span> One-Time</span>
               <span className={styles.tierBadge}>Standard</span>
               <span className={styles.tierDesc}>Single scheduled pickup</span>
             </button>
@@ -205,7 +205,7 @@ export function StepSchedule({
               onClick={() => setFrequency('weekly')}
               aria-pressed={frequency === 'weekly'}
             >
-              <span className={styles.tierTitle}>⚡ Weekly</span>
+              <span className={styles.tierTitle}><span aria-hidden="true">⚡</span> Weekly</span>
               <span className={styles.tierBadge}>Save 10%</span>
               <span className={styles.tierDesc}>Automatic weekly pickup</span>
             </button>
@@ -215,7 +215,7 @@ export function StepSchedule({
               onClick={() => setFrequency('biweekly')}
               aria-pressed={frequency === 'biweekly'}
             >
-              <span className={styles.tierTitle}>📅 Bi-Weekly</span>
+              <span className={styles.tierTitle}><span aria-hidden="true">📅</span> Bi-Weekly</span>
               <span className={styles.tierBadge}>Save 5%</span>
               <span className={styles.tierDesc}>Every 2 weeks care</span>
             </button>
@@ -241,7 +241,7 @@ export function StepSchedule({
           <div className={styles.expressOptionBox}>
             <div className={styles.expressHeader}>
               <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-                ⚡ Turnaround Speed &amp; Processing:
+                <span aria-hidden="true">⚡</span> Turnaround Speed &amp; Processing:
               </label>
               <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'info'}>
                 {expressTier === 'express_24hr'
@@ -272,7 +272,7 @@ export function StepSchedule({
                 aria-pressed={expressTier === 'express_24hr'}
                 style={hasExcludedGarments || isExpressCapacityFull ? { opacity: 0.55, cursor: 'not-allowed' } : {}}
               >
-                <span className={styles.tierTitle}>⚡ 24-Hr Express</span>
+                <span className={styles.tierTitle}><span aria-hidden="true">⚡</span> 24-Hr Express</span>
                 <span className={styles.tierBadge}>+50% (min $15)</span>
                 <span className={styles.tierDesc}>Match-Ready Tomorrow Morning</span>
               </button>

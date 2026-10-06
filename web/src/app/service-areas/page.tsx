@@ -1,6 +1,5 @@
 import { pageMetadata } from '@/lib/seo';
-import Link from 'next/link';
-import { Button, Card } from '@/components/ui';
+import { Card, ButtonLink } from '@/components/ui';
 import { ROUTES, ZONES_LIST } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -24,16 +23,12 @@ export default function ServiceAreasPage() {
             Unlike legacy dry cleaners with strict geographic boundaries, First Eleven Cleaners was built with no ZIP code walls. Delivery stays 100% free everywhere; order minimums scale fairly by zone to maintain route economics.
           </p>
           <div className={styles.heroActions}>
-            <Link href={ROUTES.book}>
-              <Button variant="primary" size="lg">
-                Schedule a Pickup in Your Area
-              </Button>
-            </Link>
-            <Link href={ROUTES.pricing}>
-              <Button variant="outlineLight" size="lg">
-                View Published Pricing
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.book} variant="primary" size="lg">
+              Schedule a Pickup in Your Area
+            </ButtonLink>
+            <ButtonLink href={ROUTES.pricing} variant="outlineLight" size="lg">
+              View Published Pricing
+            </ButtonLink>
           </div>
         </div>
       </section>
@@ -97,9 +92,7 @@ export default function ServiceAreasPage() {
                 We serve all residential and business addresses throughout the greater Dallas-Fort Worth metro area. Enter your address during booking and our dynamic routing engine will automatically assign you to the next available route window.
               </p>
             </div>
-            <Link href={ROUTES.book} className={styles.calloutAction}>
-              <Button variant="primary">Check Your Address</Button>
-            </Link>
+            <ButtonLink href={ROUTES.book} variant="primary" className={styles.calloutAction}>Check Your Address</ButtonLink>
           </div>
         </div>
       </section>

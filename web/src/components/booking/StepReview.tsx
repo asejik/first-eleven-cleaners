@@ -95,7 +95,7 @@ export function StepReview({
       <div className={styles.reviewSummary}>
         {/* Pickup info */}
         <div className={styles.summarySection}>
-          <h4>📍 Pickup &amp; Delivery Schedule</h4>
+          <h2><span aria-hidden="true">📍</span> Pickup &amp; Delivery Schedule</h2>
           <p>
             <strong>Address:</strong> {street} {unit && `(${unit})`}, {city}, TX {zip}
           </p>
@@ -106,7 +106,7 @@ export function StepReview({
             <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier)} ({isExpress24 ? 'Morning 7:30 - 10:00 AM' : (pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM')})
           </p>
           {isExpress24 && (
-            <p style={{ color: 'var(--color-gold-dark)', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
+            <p style={{ color: 'var(--color-gold-text)', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
               ⚡ 24-Hour Guarantee: Delivered by 10:00 AM or your Express surcharge is refunded automatically.
             </p>
           )}
@@ -122,7 +122,7 @@ export function StepReview({
 
         {/* Itemized breakdown */}
         <div className={styles.summarySection}>
-          <h4>🧺 Garment Breakdown</h4>
+          <h2><span aria-hidden="true">🧺</span> Garment Breakdown</h2>
           {serviceType !== 'dry_clean' && (
             <div className={styles.summaryLine}>
               <span>Wash & Fold (~{washFoldWeight} lbs)</span>
@@ -148,7 +148,7 @@ export function StepReview({
           {expressSurcharge > 0 && (
             <div className={styles.summaryLine}>
               <span>Express Surcharge (+50%, min $15)</span>
-              <span style={{ color: 'var(--color-gold-dark)', fontWeight: 'var(--font-bold)' }}>
+              <span style={{ color: 'var(--color-gold-text)', fontWeight: 'var(--font-bold)' }}>
                 +${expressSurcharge.toFixed(2)}
               </span>
             </div>
@@ -221,7 +221,7 @@ export function StepReview({
           {expressSurcharge > 0 && (
             <div className={styles.totalRow}>
               <span>24-Hour Express Surcharge (+50%, min $15)</span>
-              <span style={{ color: 'var(--color-gold-dark)', fontWeight: 'bold' }}>
+              <span style={{ color: 'var(--color-gold-text)', fontWeight: 'bold' }}>
                 +${expressSurcharge.toFixed(2)}
               </span>
             </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
-import { Button, Badge } from '@/components/ui';
+import { Button, Badge, ButtonLink } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import type { UserRole } from '@/types';
 import styles from './Header.module.css';
@@ -114,16 +114,12 @@ export function Header() {
                 </Badge>
               ) : (
                 <>
-                  <Link href={ROUTES.profile}>
-                    <Button variant="ghostLight" size="sm">
-                      👤 {firstName}
-                    </Button>
-                  </Link>
-                  <Link href={ROUTES.book}>
-                    <Button variant="primary" size="sm">
-                      + Schedule Pickup
-                    </Button>
-                  </Link>
+                  <ButtonLink href={ROUTES.profile} variant="ghostLight" size="sm">
+                    👤 {firstName}
+                  </ButtonLink>
+                  <ButtonLink href={ROUTES.book} variant="primary" size="sm">
+                    + Schedule Pickup
+                  </ButtonLink>
                 </>
               )}
 
@@ -138,12 +134,8 @@ export function Header() {
             </div>
           ) : (
             <>
-              <Link href={ROUTES.login}>
-                <Button variant="ghostLight" size="sm">Log In</Button>
-              </Link>
-              <Link href={ROUTES.book}>
-                <Button variant="primary" size="sm">Schedule Pickup</Button>
-              </Link>
+              <ButtonLink href={ROUTES.login} variant="ghostLight" size="sm">Log In</ButtonLink>
+              <ButtonLink href={ROUTES.book} variant="primary" size="sm">Schedule Pickup</ButtonLink>
             </>
           )}
         </div>

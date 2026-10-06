@@ -17,17 +17,22 @@ export function BookingStepper({ step }: BookingStepperProps) {
 
   return (
     <div className={styles.stepperWrapper}>
-      <div className={styles.stepper}>
+      {/* An ordered list with the current step marked, so screen readers can say where you are (SR-03) */}
+      <ol className={styles.stepper} aria-label="Booking progress">
         {STEP_ITEMS.map((item) => (
-          <div
+          <li
             key={item.s}
             className={`${styles.stepNode} ${step >= item.s ? styles.activeNode : ''} ${step === item.s ? styles.currentNode : ''}`}
+            aria-current={step === item.s ? 'step' : undefined}
           >
-            <div className={styles.nodeCircle}>{step > item.s ? '✓' : item.s}</div>
-            <span className={styles.nodeLabel}>{item.label}</span>
-          </div>
+            <div className={styles.nodeCircle} aria-hidden="true">{step > item.s ? '✓' : item.s}</div>
+            <span className={styles.nodeLabel}>
+              {item.label}
+              {step > item.s && <span className="sr-only">, completed</span>}
+            </span>
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }

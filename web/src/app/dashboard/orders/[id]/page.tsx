@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useOrderDetail, useCancelOrder, isNotFoundError } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Card, Badge, Loader, Modal } from '@/components/ui';
+import { Button, Card, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
 import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
@@ -45,9 +45,7 @@ export default function OrderDetailPage() {
       <div className={styles.errorContainer}>
         <h2>Order Not Found</h2>
         <p>Could not locate the requested order details.</p>
-        <Link href={ROUTES.dashboard}>
-          <Button variant="primary">Return to Dashboard</Button>
-        </Link>
+        <ButtonLink href={ROUTES.dashboard} variant="primary">Return to Dashboard</ButtonLink>
       </div>
     );
   }
@@ -102,11 +100,9 @@ export default function OrderDetailPage() {
                 🚫 Cancel Pickup
               </Button>
             )}
-            <Link href={ROUTES.claim(order.id)}>
-              <Button variant="outline" size="sm">
-                🛡️ Make It Right Claim
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.claim(order.id)} variant="outline" size="sm">
+              🛡️ Make It Right Claim
+            </ButtonLink>
           </div>
         </div>
 
@@ -329,11 +325,9 @@ export default function OrderDetailPage() {
             </div>
 
             <div className={styles.receiptActions}>
-              <Link href={ROUTES.claim(order.id)} className={styles.claimLink}>
-                <Button variant="outline" size="sm" fullWidth>
-                  🛡️ Make It Right Claim
-                </Button>
-              </Link>
+              <ButtonLink href={ROUTES.claim(order.id)} variant="outline" size="sm" fullWidth className={styles.claimLink}>
+                🛡️ Make It Right Claim
+              </ButtonLink>
             </div>
           </Card>
 

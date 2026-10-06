@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Input, Card } from '@/components/ui';
+import { Button, Input, Card, ButtonLink } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { ROUTES, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
@@ -119,11 +119,9 @@ export default function SignupPage() {
               We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click it to activate your account,
               then you&apos;ll be signed in automatically.
             </p>
-            <Link href={ROUTES.login}>
-              <Button variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
-                Go to Log In
-              </Button>
-            </Link>
+            <ButtonLink href={ROUTES.login} variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>
+              Go to Log In
+            </ButtonLink>
           </div>
         ) : (
         <>

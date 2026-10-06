@@ -31,8 +31,8 @@ export function Footer() {
 
           {/* Services */}
           <div className={styles.column}>
-            <h2 className={styles.columnTitle}>Services</h2>
-            <nav className={styles.columnLinks}>
+            <h2 id="footer-services" className={styles.columnTitle}>Services</h2>
+            <nav className={styles.columnLinks} aria-labelledby="footer-services">
               <Link href={ROUTES.pricing}>Dry Cleaning</Link>
               <Link href={ROUTES.pricing}>Wash &amp; Fold</Link>
               <Link href={ROUTES.serviceAreas}>DFW Service Areas</Link>
@@ -42,8 +42,8 @@ export function Footer() {
 
           {/* Company */}
           <div className={styles.column}>
-            <h2 className={styles.columnTitle}>Company</h2>
-            <nav className={styles.columnLinks}>
+            <h2 id="footer-company" className={styles.columnTitle}>Company</h2>
+            <nav className={styles.columnLinks} aria-labelledby="footer-company">
               <Link href={ROUTES.about}>About Us</Link>
               <Link href={ROUTES.about}>FIFA World Cup Story</Link>
               <Link href={ROUTES.commercial}>For Business &amp; B2B</Link>
@@ -53,8 +53,8 @@ export function Footer() {
 
           {/* Support */}
           <div className={styles.column}>
-            <h2 className={styles.columnTitle}>Support</h2>
-            <nav className={styles.columnLinks}>
+            <h2 id="footer-support" className={styles.columnTitle}>Support</h2>
+            <nav className={styles.columnLinks} aria-labelledby="footer-support">
               <a
                 href={`tel:+1${SUPPORT_PHONE.replace(/\D/g, '')}`}
                 className={styles.contactLink}
@@ -104,8 +104,8 @@ export function Footer() {
 
           {/* Legal */}
           <div className={styles.column}>
-            <h2 className={styles.columnTitle}>Legal &amp; Trust</h2>
-            <nav className={styles.columnLinks}>
+            <h2 id="footer-legal" className={styles.columnTitle}>Legal &amp; Trust</h2>
+            <nav className={styles.columnLinks} aria-labelledby="footer-legal">
               <Link href={ROUTES.terms}>Terms of Service</Link>
               <Link href={ROUTES.privacy}>Privacy Policy</Link>
               <Link href={ROUTES.pricing}>Satisfaction Guarantee</Link>
