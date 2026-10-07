@@ -10,8 +10,10 @@ import {
   TX_SALES_TAX_RATE,
   EXPRESS_SURCHARGE_PERCENT,
   EXTENDED_REACH_LABEL,
+  EXTENDED_REACH_BAND_CITIES,
+  extendedReachTurnaroundLine,
 } from '@/lib/constants';
-import { DEFAULT_COVERAGE, feeLabel, type Coverage } from '@/lib/coverage';
+import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
 /**
  * Price text for the Eleven concierge, generated from the booking catalog (P03 PR-21) so the
@@ -81,16 +83,17 @@ export function extendedReachLines(coverage: Coverage = DEFAULT_COVERAGE): strin
   const z = coverage.extendedReachZone;
   return [
     `${z.name} (beyond the Metroplex): ${money(r.minimumOrder)} order minimum plus an ${EXTENDED_REACH_LABEL} fee by driving distance from the plant: ${r.bands
-      .map((b) => `${b.minMiles}-${b.maxMiles} mi ${feeLabel(b.fee)} (route runs at ${b.dispatchThreshold} bookings)`)
-      .join('; ')}. The fee is its own line, taxed like any line. Routine members (Weekly or Bi-Weekly plan) get ${r.routineDiscountPercent}% off the fee. No Express. Areas: ${z.cities.join(', ')}.`,
-    `Zone 5 routes run every ${r.cadenceWeeks === 1 ? 'week' : `${r.cadenceWeeks} weeks`} on ${r.routeDay}s, only once enough neighbors book; below the threshold, bookings move to the next route automatically and the customer is told. Standard turnaround.`,
+      .map((b) => `${b.minMiles}-${b.maxMiles} mi ${feeLabel(b.fee)} (${EXTENDED_REACH_BAND_CITIES[b.id].join(', ')}; new pickups open at ${b.dispatchThreshold} bookings)`)
+      .join('; ')}. The fee is its own line, taxed like any line. Routine members (Weekly or Bi-Weekly plan) get ${r.routineDiscountPercent}% off the fee. No Express.`,
+    `${extendedReachTurnaroundLine(r)} A run always goes out when deliveries are due, so clothes are never held. New pickups are accepted for a run once enough neighbors book or when a delivery is already due there that day; otherwise the pickup moves to the next run automatically and the customer is told.`,
+    ...(r.firstRunDate ? [] : [`Zone 5 hasn't started yet: say "${extendedReachStartLine(r)}" and offer the waitlist on the booking page.`]),
     `Beyond ${r.waitlistBeyondMiles} miles: no booking yet; the customer can join the waitlist on the booking page ("Not in your area yet").`,
   ];
 }
 
 /** How the zone is chosen, and route-day delivery (client 8A-8B). */
 export function zoneRulesLine(): string {
-  return `Zones 1-4 follow their published area lists; other addresses are placed by driving distance from our plant in North Dallas (don't share the plant's street address). Zones 3 and 4 pick up on their route days and deliver on the next route day once the plant has the order ready (a Zone 4 Friday pickup is delivered Tuesday). The booking page shows the exact zone, fee and dates for an address.`;
+  return `Zones 1-4 follow their published area lists; an address not on a list is placed by driving distance from our plant in North Dallas (0-15 mi Zone 1, 15-25 Zone 2, 25-35 Zone 3, 35-45 Zone 4, 45-80 Zone 5; don't share the plant's street address). Zones 3 and 4 pick up on their route days and deliver on the next route day once the plant has the order ready (a Zone 4 Friday pickup is delivered Tuesday). The booking page shows the exact zone, fee and dates for an address.`;
 }
 
 export function expressLine(coverage: Coverage = DEFAULT_COVERAGE): string {

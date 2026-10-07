@@ -7,8 +7,8 @@ import type {
 } from './types';
 import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE, NO_LEATHER_LINE, plantScheduleLine, alterationLines } from './price-list';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
-import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB, EXTENDED_REACH_LABEL } from '@/lib/constants';
-import { DEFAULT_COVERAGE, feeLabel, type Coverage } from '@/lib/coverage';
+import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB, EXTENDED_REACH_LABEL, extendedReachTurnaroundLine } from '@/lib/constants';
+import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
 export * from './types';
 export * from './systemPrompt';
@@ -33,7 +33,7 @@ export function coverageAnswer(coverage: Coverage = DEFAULT_COVERAGE): string {
   return [
     'Door-to-door courier delivery is complimentary across the entire DFW Metroplex:',
     zones,
-    `- **${coverage.extendedReachZone.name}** (beyond the Metroplex: ${coverage.extendedReachZone.cities.join(', ')}): $${r.minimumOrder.toFixed(0)} minimum plus an ${EXTENDED_REACH_LABEL} fee (${bands}; ${r.routineDiscountPercent}% off for Routine members). Routes run every ${r.cadenceWeeks === 1 ? 'week' : `${r.cadenceWeeks} weeks`} on ${r.routeDay}s once enough neighbors book.`,
+    `- **${coverage.extendedReachZone.name}** (beyond the Metroplex: ${coverage.extendedReachZone.cities.join(', ')}): $${r.minimumOrder.toFixed(0)} minimum plus an ${EXTENDED_REACH_LABEL} fee (${bands}; ${r.routineDiscountPercent}% off for Routine members). ${extendedReachTurnaroundLine(r)}${r.firstRunDate ? '' : ` ${extendedReachStartLine(r)}`}`,
     `Zones 3 and 4 deliver on their next route day (a Zone 4 Friday pickup comes back Tuesday). Beyond ${r.waitlistBeyondMiles} miles we're not there yet, but you can join the waitlist. Enter your address on the booking page to see your exact zone, fee and dates.`,
   ].join('\n');
 }
