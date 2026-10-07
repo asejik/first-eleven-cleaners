@@ -1,7 +1,12 @@
 import { pageMetadata } from '@/lib/seo';
 import { Card, ButtonLink } from '@/components/ui';
-import { ROUTES, ZONES_LIST } from '@/lib/constants';
+import { ROUTES, EXPRESS_BADGE } from '@/lib/constants';
+import { getCoverage } from '@/lib/coverage-settings';
 import styles from './page.module.css';
+
+// Zone cards come from the live coverage settings (client 2026-10-07, 8F: no hardcoding);
+// refreshed every 5 minutes after a Mission Control change
+export const revalidate = 300;
 
 export const metadata = pageMetadata({
   path: '/service-areas',
@@ -11,7 +16,11 @@ export const metadata = pageMetadata({
   imageAlt: 'First Eleven Cleaners - Dallas–Fort Worth Service Areas',
 });
 
-export default function ServiceAreasPage() {
+export default async function ServiceAreasPage() {
+  const coverage = await getCoverage();
+  const reach = coverage.extendedReach;
+  const reachZone = coverage.extendedReachZone;
+  const [bandA, bandB] = reach.bands;
   return (
     <div className={styles.page}>
       {/* Hero */}
@@ -20,7 +29,7 @@ export default function ServiceAreasPage() {
           <span className={styles.badge}>Smart Coverage · No ZIP Fences</span>
           <h1 className={styles.pageTitle}>Serving the Entire Dallas–Fort Worth Metroplex</h1>
           <p className={styles.pageSubtitle}>
-            Unlike legacy dry cleaners with strict geographic boundaries, First Eleven Cleaners was built with no ZIP code walls. Delivery stays 100% free everywhere; order minimums scale fairly by zone to maintain route economics.
+            Unlike legacy dry cleaners with strict geographic boundaries, First Eleven Cleaners was built with no ZIP code walls. Delivery is free across the Metroplex, with order minimums that scale fairly by zone; beyond it, Extended Reach routes run when neighbors book.
           </p>
           <div className={styles.heroActions}>
             <ButtonLink href={ROUTES.book} variant="primary" size="lg">
@@ -39,12 +48,12 @@ export default function ServiceAreasPage() {
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Smart Metroplex Coverage Zones</h2>
             <p className={styles.sectionSubtitle}>
-              Every accepted booking receives a committed window — morning (7:30–10:00 AM) or evening (5:00–8:00 PM). Door-to-door courier delivery is always complimentary.
+              Every accepted booking receives a committed window — morning (7:30–10:00 AM) or evening (5:00–8:00 PM). Door-to-door courier delivery is complimentary across the entire DFW Metroplex.
             </p>
           </div>
 
           <div className={styles.regionsGrid}>
-            {ZONES_LIST.map((zone) => (
+            {coverage.zonesList.map((zone) => (
               <Card key={zone.id} variant="bordered" padding="lg" className={styles.regionCard}>
                 <div className={styles.regionHeader}>
                   <h3 className={styles.regionTitle}>{zone.name}</h3>
@@ -66,7 +75,7 @@ export default function ServiceAreasPage() {
                       zone.expressEligible ? styles.zonePillHighlight : styles.zonePillMuted
                     }`}
                   >
-                    {zone.expressEligible ? '⚡ 24-Hr Express' : '⏱ Standard Turnaround'}
+                    {zone.expressEligible ? EXPRESS_BADGE : '⏱ Standard Turnaround'}
                   </span>
                 </div>
 
@@ -81,6 +90,41 @@ export default function ServiceAreasPage() {
                 </div>
               </Card>
             ))}
+
+            {/* Zone 5: beyond the Metroplex (client 2026-10-07, 8F) */}
+            <Card variant="bordered" padding="lg" className={styles.regionCard} id="extended-reach">
+              <div className={styles.regionHeader}>
+                <h3 className={styles.regionTitle}>{reachZone.name}</h3>
+                <span className={styles.regionBadge}>Beyond the Metroplex</span>
+              </div>
+
+              <div className={styles.zoneSpecRow}>
+                <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}>
+                  💰 ${reach.minimumOrder.toFixed(0)} min
+                </span>
+                <span className={styles.zonePill}>
+                  🚐 Delivery fee shown at booking (${bandA.fee} / ${bandB.fee} by distance; {reach.routineDiscountPercent}% off for Routine members)
+                </span>
+                <span className={styles.zonePill}>
+                  📅 Bi-weekly routes, dispatched when neighbors book
+                </span>
+                <span className={`${styles.zonePill} ${styles.zonePillMuted}`}>
+                  ⏱ Standard turnaround
+                </span>
+              </div>
+
+              <p className={styles.regionDesc}>
+                {bandA.minMiles}–{bandA.maxMiles} miles from our plant: ${bandA.fee} delivery fee, the route runs at {bandA.dispatchThreshold} bookings. {bandB.minMiles}–{bandB.maxMiles} miles: ${bandB.fee}, at {bandB.dispatchThreshold} bookings. Beyond {reach.waitlistBeyondMiles} miles, join the waitlist.
+              </p>
+
+              <div className={styles.cityList}>
+                {reachZone.cities.map((city) => (
+                  <span key={city} className={styles.cityTag}>
+                    📍 {city}
+                  </span>
+                ))}
+              </div>
+            </Card>
           </div>
 
           {/* No Zip Fence Callout */}
@@ -89,7 +133,7 @@ export default function ServiceAreasPage() {
             <div>
               <h3 className={styles.calloutTitle}>Don&apos;t see your specific neighborhood listed?</h3>
               <p className={styles.calloutText}>
-                We serve all residential and business addresses throughout the greater Dallas-Fort Worth metro area. Enter your address during booking and our dynamic routing engine will automatically assign you to the next available route window.
+                We serve all residential and business addresses throughout the greater Dallas-Fort Worth metro area. Enter your address during booking and our dynamic routing engine will automatically assign you to the next available route window. Beyond the Metroplex? <a href="#extended-reach">See Extended Reach.</a>
               </p>
             </div>
             <ButtonLink href={ROUTES.book} variant="primary" className={styles.calloutAction}>Check Your Address</ButtonLink>

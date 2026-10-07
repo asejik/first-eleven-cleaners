@@ -1,4 +1,4 @@
-import { ELEVEN_SYSTEM_PROMPT } from './systemPrompt';
+import { buildElevenSystemPrompt } from './systemPrompt';
 import type {
   AIConversationMessage,
   AIResponse,
@@ -7,10 +7,36 @@ import type {
 } from './types';
 import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE, NO_LEATHER_LINE, plantScheduleLine, alterationLines } from './price-list';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
-import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB } from '@/lib/constants';
+import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB, EXTENDED_REACH_LABEL } from '@/lib/constants';
+import { DEFAULT_COVERAGE, feeLabel, type Coverage } from '@/lib/coverage';
 
 export * from './types';
 export * from './systemPrompt';
+
+/** The live coverage settings (Mission Control), or the code defaults if they can't be read. */
+async function loadCoverage(): Promise<Coverage> {
+  try {
+    const { getCoverage } = await import('@/lib/coverage-settings');
+    return await getCoverage();
+  } catch {
+    return DEFAULT_COVERAGE;
+  }
+}
+
+/** The zones answer (client 2026-10-07, request 8): Zones 1-4, Zone 5 and the waitlist. */
+export function coverageAnswer(coverage: Coverage = DEFAULT_COVERAGE): string {
+  const r = coverage.extendedReach;
+  const zones = coverage.zonesList
+    .map((z) => `- **${z.name}**: $${z.minimumOrder.toFixed(0)} minimum, free delivery, ${z.routeScheduleLabel}${z.expressEligible ? ', 24-Hr Express Mon-Thu' : ''}. ${z.cities.join(', ')}.`)
+    .join('\n');
+  const bands = r.bands.map((b) => `${feeLabel(b.fee)} at ${b.minMiles}-${b.maxMiles} mi`).join(', ');
+  return [
+    'Door-to-door courier delivery is complimentary across the entire DFW Metroplex:',
+    zones,
+    `- **${coverage.extendedReachZone.name}** (beyond the Metroplex: ${coverage.extendedReachZone.cities.join(', ')}): $${r.minimumOrder.toFixed(0)} minimum plus an ${EXTENDED_REACH_LABEL} fee (${bands}; ${r.routineDiscountPercent}% off for Routine members). Routes run every ${r.cadenceWeeks === 1 ? 'week' : `${r.cadenceWeeks} weeks`} on ${r.routeDay}s once enough neighbors book.`,
+    `Zones 3 and 4 deliver on their next route day (a Zone 4 Friday pickup comes back Tuesday). Beyond ${r.waitlistBeyondMiles} miles we're not there yet, but you can join the waitlist. Enter your address on the booking page to see your exact zone, fee and dates.`,
+  ].join('\n');
+}
 
 /**
  * Smart Heuristic Simulated AI Engine Provider
@@ -278,18 +304,19 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
       };
     }
 
-    // 6. Coverage / Area Inquiries
-    if (/\b(area|zone|dfw|dallas|plano|frisco|southlake|coverage|cobertura|ubicacion|donde operan)\b/i.test(raw)) {
+    // 6. Coverage / Area Inquiries: the five zones, Zone 5 Extended Reach and the waitlist
+    if (/\b(area|areas|zone|zones|dfw|dallas|plano|frisco|southlake|coverage|deliver to|extended reach|sherman|weatherford|denton|fort worth|cobertura|ubicacion|donde operan)\b/i.test(raw)) {
+      const coverage = await loadCoverage();
       return {
         content: isSpanish
-          ? 'Ofrecemos servicio en todo el Metroplex de Dallas–Fort Worth, incluyendo Dallas (Uptown, Downtown, Highland Park), Plano, Frisco, Southlake, McKinney, Allen y Addison con recolección y entrega a domicilio gratis.'
-          : 'We service the entire Dallas–Fort Worth Metroplex, including Dallas (Highland Park, University Park, Uptown, Downtown), Plano, Frisco, Southlake, McKinney, Allen, and Addison with free doorstep pickup & delivery.',
+          ? `Ofrecemos recolección y entrega a domicilio gratis en todo el Metroplex de Dallas–Fort Worth (Zonas 1-4, con un pedido mínimo según la zona). Más allá del Metroplex, la Zona 5 (Extended Reach) tiene un mínimo de $${coverage.extendedReach.minimumOrder.toFixed(0)} y un cargo de entrega según la distancia. Ingrese su dirección en la página de reservas para ver su zona exacta.`
+          : coverageAnswer(coverage),
         intent: 'coverage_inquiry',
         detectedLanguage: isSpanish ? 'es' : 'en',
         action: {
           type: 'navigate',
           label: '🗺️ Check Service Zones',
-          url: '/pricing',
+          url: '/service-areas',
         },
       };
     }
@@ -366,7 +393,8 @@ export class ClaudeAIEngineProvider implements IAIEngineProvider {
         body: JSON.stringify({
           model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
           max_tokens: 600,
-          system: ELEVEN_SYSTEM_PROMPT,
+          // Zones, Zone 5 and the Express switch as Mission Control set them (client 2026-10-07)
+          system: buildElevenSystemPrompt(await loadCoverage()),
           messages,
         }),
         signal: AbortSignal.timeout(20_000), // PR-17

@@ -23,9 +23,11 @@ describe('Mission Control controls are real (PR-09)', () => {
     expect(express).not.toMatch(/Simulator/i);
   });
 
-  it('Zone screen shows the enforced rules without edit or save controls', () => {
+  it('Zone screen edits the settings booking enforces, and saves them to the server', () => {
+    // Client 2026-10-07 (request 8): zones, Zone 5 and the Express switch are admin-configurable
     const zones = src('src/components/mission-control/ZoneGovernance.tsx');
-    expect(zones).not.toContain('<input');
+    expect(zones).toContain("fetch('/api/mission-control/coverage', {");
+    expect(zones).toContain("method: 'PUT'");
     expect(zones).not.toMatch(/Save .*Rules/);
     expect(zones).not.toMatch(/Tier-Down/);
     expect(zones).not.toContain('stops30Days');

@@ -904,3 +904,51 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+
+/* Zone 5 Extended Reach: the delivery fee line, the Routine offer and the route threshold
+   (client 2026-10-07, 8C-8D) */
+.extendedReachBox {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-white);
+  border: 1px solid rgba(201, 161, 74, 0.45);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.extendedReachLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+}
+
+.extendedReachRoutine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-gold-text);
+  font-weight: var(--font-semibold);
+  margin: var(--space-2) 0;
+}
+
+.extendedReachNote {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+
+/* Route-day zones pick from their dates (Zone 3/4 route days, Zone 5 runs) */
+.routeDateOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}

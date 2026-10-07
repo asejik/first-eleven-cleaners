@@ -23,6 +23,10 @@ export interface MessagePayload {
   customTitle?: string;
   /** Booked with alterations: the date the whole order returns together (Parts B-D) */
   returnsTogetherOn?: string;
+  /** The delivery day, stated in the confirmation ("Tuesday, October 20"; client 2026-10-07, 8B) */
+  deliveredOn?: string;
+  /** Zone 5: "Your route runs when 3 neighbors book. Currently 2 of 3." (client 8D) */
+  routeThresholdLine?: string;
   smsConsent?: boolean;
   /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
   signupUrl?: string;
@@ -66,11 +70,14 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
       const saturday = data.pickupDate && isSaturdayPickup(data.pickupDate) ? ` ${SATURDAY_PICKUP_NOTICE}` : '';
       // Orders with alterations come back together on the alteration date (Parts B-D)
       const together = data.returnsTogetherOn ? ` Your whole order returns together on ${data.returnsTogetherOn}.` : '';
+      // The delivery day, stated explicitly (Zone 4 Friday pickups: "delivered Tuesday ...")
+      const delivered = !together && data.deliveredOn ? ` Delivered ${data.deliveredOn}.` : '';
+      const route = data.routeThresholdLine ? ` ${data.routeThresholdLine}` : '';
       return {
         stage: 'booked',
         title: '📋 Order Confirmation',
-        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${saturday}${together} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
-        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${saturday ? `\n🚚${saturday}` : ''}${together ? `\n🧵${together}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
+        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${delivered}${saturday}${together}${route} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
+        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${delivered ? `\n🚚${delivered}` : ''}${saturday ? `\n🚚${saturday}` : ''}${together ? `\n🧵${together}` : ''}${route ? `\n🚐${route}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
         mediaUrl: data.photoUrl,
       };
     }

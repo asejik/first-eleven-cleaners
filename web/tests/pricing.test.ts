@@ -7,6 +7,7 @@ import {
   calculateExpressSurcharge,
   calculateOrderFinancials,
   resolveZoneByZip,
+  ZONE_EXPRESS_ELIGIBLE,
   getZoneMinimumGap,
   ZONE_CONFIG,
   computeBookingFinancials,
@@ -52,7 +53,8 @@ function calculatePrice({
   const zone_gap = getZoneMinimumGap(subtotal, zone);
 
   let express_surcharge = 0;
-  if (express_tier === 'express_24hr' && zone?.expressEligible) {
+  // Surcharge math as it applies once the Express switch is on (it starts off, client 8E)
+  if (express_tier === 'express_24hr' && zone && zone.id !== 'zone_5' && ZONE_EXPRESS_ELIGIBLE[zone.id]) {
     express_surcharge = calculateExpressSurcharge(subtotal, true);
   }
 
@@ -152,7 +154,9 @@ describe('Pricing Engine & Business Rules', () => {
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_1');
       expect(zone?.minimumOrder).toBe(45.0);
-      expect(zone?.expressEligible).toBe(true);
+      // Express is switched off until the plant confirms (client 2026-10-07, 8E); Zone 1 may offer it
+      expect(zone?.expressEligible).toBe(false);
+      expect(ZONE_EXPRESS_ELIGIBLE.zone_1).toBe(true);
       expect(zone?.routeDays.length).toBe(6);
     });
 
@@ -161,25 +165,26 @@ describe('Pricing Engine & Business Rules', () => {
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_2');
       expect(zone?.minimumOrder).toBe(60.0);
-      expect(zone?.expressEligible).toBe(true);
+      expect(zone?.expressEligible).toBe(false);
+      expect(ZONE_EXPRESS_ELIGIBLE.zone_2).toBe(true);
     });
 
-    it('resolves Zone 3 (Tarrant & West Metro) with $80 minimum, Tue/Fri routes, no Express', () => {
+    it('resolves Zone 3 (Tarrant & West Metro) with $80 minimum, Mon/Thu routes, no Express', () => {
       const zone = resolveZoneByZip('76107'); // Fort Worth
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_3');
       expect(zone?.minimumOrder).toBe(80.0);
       expect(zone?.expressEligible).toBe(false);
-      expect(zone?.routeDays).toEqual(['Tuesday', 'Friday']);
+      expect(zone?.routeDays).toEqual(['Monday', 'Thursday']);
     });
 
-    it('resolves Zone 4 (Extended North Texas) with $100 minimum and Wednesday routes', () => {
+    it('resolves Zone 4 (Extended North Texas) with $100 minimum and Tue/Fri routes', () => {
       const zone = resolveZoneByZip('76201'); // Denton
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_4');
       expect(zone?.minimumOrder).toBe(100.0);
       expect(zone?.expressEligible).toBe(false);
-      expect(zone?.routeDays).toEqual(['Wednesday']);
+      expect(zone?.routeDays).toEqual(['Tuesday', 'Friday']);
     });
 
     it('returns null for empty, incomplete, or out-of-area ZIP codes', () => {

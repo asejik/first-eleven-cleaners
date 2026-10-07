@@ -549,3 +549,21 @@
     min-height: 44px;
   }
 }
+
+/* "Join the Routine" on the Zone 5 fee line (client 2026-10-07, 8C) */
+.routineButton {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-gold-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.routineButton:hover {
+  background: rgba(201, 161, 74, 0.12);
+}

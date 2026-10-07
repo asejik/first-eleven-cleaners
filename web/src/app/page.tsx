@@ -3,8 +3,8 @@ import {
   APP_TAGLINE,
   PROMO_CODE_LAUNCH,
   PROMO_DISCOUNT_PERCENT,
-  EXPRESS_ENABLED,
 } from '@/lib/constants';
+import { getCoverage } from '@/lib/coverage-settings';
 import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
@@ -17,7 +17,11 @@ export const metadata = pageMetadata({
   imageAlt: 'First Eleven Cleaners - Every Garment Makes the Lineup',
 });
 
-export default function HomePage() {
+// The Express card follows Mission Control's Express switch (client 2026-10-07, 8E)
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const { expressEnabled } = await getCoverage();
   return (
     <div className={styles.page}>
       {/* === Promo Banner === */}
@@ -138,11 +142,11 @@ export default function HomePage() {
               <span className={styles.serviceIcon}>⚡</span>
               <h3>24-Hour Express</h3>
               <p>
-                {EXPRESS_ENABLED
-                  ? 'Need it fast? 24-Hour Express turnaround available with a +50% surcharge. Picked up morning, delivered next morning.'
+                {expressEnabled
+                  ? 'Need it fast? 24-Hour Express turnaround, Monday to Thursday pickups, with a +50% surcharge. Picked up morning, delivered next morning.'
                   : 'Available soon — plant capacity confirming. Built for mission-critical fast turnaround.'}
               </p>
-              <span className={styles.servicePrice}>{EXPRESS_ENABLED ? 'From +50%' : 'Available Soon'}</span>
+              <span className={styles.servicePrice}>{expressEnabled ? 'From +50%' : 'Available Soon'}</span>
             </div>
           </div>
         </div>

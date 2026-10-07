@@ -126,6 +126,8 @@ export interface Order {
     discount_amount?: number | null;
     environmental_fee?: number | null;
     sales_tax?: number | null;
+    /** Zone 5 Extended Reach delivery fee (client 2026-10-07, 8C) */
+    extended_reach_fee?: number | null;
     total: number;
   };
   hold_amount?: number | null;
@@ -136,6 +138,11 @@ export interface Order {
   payment_reminder_stage?: number | null;
   notes: string | null;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
+  /** Where the address resolved and the Zone 5 fee (client 2026-10-07, request 8) */
+  zone_id?: string | null;
+  distance_miles?: number | null;
+  extended_reach_band?: string | null;
+  extended_reach_fee?: number | null;
   created_at: string;
   updated_at: string;
   // Joined relations (optional)
@@ -273,4 +280,6 @@ export interface BookingSubmissionResult {
   order: Order;
   order_number: string;
   message: string;
+  /** Zone 5: the run's bookings (this one included) against its threshold */
+  route_threshold?: { booked: number; threshold: number };
 }

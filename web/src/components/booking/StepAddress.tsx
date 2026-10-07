@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Card, Input, Button } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
-import { resolveZoneByZip, type ZoneConfig } from '@/lib/constants';
+import { resolveZoneByZip, ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
+import { dispatchThresholdMessage, formatLongDate, type ExtendedReachQuote } from '@/lib/coverage';
+import type { AddressCoverage } from '@/hooks/useCoverage';
 import styles from '@/app/book/page.module.css';
 
 interface StepAddressProps {
@@ -26,7 +28,12 @@ interface StepAddressProps {
   deliveryNotes: string;
   setDeliveryNotes: (val: string) => void;
   detectedZone: ZoneConfig | null;
-  onZoneChange: (zone: ZoneConfig | null) => void;
+  /** Where the address is served: ZIP lists, or driving distance (client 2026-10-07, 8A) */
+  addressCoverage: AddressCoverage;
+  /** Zone 5: the fee, Routine price and the next runs */
+  extendedReach: ExtendedReachQuote | null;
+  isRoutine: boolean;
+  onJoinRoutine: () => void;
   isValid: boolean;
   onContinue: () => void;
 }
@@ -53,14 +60,17 @@ export function StepAddress({
   deliveryNotes,
   setDeliveryNotes,
   detectedZone,
-  onZoneChange,
+  addressCoverage,
+  extendedReach,
+  isRoutine,
+  onJoinRoutine,
   isValid,
   onContinue,
 }: StepAddressProps) {
   const handleZipChange = (val: string) => {
     setZip(val);
+    // A likely city for the ZIP; the zone itself comes from addressCoverage
     const resolved = resolveZoneByZip(val);
-    onZoneChange(resolved);
     if (resolved && (!city || city === 'Dallas')) {
       if (resolved.id === 'zone_3') setCity('Fort Worth');
       else if (resolved.id === 'zone_2') setCity('Plano');
@@ -70,6 +80,25 @@ export function StepAddress({
   };
 
   const cleanedZip = (zip || '').trim().replace(/[^\d]/g, '');
+  const isWaitlist = addressCoverage.resolution.status === 'waitlist';
+  const nextRun = extendedReach?.runs[0];
+
+  // "Not in your area yet": join the waitlist with the contact details above (client 8C)
+  const [waitlist, setWaitlist] = useState<{ state: 'idle' | 'sending' | 'done' | 'error'; message?: string }>({ state: 'idle' });
+  const joinWaitlist = async () => {
+    setWaitlist({ state: 'sending' });
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: fullName || undefined, email, phone, street, city, zip, source: 'booking' }),
+      });
+      const data = await res.json();
+      setWaitlist(res.ok ? { state: 'done', message: data.message } : { state: 'error', message: data.error });
+    } catch {
+      setWaitlist({ state: 'error', message: 'Could not join the waitlist. Please try again.' });
+    }
+  };
 
   // Continue stays enabled: a dimmed button gives screen-reader users no reason. On
   // press, missing fields show an error (announced by Input) and get focus (SR-02).
@@ -80,7 +109,7 @@ export function StepAddress({
     ['booking-phone', phone.trim() ? null : 'Enter your mobile phone number.'],
     ['booking-street', street.trim() ? null : 'Enter your street address.'],
     ['booking-city', city.trim() ? null : 'Enter your city.'],
-    ['booking-zip', cleanedZip.length < 5 ? 'Enter your 5-digit ZIP code.' : detectedZone ? null : 'We don\u2019t serve this ZIP code yet.'],
+    ['booking-zip', cleanedZip.length < 5 ? 'Enter your 5-digit ZIP code.' : detectedZone ? null : addressCoverage.checking ? 'Checking your address\u2026' : 'We don\u2019t serve this address yet.'],
   ];
   const errorFor = (id: string) => (showErrors ? fieldErrors.find(([f]) => f === id)?.[1] ?? undefined : undefined);
 
@@ -98,7 +127,7 @@ export function StepAddress({
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>Where Should We Pick Up?</h1>
       <p className={styles.cardSubtitle}>
-        Door-to-door coverage across the Dallas-Fort Worth Metroplex. Free delivery everywhere.
+        Door-to-door courier delivery is complimentary across the entire DFW Metroplex.
       </p>
 
       <div className={styles.formGrid}>
@@ -193,9 +222,16 @@ export function StepAddress({
         />
       </div>
 
-      {/* Dynamic Zone Detection Card (Only shown when 5-digit ZIP matches a recognized zone) */}
+      {cleanedZip.length >= 5 && addressCoverage.checking && !detectedZone && !isWaitlist && (
+        <div className={styles.zonePrompt} role="status">
+          <span style={{ fontSize: '20px' }}>📍</span>
+          <div>Checking your address&hellip;</div>
+        </div>
+      )}
+
+      {/* Zone card: shown once the address resolves */}
       {cleanedZip.length >= 5 && detectedZone && (
-        <div className={styles.zoneBanner}>
+        <div className={styles.zoneBanner} role="status">
           <div className={styles.zoneBannerHeader}>
             <div className={styles.zoneBannerTitle}>
               <span>📍 {detectedZone.name}</span>
@@ -214,7 +250,9 @@ export function StepAddress({
             <div className={styles.zoneSpecItem}>
               <span className={styles.zoneSpecLabel}>Delivery Fee</span>
               <span className={`${styles.zoneSpecValue} ${styles.zoneSpecHighlight}`}>
-                $0.00 (Always Free)
+                {extendedReach
+                  ? `$${(isRoutine ? extendedReach.routineFee : extendedReach.fullFee).toFixed(2)}`
+                  : '$0.00 (Always Free)'}
               </span>
             </div>
             <div className={styles.zoneSpecItem}>
@@ -228,24 +266,84 @@ export function StepAddress({
                   detectedZone.expressEligible ? styles.zoneSpecHighlight : styles.zoneSpecMuted
                 }`}
               >
-                {detectedZone.expressEligible ? '⚡ Eligible' : 'Standard 48-Hr'}
+                {detectedZone.expressEligible ? '⚡ Mon–Thu' : 'Standard 48-Hr'}
               </span>
             </div>
           </div>
+
+          {/* Zone 5: the fee as its own line, the Routine price, and the route threshold */}
+          {extendedReach && (
+            <div className={styles.extendedReachBox}>
+              <div className={styles.extendedReachLine}>
+                <span>{EXTENDED_REACH_LABEL}</span>
+                <strong>
+                  {isRoutine ? (
+                    <>
+                      <s>${extendedReach.fullFee.toFixed(2)}</s> ${extendedReach.routineFee.toFixed(2)} (Routine member)
+                    </>
+                  ) : (
+                    `$${extendedReach.fullFee.toFixed(2)}`
+                  )}
+                </strong>
+              </div>
+              {!isRoutine && (
+                <div className={styles.extendedReachRoutine}>
+                  <span>
+                    {EXTENDED_REACH_LABEL}: ${extendedReach.fullFee.toFixed(0)} → ${extendedReach.routineFee.toFixed(2)} for Routine members
+                  </span>
+                  <Button variant="outline" size="sm" onClick={onJoinRoutine}>
+                    Join the Routine
+                  </Button>
+                </div>
+              )}
+              <p className={styles.extendedReachNote}>
+                ${extendedReach.minimumOrder.toFixed(0)} order minimum, plus the delivery fee. Tax and the environmental fee apply to the delivery fee like any line.
+                {nextRun && (
+                  <>
+                    {' '}Next route: {formatLongDate(nextRun.date)}. {dispatchThresholdMessage(nextRun.booked, nextRun.threshold)}
+                  </>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Out of Service Area Alert (Shown when 5-digit ZIP is entered but outside North Texas) */}
-      {cleanedZip.length >= 5 && !detectedZone && (
-        <div className={styles.zoneOutOfArea}>
+      {/* Beyond the last Extended Reach band, or outside North Texas: the waitlist */}
+      {cleanedZip.length >= 5 && isWaitlist && (
+        <div className={styles.zoneOutOfArea} role="status">
           <span style={{ fontSize: '24px', lineHeight: 1 }}>📍</span>
           <div>
-            <div className={styles.zoneOutOfAreaTitle}>
-              Outside Service Area ({zip.trim()})
-            </div>
+            <div className={styles.zoneOutOfAreaTitle}>Not in your area yet</div>
             <div className={styles.zoneOutOfAreaText}>
-              First Eleven Cleaners currently operates daily plant routes throughout the Dallas–Fort Worth Metroplex and North Texas (covering ZIP codes starting with 750–754 and 760–762). The ZIP code you entered is outside our delivery area. Please verify your ZIP code or contact our concierge for corporate or commercial laundry inquiries.
+              This address is beyond our delivery routes for now. Join the waitlist and we&apos;ll let you know as soon as we reach you.
             </div>
+            {waitlist.state === 'done' ? (
+              <p className={styles.zoneOutOfAreaText} style={{ marginTop: 'var(--space-2)', fontWeight: 700 }}>
+                ✅ {waitlist.message}
+              </p>
+            ) : (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={joinWaitlist}
+                  disabled={waitlist.state === 'sending' || !(email.trim() || phone.trim())}
+                >
+                  {waitlist.state === 'sending' ? 'Joining…' : 'Join the waitlist'}
+                </Button>
+                {!(email.trim() || phone.trim()) && (
+                  <p className={styles.zoneOutOfAreaText} style={{ marginTop: 'var(--space-2)' }}>
+                    Enter your email or phone above so we can tell you.
+                  </p>
+                )}
+                {waitlist.state === 'error' && (
+                  <p className={styles.zoneOutOfAreaText} role="alert" style={{ marginTop: 'var(--space-2)' }}>
+                    {waitlist.message}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -265,7 +363,8 @@ export function StepAddress({
       <div className={styles.smartCoverageNotice}>
         <span className={styles.noticeEmoji}>🗺️</span>
         <div>
-          <strong>Smart Coverage Promise:</strong> No restrictive ZIP fences. We serve all of North Texas with $0 delivery fees. Order minimums scale fairly by zone to power reliable plant routes.
+          <strong>Smart Coverage Promise:</strong> Door-to-door courier delivery is complimentary across the entire DFW Metroplex. Order minimums scale fairly by zone to power reliable plant routes. Beyond the Metroplex?{' '}
+          <a href={`${ROUTES.serviceAreas}#extended-reach`}>See Extended Reach.</a>
         </div>
       </div>
 

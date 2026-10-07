@@ -18,33 +18,95 @@ export const WASH_FOLD_MINIMUM_LBS = 15;
 export const WASH_FOLD_MINIMUM_PRICE = WASH_FOLD_PRICE_PER_LB * WASH_FOLD_MINIMUM_LBS; // $45
 export const EXPRESS_SURCHARGE_PERCENT = 0.50; // +50% surcharge
 export const EXPRESS_DAILY_SLOT_CAP = 8; // Default 8 slots/day capacity cap
-export const EXPRESS_ENABLED = true; // 24-Hour Express ("Match-Ready Tomorrow") active
-// --- Smart Coverage Zones ---
+/**
+ * 24-Hour Express master switch (client 2026-10-07, 8E): OFF until the plant confirms the
+ * Mon-Thu schedule in writing. This is the starting value; Mission Control's coverage
+ * settings (lib/coverage-settings.ts) turn it on.
+ */
+export const EXPRESS_ENABLED = false;
+
+// --- Smart Coverage Zones (client 2026-10-07, request 8) ---
+// Zones 1-4 (the Metroplex) have free delivery and an order minimum. Zone 5 (Extended
+// Reach) is beyond the Metroplex: a delivery fee by driving distance from the hub, a $125
+// minimum, and bi-weekly routes that run once enough neighbors book. The values here are the
+// starting values; Mission Control can change minimums, route days, bands, fees and thresholds.
+export type RouteDayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+export type MetroZoneId = 'zone_1' | 'zone_2' | 'zone_3' | 'zone_4';
+export type ZoneId = MetroZoneId | 'zone_5';
+
 export interface ZoneConfig {
-  id: 'zone_1' | 'zone_2' | 'zone_3' | 'zone_4';
+  id: ZoneId;
   name: string;
   badge: string;
   tagline: string;
   minimumOrder: number;
-  routeDays: ('Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday')[];
+  routeDays: RouteDayName[];
   routeScheduleLabel: string;
+  /** Express offered in this zone (only while the Express switch is on) */
   expressEligible: boolean;
   expressLabel: string;
+  /** Driving-distance band from the hub, in miles */
+  minMiles: number;
+  maxMiles: number;
+  /** Display list for the coverage page */
   cities: string[];
   zipCodes: string[];
 }
 
-export const ZONE_CONFIG: Record<ZoneConfig['id'], ZoneConfig> = {
-  zone_1: {
+/** Every zone is measured from here (driving distance). */
+export const COVERAGE_HUB = { name: 'Dry Clean City', address: '18217 Midway Rd, Dallas, TX 75287' } as const;
+
+export const EXPRESS_BADGE = '⚡ 24-Hr Express (Mon–Thu)';
+export const STANDARD_BADGE = '⏱ Standard 48-Hour (Express Unavailable)';
+
+export const ALL_ROUTE_DAYS: RouteDayName[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const SHORT_DAY: Record<RouteDayName, string> = {
+  Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat',
+};
+
+/** "Daily Routes (Mon–Sat)" or "Scheduled Routes (Mon & Thu)" for a set of route days. */
+export function routeDaysLabel(days: readonly RouteDayName[]): string {
+  if (ALL_ROUTE_DAYS.every((d) => days.includes(d))) return 'Daily Routes (Mon–Sat)';
+  const ordered = ALL_ROUTE_DAYS.filter((d) => days.includes(d)).map((d) => SHORT_DAY[d]);
+  if (ordered.length <= 2) return `Scheduled Routes (${ordered.join(' & ')})`;
+  return `Scheduled Routes (${ordered.slice(0, -1).join(', ')} & ${ordered[ordered.length - 1]})`;
+}
+
+/** Express labels follow the switch: Zones 1-2 read "24-Hr Express (Mon–Thu)" only while it is on. */
+export function zoneExpressLabel(expressEligible: boolean): string {
+  return expressEligible ? EXPRESS_BADGE : STANDARD_BADGE;
+}
+
+/** Which zones may offer Express once the switch is on. */
+export const ZONE_EXPRESS_ELIGIBLE: Record<MetroZoneId, boolean> = {
+  zone_1: true,
+  zone_2: true,
+  zone_3: false,
+  zone_4: false,
+};
+
+const metroZone = (
+  zone: Omit<ZoneConfig, 'routeScheduleLabel' | 'expressEligible' | 'expressLabel'> & { id: MetroZoneId; routeScheduleLabel?: string }
+): ZoneConfig => {
+  const expressEligible = EXPRESS_ENABLED && ZONE_EXPRESS_ELIGIBLE[zone.id];
+  return {
+    ...zone,
+    routeScheduleLabel: zone.routeScheduleLabel ?? routeDaysLabel(zone.routeDays),
+    expressEligible,
+    expressLabel: zoneExpressLabel(expressEligible),
+  };
+};
+
+export const ZONE_CONFIG: Record<MetroZoneId, ZoneConfig> = {
+  zone_1: metroZone({
     id: 'zone_1',
     name: 'Zone 1 — Core',
     badge: 'Core Metro',
-    tagline: 'Dallas Central & Core + Mid-Cities & Las Colinas',
+    tagline: 'Dallas Central & Core, Las Colinas and the North Dallas suburbs',
     minimumOrder: 45.00,
-    routeDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    routeScheduleLabel: 'Daily Routes (Mon–Sat)',
-    expressEligible: true,
-    expressLabel: '⚡ 24-Hour Express Eligible',
+    routeDays: ALL_ROUTE_DAYS,
+    minMiles: 0,
+    maxMiles: 15,
     cities: [
       'Downtown Dallas',
       'Uptown & Victory Park',
@@ -58,53 +120,57 @@ export const ZONE_CONFIG: Record<ZoneConfig['id'], ZoneConfig> = {
       'Irving & Las Colinas',
       'Coppell',
       'Farmers Branch',
-      'Euless',
-      'Bedford',
-      'Hurst',
-      'Grand Prairie',
+      'Addison',
+      'Carrollton',
+      'Richardson',
     ],
     zipCodes: [
+      // Dallas
       '75201', '75202', '75204', '75205', '75206', '75207', '75208', '75209', '75214', '75219',
       '75220', '75225', '75226', '75230', '75234', '75235', '75240', '75244', '75248', '75251',
-      '75038', '75039', '75060', '75061', '75062', '75063', '75019', '75006', '76039', '76040',
-      '76053', '76054', '75050', '75051', '75052',
+      // Far North Dallas around the hub
+      '75252', '75254', '75287',
+      // Irving & Las Colinas, Coppell, Farmers Branch
+      '75038', '75039', '75060', '75061', '75062', '75063', '75019',
+      // Addison, Carrollton, Richardson (moved from Zone 2)
+      '75001', '75006', '75007', '75010', '75080', '75081', '75082',
     ],
-  },
-  zone_2: {
+  }),
+  zone_2: metroZone({
     id: 'zone_2',
     name: 'Zone 2 — North Dallas Corridor',
     badge: 'North Corridor',
-    tagline: 'Plano, Frisco, Richardson, Carrollton, Addison, Allen, McKinney & Prosper',
+    tagline: 'Plano, Frisco, Allen, McKinney, Prosper, Lewisville & Flower Mound',
     minimumOrder: 60.00,
-    routeDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    routeDays: ALL_ROUTE_DAYS,
     routeScheduleLabel: 'Daily & Alternating Routes (Mon–Sat)',
-    expressEligible: true,
-    expressLabel: '⚡ 24-Hour Express Eligible',
+    minMiles: 15,
+    maxMiles: 25,
     cities: [
-      'Plano (Legacy & West)',
-      'Frisco (The Star & Hall Park)',
-      'Addison',
-      'Carrollton',
-      'Richardson (Telecom Corridor)',
+      'Plano',
+      'Frisco',
       'Allen',
       'McKinney & Craig Ranch',
       'Prosper',
+      'Lewisville & Flower Mound',
     ],
     zipCodes: [
-      '75001', '75007', '75010', '75013', '75023', '75024', '75025', '75093', '75033', '75034',
-      '75035', '75036', '75070', '75071', '75072', '75078', '75080', '75081', '75082', '75094',
+      // Plano, Frisco, Allen, McKinney, Prosper
+      '75002', '75013', '75023', '75024', '75025', '75093', '75094', '75033', '75034', '75035',
+      '75036', '75070', '75071', '75072', '75078',
+      // Lewisville, Flower Mound, Highland Village, The Colony (moved from Zone 4)
+      '75022', '75028', '75056', '75057', '75067', '75077',
     ],
-  },
-  zone_3: {
+  }),
+  zone_3: metroZone({
     id: 'zone_3',
     name: 'Zone 3 — Tarrant & West Metro',
     badge: 'Tarrant & West',
-    tagline: 'Fort Worth, Arlington, Southlake, Colleyville, Grapevine, Keller & Westlake',
+    tagline: 'Fort Worth, Arlington, Southlake, Grapevine and the Mid-Cities',
     minimumOrder: 80.00,
-    routeDays: ['Tuesday', 'Friday'],
-    routeScheduleLabel: 'Scheduled Routes (Tue & Fri)',
-    expressEligible: false,
-    expressLabel: '⏱ Standard 48-Hour (Express Unavailable)',
+    routeDays: ['Monday', 'Thursday'],
+    minMiles: 20,
+    maxMiles: 35,
     cities: [
       'Downtown Fort Worth',
       'Fort Worth Cultural District',
@@ -114,71 +180,175 @@ export const ZONE_CONFIG: Record<ZoneConfig['id'], ZoneConfig> = {
       'Grapevine',
       'Keller',
       'Westlake',
+      'Bedford',
+      'Hurst',
+      'Euless',
+      'Grand Prairie',
     ],
     zipCodes: [
       '76102', '76104', '76107', '76109', '76116', '76132', '76137', '76179', '76006', '76010',
       '76011', '76012', '76013', '76017', '76018', '76092', '76034', '76051', '76248', '76262',
+      // Bedford, Hurst, Euless, Grand Prairie (moved from Zone 1)
+      '76021', '76022', '76053', '76054', '76039', '76040', '75050', '75051', '75052',
     ],
-  },
-  zone_4: {
+  }),
+  zone_4: metroZone({
     id: 'zone_4',
     name: 'Zone 4 — Extended North Texas',
     badge: 'Extended Coverage',
-    tagline: 'Wider Metroplex & Surrounding Communities',
+    tagline: 'Denton, Rockwall, Forney, Waxahachie, Burleson & Mansfield',
     minimumOrder: 100.00,
-    routeDays: ['Wednesday'],
-    routeScheduleLabel: 'Scheduled Routes (Wednesdays)',
-    expressEligible: false,
-    expressLabel: '⏱ Standard 48-Hour (Express Unavailable)',
+    routeDays: ['Tuesday', 'Friday'],
+    minMiles: 30,
+    maxMiles: 45,
     cities: [
       'Denton',
-      'Lewisville & Flower Mound',
       'Rockwall & Heath',
       'Forney',
       'Waxahachie',
-      'Weatherford',
       'Burleson & Mansfield',
-      'Extended North Texas Coverage',
     ],
     zipCodes: [
       // Denton, Corinth, Argyle, North Lakes
       '76201', '76202', '76203', '76204', '76205', '76207', '76208', '76209', '76210', '76226', '76227', '76249', '76258', '76259',
-      // Lewisville, Flower Mound, Highland Village, The Colony
-      '75022', '75028', '75056', '75057', '75067', '75077',
       // Rockwall, Heath, Royse City
       '75032', '75087', '75189',
       // Forney, Kaufman, Terrell
       '75126', '75142', '75160',
       // Waxahachie, Midlothian, Red Oak, Ennis
       '75165', '75167', '76065', '75154', '75119',
-      // Weatherford, Aledo, Parker County
-      '76085', '76086', '76087', '76088', '76008',
       // Burleson, Mansfield, Crowley, Joshua, Cleburne
       '76028', '76063', '76084', '76036', '76058', '76031',
       // Perimeter North Texas / DFW Communities
       '75048', '75088', '75089', '75098', '75104', '75115', '75116', '75134', '75146', '75149', '75150', '75180', '75181',
     ],
-  },
+  }),
 };
 
 export const ZONES_LIST = Object.values(ZONE_CONFIG);
 
+// --- Zone 5: Extended Reach (client 2026-10-07, 8C-8D) ---
+export interface ExtendedReachBand {
+  id: 'A' | 'B';
+  /** Driving miles from the hub: above minMiles, up to and including maxMiles */
+  minMiles: number;
+  maxMiles: number;
+  /** Extended Reach delivery fee, in dollars (taxed like any line) */
+  fee: number;
+  /** The route runs once this many orders are booked in the cycle */
+  dispatchThreshold: number;
+}
+
+export interface ExtendedReachConfig {
+  /** Order minimum (garments; the delivery fee is on top) */
+  minimumOrder: number;
+  /** Routine members' discount on the delivery fee */
+  routineDiscountPercent: number;
+  /** Beyond this many miles: no booking, the waitlist instead */
+  waitlistBeyondMiles: number;
+  /** Bi-weekly: one fixed route day every N weeks, counted from firstRunDate */
+  cadenceWeeks: number;
+  routeDay: RouteDayName;
+  /** The first route day (YYYY-MM-DD); later runs follow every cadenceWeeks weeks */
+  firstRunDate: string;
+  /** Booking closes this many days before a run (the threshold is decided 2 days before) */
+  bookingNoticeDays: number;
+  bands: ExtendedReachBand[];
+}
+
+export const EXTENDED_REACH_DEFAULTS: ExtendedReachConfig = {
+  minimumOrder: 125,
+  routineDiscountPercent: 50,
+  waitlistBeyondMiles: 80,
+  cadenceWeeks: 2,
+  routeDay: 'Wednesday',
+  firstRunDate: '2026-10-21',
+  bookingNoticeDays: 3,
+  bands: [
+    { id: 'A', minMiles: 45, maxMiles: 60, fee: 35, dispatchThreshold: 3 },
+    { id: 'B', minMiles: 60, maxMiles: 80, fee: 60, dispatchThreshold: 4 },
+  ],
+};
+
+export const EXTENDED_REACH_LABEL = 'Extended Reach delivery';
+
 /**
- * Resolves coverage zone by customer 5-digit ZIP code.
- * Returns null if the ZIP code is empty, incomplete, or outside our Dallas–Fort Worth service area.
+ * Approximate driving miles from the hub for the Zone 5 display towns. Used ONLY when the
+ * routing service can't be reached (or isn't set up locally), so these towns still resolve.
+ */
+export const EXTENDED_REACH_FALLBACK_MILES: Record<string, number> = {
+  // Weatherford, Aledo
+  '76085': 58, '76086': 58, '76087': 58, '76088': 58, '76008': 50,
+  // Sherman, Denison
+  '75090': 64, '75092': 64, '75020': 71, '75021': 71,
+  // Greenville
+  '75401': 57, '75402': 57,
+  // Corsicana
+  '75109': 73, '75110': 73,
+  // Gainesville
+  '76240': 60,
+};
+
+export function extendedReachZone(config: ExtendedReachConfig = EXTENDED_REACH_DEFAULTS): ZoneConfig {
+  const fees = config.bands.map((b) => `$${b.fee}`).join(' / ');
+  return {
+    id: 'zone_5',
+    name: 'Zone 5 — Extended Reach',
+    badge: 'Extended Reach',
+    tagline: `Beyond the Metroplex · delivery fee shown at booking (${fees} by distance)`,
+    minimumOrder: config.minimumOrder,
+    routeDays: [config.routeDay],
+    routeScheduleLabel: `Bi-weekly routes (alternate ${config.routeDay}s), dispatched when neighbors book`,
+    expressEligible: false,
+    expressLabel: STANDARD_BADGE,
+    minMiles: config.bands[0]?.minMiles ?? 45,
+    maxMiles: config.waitlistBeyondMiles,
+    cities: ['Sherman & Denison', 'Weatherford', 'Greenville', 'Corsicana', 'Gainesville'],
+    zipCodes: Object.keys(EXTENDED_REACH_FALLBACK_MILES),
+  };
+}
+
+export const EXTENDED_REACH_ZONE = extendedReachZone();
+
+/** The Extended Reach band for a driving distance, or null (inside the Metroplex, or beyond). */
+export function extendedReachBand(miles: number, config: ExtendedReachConfig = EXTENDED_REACH_DEFAULTS): ExtendedReachBand | null {
+  if (!(miles > 0) || miles > config.waitlistBeyondMiles) return null;
+  return config.bands.find((b) => miles > b.minMiles && miles <= b.maxMiles) ?? null;
+}
+
+/** The Extended Reach fee in dollars: Routine members get the discount (whole cents, half-up). */
+export function extendedReachFee(
+  band: Pick<ExtendedReachBand, 'fee'> | null,
+  isRoutineMember: boolean,
+  config: Pick<ExtendedReachConfig, 'routineDiscountPercent'> = EXTENDED_REACH_DEFAULTS
+): number {
+  if (!band) return 0;
+  const cents = Math.round(band.fee * 100);
+  if (!isRoutineMember) return cents / 100;
+  return Math.round((cents * (100 - config.routineDiscountPercent)) / 100) / 100;
+}
+
+/**
+ * Resolves the zone from the ZIP code alone (no distance): the Zone 1-4 lists, then the
+ * Zone 5 towns' approximate miles, then any other North Texas ZIP (750-754, 760-762) as
+ * Zone 4. Returns null outside North Texas. lib/coverage.ts uses the driving distance when
+ * the routing service has one; this is its fallback and the instant first guess on screen.
  */
 export function resolveZoneByZip(zip: string): ZoneConfig | null {
   const cleaned = (zip || '').trim().replace(/[^\d]/g, '');
   if (cleaned.length < 5) return null;
   const zip5 = cleaned.slice(0, 5);
 
-  for (const zone of [ZONE_CONFIG.zone_1, ZONE_CONFIG.zone_2, ZONE_CONFIG.zone_3, ZONE_CONFIG.zone_4]) {
+  for (const zone of ZONES_LIST) {
     if (zone.zipCodes.includes(zip5)) {
       return zone;
     }
   }
 
-  // Fallback for valid North Texas / DFW perimeter ZIP prefixes (750-754, 760-762)
+  const fallbackMiles = EXTENDED_REACH_FALLBACK_MILES[zip5];
+  if (fallbackMiles !== undefined) return extendedReachBand(fallbackMiles) ? EXTENDED_REACH_ZONE : null;
+
+  // Other North Texas / DFW perimeter ZIP prefixes (750-754, 760-762)
   const isNorthTexasPrefix = /^(75[0-4]|76[0-2])\d{2}$/.test(zip5);
   if (isNorthTexasPrefix) {
     return ZONE_CONFIG.zone_4;
@@ -415,6 +585,8 @@ export interface OrderFinancials {
   frequencyDiscountPercent: number;
   promoDiscount: number;
   promoDiscountPercent: number;
+  /** Zone 5 Extended Reach delivery fee (after the Routine discount); taxed like any line */
+  extendedReachFee: number;
   netSubtotal: number;
   environmentalFee: number;
   taxableAmount: number;
@@ -462,6 +634,7 @@ export function calculateOrderFinancials({
   discountPercent = 0,
   discountAmount: directDiscountAmount,
   frequency = 'one_time',
+  extendedReachFee = 0,
 }: {
   subtotal: number;
   expressMultiplier?: number;
@@ -470,6 +643,8 @@ export function calculateOrderFinancials({
   discountPercent?: number;
   discountAmount?: number;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
+  /** Zone 5 delivery fee in dollars: no discount applies to it; fee and tax do (client 8C) */
+  extendedReachFee?: number;
 }): OrderFinancials {
   const subtotalCents = toCents(subtotal);
 
@@ -494,7 +669,8 @@ export function calculateOrderFinancials({
     : Math.round((grossCents * promoDiscountPercent) / 100);
 
   const totalDiscountCents = frequencyCents + promoCents;
-  const netCents = Math.max(0, grossCents - totalDiscountCents);
+  const deliveryCents = Math.max(0, toCents(extendedReachFee));
+  const netCents = Math.max(0, grossCents - totalDiscountCents) + deliveryCents;
   const feeCents = applyRate(netCents, ENV_FEE_BASIS_POINTS, 10000);
   const taxableCents = netCents + feeCents;
   const taxCents = applyRate(taxableCents, SALES_TAX_BASIS_POINTS, 10000);
@@ -508,6 +684,7 @@ export function calculateOrderFinancials({
     frequencyDiscountPercent,
     promoDiscount: toDollars(promoCents),
     promoDiscountPercent,
+    extendedReachFee: toDollars(deliveryCents),
     netSubtotal: toDollars(netCents),
     environmentalFee: toDollars(feeCents),
     taxableAmount: toDollars(taxableCents),
@@ -553,6 +730,7 @@ export function computeBookingFinancials({
   promoDiscountPercent = 0,
   promoDiscountAmount,
   frequency = 'one_time',
+  extendedReachFee = 0,
 }: {
   dryCleanItems?: BookingItemInput[];
   /** One line per alteration piece (buttons: one line with a quantity), already validated */
@@ -563,6 +741,8 @@ export function computeBookingFinancials({
   /** Fixed-dollar promo (discount_type 'fixed'); takes precedence over the percentage (SEC-15) */
   promoDiscountAmount?: number;
   frequency?: 'one_time' | 'weekly' | 'biweekly';
+  /** Zone 5 Extended Reach delivery fee, already discounted for Routine members */
+  extendedReachFee?: number;
 }): RecomputedBookingPricing {
   let washFoldSubtotal = 0;
   const itemizedList: RecomputedBookingPricing['itemizedList'] = [];
@@ -624,6 +804,7 @@ export function computeBookingFinancials({
     discountPercent: promoDiscountPercent,
     discountAmount: promoDiscountAmount,
     frequency,
+    extendedReachFee,
   });
 
   return {

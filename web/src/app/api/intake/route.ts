@@ -138,6 +138,8 @@ export async function POST(request: Request) {
         discount_amount,
         express_tier,
         promo_code,
+        frequency,
+        extended_reach_fee,
         payment_status,
         payment_id,
         square_customer_id,
@@ -296,12 +298,16 @@ export async function POST(request: Request) {
         promoDiscountPercent = Number(promoRow.discount_value) || 0;
       }
     }
-    // Booking records the recurring plan in the order notes ("Recurring Plan: Weekly | Bi-Weekly")
-    const frequency = order.notes?.includes('Recurring Plan: Bi-Weekly')
-      ? 'biweekly'
-      : order.notes?.includes('Recurring Plan: Weekly')
-        ? 'weekly'
-        : 'one_time';
+    // The recurring plan is saved on the order (20261007_zones_extended_reach); older orders
+    // have it only in the notes ("Recurring Plan: Weekly | Bi-Weekly")
+    const frequency =
+      order.frequency === 'weekly' || order.frequency === 'biweekly'
+        ? order.frequency
+        : order.notes?.includes('Recurring Plan: Bi-Weekly')
+          ? 'biweekly'
+          : order.notes?.includes('Recurring Plan: Weekly')
+            ? 'weekly'
+            : 'one_time';
 
     const financials = calculateOrderFinancials({
       subtotal,
@@ -309,6 +315,8 @@ export async function POST(request: Request) {
       discountPercent: promoDiscountPercent,
       discountAmount: promoDiscountAmount,
       frequency,
+      // Zone 5 delivery fee as booked (Routine discount already applied)
+      extendedReachFee: Number(order.extended_reach_fee) || 0,
     });
     const finalTotal = financials.finalTotal;
 

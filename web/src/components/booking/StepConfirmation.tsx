@@ -2,10 +2,17 @@ import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Badge, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
+import { formatLongDate, dispatchThresholdMessage } from '@/lib/coverage';
 import styles from '@/app/book/page.module.css';
 
 interface StepConfirmationProps {
-  confirmedOrder: { order_number: string; id: string };
+  confirmedOrder: {
+    order_number: string;
+    id: string;
+    deliveryDate?: string | null;
+    /** Zone 5: the run's bookings (this one included) against its threshold */
+    routeThreshold?: { booked: number; threshold: number } | null;
+  };
   pickupDate: string;
   pickupWindow: 'morning' | 'evening';
 }
@@ -43,7 +50,14 @@ export function StepConfirmation({
         <p className={styles.confSubtitle}>
           Order #{confirmedOrder.order_number} is confirmed. Our van will arrive on{' '}
           <strong>{pickupDate}</strong> ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'}).
+          {/* The delivery day, stated explicitly (client 2026-10-07, 8B) */}
+          {confirmedOrder.deliveryDate && <> Delivered <strong>{formatLongDate(confirmedOrder.deliveryDate)}</strong>.</>}
         </p>
+        {confirmedOrder.routeThreshold && (
+          <p className={styles.confSubtitle}>
+            🚐 {dispatchThresholdMessage(confirmedOrder.routeThreshold.booked, confirmedOrder.routeThreshold.threshold)} We&apos;ll message you the moment your route is confirmed.
+          </p>
+        )}
       </div>
 
       {/* Domino's Style 6-Stage Progress Indicator */}

@@ -9,14 +9,22 @@ import {
   PROMO_CODE_LAUNCH,
   calculateOrderFinancials,
   isExpressExcluded,
-  resolveZoneByZip,
   getZoneMinimumGap,
   type ZoneConfig,
 } from '@/lib/constants';
+import {
+  zoneDeliveryDate,
+  isRoutineFrequency,
+  nextZoneRouteDay,
+  DEFAULT_COVERAGE,
+  type Coverage,
+} from '@/lib/coverage';
+import { useCoverage, useAddressCoverage } from '@/hooks/useCoverage';
+import { addDaysToDate } from '@/lib/texas-time';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
-import { earliestPickupDate, estimatedDeliveryDate, isExpressPickupDay } from '@/lib/schedule';
+import { earliestPickupDate, isExpressPickupDay } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
 import { holdAmountFor, shouldPlaceHoldNow } from '@/lib/payment-hold';
 import {
@@ -53,15 +61,32 @@ export function getMinPickupDate(tier: 'standard' | 'express_24hr' = 'standard')
   return earliestPickupDate(tier);
 }
 
-// Estimated delivery date: the same plant-day rule the server stores (Mon-Fri plant)
+// Estimated delivery date: the same rule the server stores. The plant runs Mon-Fri; Zones 3
+// and 4 deliver on their next route day (client 2026-10-07, 8B).
 export function getEstimatedDeliveryDate(
   pickupDateStr: string,
   tier: 'standard' | 'express_24hr' = 'standard',
-  hasAlterations = false
+  hasAlterations = false,
+  zone: ZoneConfig | null = null,
+  coverage: Coverage = DEFAULT_COVERAGE
 ) {
   if (!pickupDateStr) return '';
   // An order with alterations returns together on the alteration date (Parts B-D)
-  return formatDisplayDate(estimatedDeliveryDate(pickupDateStr, tier, { alterations: hasAlterations }));
+  return formatDisplayDate(zoneDeliveryDate(zone, pickupDateStr, tier, { alterations: hasAlterations }, coverage));
+}
+
+/** Zones with set route days pick from a list: Zone 3/4 route days, Zone 5 run dates (client 8B-8C). */
+function routeDateOptions(zone: ZoneConfig | null, coverage: Coverage, zone5Runs: string[] | null): string[] | null {
+  if (!zone) return null;
+  if (zone.id === 'zone_5') return zone5Runs;
+  if (zone.routeDays.length >= 6) return null;
+  const dates: string[] = [];
+  let date = nextZoneRouteDay(zone, earliestPickupDate('standard'), coverage);
+  while (dates.length < 8) {
+    dates.push(date);
+    date = nextZoneRouteDay(zone, addDaysToDate(date, 1), coverage);
+  }
+  return dates;
 }
 
 export function useBookingState() {
@@ -84,7 +109,11 @@ export function useBookingState() {
   const [city, setCity] = useState('Dallas');
   const [zip, setZip] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
-  const [detectedZone, setDetectedZone] = useState<ZoneConfig | null>(() => resolveZoneByZip(''));
+  // The zone comes from the ZIP lists, or the driving distance for anything else (client 8A)
+  const coverage = useCoverage();
+  const addressCoverage = useAddressCoverage({ street, city, zip }, coverage);
+  const detectedZone: ZoneConfig | null = addressCoverage.resolution.status === 'served' ? addressCoverage.resolution.zone : null;
+  const isWaitlist = addressCoverage.resolution.status === 'waitlist';
 
   // Prefill contact details when the signed-in customer loads. The login now arrives after
   // the first render (P05 AR-05), so the initial values above are empty. Adjusted during
@@ -142,7 +171,13 @@ export function useBookingState() {
   const [cardCvc, setCardCvc] = useState('•••');
 
   // Step 6: Confirmation result
-  const [confirmedOrder, setConfirmedOrder] = useState<{ order_number: string; id: string } | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<{
+    order_number: string;
+    id: string;
+    deliveryDate?: string | null;
+    /** Zone 5: where this run stands with this booking included */
+    routeThreshold?: { booked: number; threshold: number } | null;
+  } | null>(null);
   // One key per checkout: resubmitting (double click, retry after a timeout) returns the
   // order already created instead of booking twice (PR-11)
   const checkoutKeyRef = useRef<string | null>(null);
@@ -168,10 +203,7 @@ export function useBookingState() {
           if (d.street) setStreet(d.street);
           if (d.unit) setUnit(d.unit);
           if (d.city) setCity(d.city);
-          if (d.zip) {
-            setZip(d.zip);
-            setDetectedZone(resolveZoneByZip(d.zip));
-          }
+          if (d.zip) setZip(d.zip);
           if (d.deliveryNotes) setDeliveryNotes(d.deliveryNotes);
           if (d.serviceType) setServiceType(d.serviceType);
           if (d.washFoldWeight) setWashFoldWeight(d.washFoldWeight);
@@ -306,13 +338,30 @@ export function useBookingState() {
   // Fixed-dollar codes are dollars off, as the server applies them (SEC-15, P05 AR-02)
   const { discountPercent, discountAmount: promoDiscountAmount } = promoFinancialInputs(appliedPromo);
 
+  // Zone 5: the Extended Reach fee line, half off for Routine members (client 8C)
+  const extendedReach = detectedZone?.id === 'zone_5' ? addressCoverage.extendedReach : null;
+  const isRoutine = isRoutineFrequency(frequency);
+  const extendedReachFee = extendedReach ? (isRoutine ? extendedReach.routineFee : extendedReach.fullFee) : 0;
+  // "Join the Routine": Bi-Weekly matches the Zone 5 route
+  const joinRoutine = () => setFrequency('biweekly');
+
   const financials = calculateOrderFinancials({
     subtotal,
     isExpress: isExpressActive,
     discountPercent,
     discountAmount: promoDiscountAmount,
     frequency,
+    extendedReachFee,
   });
+
+  // Route-day zones pick from their dates; keep the pickup on one of them (adjusted during
+  // render, like the sign-in prefill above)
+  const routeDates = routeDateOptions(detectedZone, coverage, extendedReach ? extendedReach.runs.map((r) => r.date) : null);
+  if (routeDates && routeDates.length > 0 && !routeDates.includes(pickupDate) && expressTier === 'standard') {
+    setPickupDate(routeDates[0]);
+  }
+  const getDeliveryDate = (pickupDateStr: string, tier: 'standard' | 'express_24hr' = 'standard', alterations = false) =>
+    getEstimatedDeliveryDate(pickupDateStr, tier, alterations, detectedZone, coverage);
 
   const expressSurcharge = financials.expressSurcharge;
   const discountAmount = financials.discountAmount;
@@ -323,14 +372,14 @@ export function useBookingState() {
   const holdNow = Boolean(pickupDate) && shouldPlaceHoldNow(pickupDate);
 
   // Step Validations: Step 1 requires full address (including city) AND a valid recognized service zone
-  const isStep1Valid = Boolean(fullName && email && phone && street && city && zip && detectedZone !== null);
+  const isStep1Valid = Boolean(fullName && email && phone && street && city && zip && detectedZone !== null && !addressCoverage.checking);
   const isStep2Valid =
     ((serviceType !== 'dry_clean' && washFoldWeight > 0) ||
       (serviceType !== 'wash_fold' && Object.values(dryCleanQuantities).some((q) => q > 0)) ||
       hasAlterations) &&
     alterationsReady &&
     !buttonsOnlyMessage;
-  const isStep3Valid = Boolean(pickupDate && pickupWindow);
+  const isStep3Valid = Boolean(pickupDate && pickupWindow && (!routeDates || routeDates.includes(pickupDate)));
 
   // Handle Promo Validation
   const handleApplyPromo = async () => {
@@ -415,7 +464,12 @@ export function useBookingState() {
       };
 
       const result = await submitBookingMutation.mutateAsync(payload);
-      setConfirmedOrder({ order_number: result.order_number, id: result.order.id });
+      setConfirmedOrder({
+        order_number: result.order_number,
+        id: result.order.id,
+        deliveryDate: result.order.delivery_date ?? null,
+        routeThreshold: result.route_threshold ?? null,
+      });
       checkoutKeyRef.current = null; // the next booking is a new checkout
       try {
         sessionStorage.removeItem('f11_booking_draft');
@@ -463,7 +517,15 @@ export function useBookingState() {
     deliveryNotes,
     setDeliveryNotes,
     detectedZone,
-    setDetectedZone,
+    coverage,
+    addressCoverage,
+    isWaitlist,
+    extendedReach,
+    extendedReachFee,
+    isRoutine,
+    joinRoutine,
+    routeDates,
+    getDeliveryDate,
     serviceType,
     setServiceType,
     washFoldWeight,

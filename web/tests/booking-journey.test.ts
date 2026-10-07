@@ -66,20 +66,21 @@ const BookingSchema = z.object({
 
 describe('Booking Journey E2E Integration Tests', () => {
   describe('Step 1: Address, Zone Resolution, and City Mapping', () => {
-    it('correctly maps Zone 1 (Dallas Core) with $45 minimum and Express eligibility', () => {
+    // Express is switched off until the plant confirms in writing (client 2026-10-07, 8E)
+    it('correctly maps Zone 1 (Dallas Core) with $45 minimum (Express off until the plant confirms)', () => {
       const zone = resolveZoneByZip('75201');
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_1');
       expect(zone?.minimumOrder).toBe(45);
-      expect(zone?.expressEligible).toBe(true);
+      expect(zone?.expressEligible).toBe(false);
     });
 
-    it('correctly maps Zone 2 (North Dallas / Plano) with $60 minimum and Express eligibility', () => {
+    it('correctly maps Zone 2 (North Dallas / Plano) with $60 minimum (Express off until the plant confirms)', () => {
       const zone = resolveZoneByZip('75024');
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_2');
       expect(zone?.minimumOrder).toBe(60);
-      expect(zone?.expressEligible).toBe(true);
+      expect(zone?.expressEligible).toBe(false);
     });
 
     it('correctly maps Zone 3 (Fort Worth Metro) with $80 minimum and scheduled routes (Express unavailable)', () => {
@@ -88,7 +89,7 @@ describe('Booking Journey E2E Integration Tests', () => {
       expect(zone?.id).toBe('zone_3');
       expect(zone?.minimumOrder).toBe(80);
       expect(zone?.expressEligible).toBe(false);
-      expect(zone?.routeScheduleLabel).toContain('Tue & Fri');
+      expect(zone?.routeScheduleLabel).toContain('Mon & Thu');
     });
 
     it('correctly maps Zone 4 (Outer DFW / Denton) with $100 minimum and gates Express', () => {

@@ -16,7 +16,6 @@ import {
   useBookingState,
   formatDisplayDate,
   formatLocalDate,
-  getEstimatedDeliveryDate,
   getMinPickupDate,
 } from '@/hooks/useBookingState';
 import styles from './page.module.css';
@@ -106,7 +105,10 @@ export default function BookingPage() {
             deliveryNotes={b.deliveryNotes}
             setDeliveryNotes={b.setDeliveryNotes}
             detectedZone={b.detectedZone}
-            onZoneChange={b.setDetectedZone}
+            addressCoverage={b.addressCoverage}
+            extendedReach={b.extendedReach}
+            isRoutine={b.isRoutine}
+            onJoinRoutine={b.joinRoutine}
             isValid={b.isStep1Valid}
             onContinue={() => b.setStep(2)}
           />
@@ -145,7 +147,10 @@ export default function BookingPage() {
             getMinPickupDate={getMinPickupDate}
             formatDisplayDate={formatDisplayDate}
             formatLocalDate={formatLocalDate}
-            getEstimatedDeliveryDate={getEstimatedDeliveryDate}
+            getEstimatedDeliveryDate={b.getDeliveryDate}
+            routeDates={b.routeDates}
+            extendedReach={b.extendedReach}
+            expressEnabled={b.coverage.expressEnabled}
             onToast={b.addToast}
             hasExcludedGarments={b.hasExcludedGarments}
             hasAlterations={b.hasAlterations}
@@ -190,9 +195,13 @@ export default function BookingPage() {
             salesTax={b.financials.salesTax}
             finalTotal={b.financials.finalTotal}
             formatDisplayDate={formatDisplayDate}
-            getEstimatedDeliveryDate={getEstimatedDeliveryDate}
+            getEstimatedDeliveryDate={b.getDeliveryDate}
             detectedZone={b.detectedZone}
             zoneMinimumGap={b.zoneMinimumGap}
+            extendedReach={b.extendedReach}
+            extendedReachFee={b.extendedReachFee}
+            isRoutine={b.isRoutine}
+            onJoinRoutine={b.joinRoutine}
             onBack={() => b.setStep(3)}
             onContinue={() => b.setStep(5)}
           />

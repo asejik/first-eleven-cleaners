@@ -128,6 +128,14 @@ CREATE TABLE IF NOT EXISTS orders (
   -- 0 none, 1 reminder sent (24 h), 2 staff call due (48 h), 3 owner decision (7 days)
   payment_reminder_stage SMALLINT NOT NULL DEFAULT 0 CONSTRAINT orders_payment_reminder_stage_check
     CHECK (payment_reminder_stage BETWEEN 0 AND 3),
+  -- Where the address resolved (20261007_zones_extended_reach.sql)
+  zone_id VARCHAR(10),
+  distance_miles NUMERIC(6, 1), -- driving miles from the hub, when known
+  extended_reach_band VARCHAR(1) CONSTRAINT orders_extended_reach_band_check
+    CHECK (extended_reach_band IS NULL OR extended_reach_band IN ('A', 'B')), -- Zone 5 only
+  extended_reach_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.00, -- Zone 5 delivery fee, after the Routine discount
+  frequency VARCHAR(10) NOT NULL DEFAULT 'one_time' CONSTRAINT orders_frequency_check
+    CHECK (frequency IN ('one_time', 'weekly', 'biweekly')), -- recurring plan (Routine)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -706,6 +714,65 @@ CREATE INDEX IF NOT EXISTS idx_orders_payment_needed ON orders(payment_needed_si
 REVOKE ALL ON order_payments FROM anon, authenticated;
 GRANT ALL ON order_payments TO service_role;
 
+-- ZONES AND EXTENDED REACH (20261007_zones_extended_reach.sql). Server only: RLS on, no
+-- policies, no grants to anon/authenticated.
+-- Coverage settings edited in Mission Control (key 'coverage'; defaults in constants.ts)
+CREATE TABLE IF NOT EXISTS app_settings (
+  key VARCHAR(60) PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by VARCHAR(255)
+);
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON app_settings FROM anon, authenticated;
+GRANT ALL ON app_settings TO service_role;
+
+-- Driving miles from the hub per normalized address (one routing lookup per address)
+CREATE TABLE IF NOT EXISTS distance_cache (
+  address_key VARCHAR(400) PRIMARY KEY,
+  miles NUMERIC(6, 1) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE distance_cache ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON distance_cache FROM anon, authenticated;
+GRANT ALL ON distance_cache TO service_role;
+
+-- "Not in your area yet": addresses beyond the last Extended Reach band
+CREATE TABLE IF NOT EXISTS waitlist (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  full_name VARCHAR(255),
+  email VARCHAR(255),
+  phone VARCHAR(30),
+  street VARCHAR(255),
+  city VARCHAR(100),
+  zip VARCHAR(10) NOT NULL,
+  miles NUMERIC(6, 1),
+  source VARCHAR(30) NOT NULL DEFAULT 'booking',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT waitlist_contact_check CHECK (email IS NOT NULL OR phone IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_waitlist_created ON waitlist(created_at DESC);
+ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON waitlist FROM anon, authenticated;
+GRANT ALL ON waitlist TO service_role;
+
+-- Zone 5 runs per band: dispatched (threshold met or "dispatch anyway") and announced
+CREATE TABLE IF NOT EXISTS route_cycles (
+  run_date DATE NOT NULL,
+  band VARCHAR(1) NOT NULL CHECK (band IN ('A', 'B')),
+  status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'dispatched')),
+  dispatched_at TIMESTAMPTZ,
+  dispatched_by VARCHAR(255),
+  notified_at TIMESTAMPTZ,
+  PRIMARY KEY (run_date, band)
+);
+ALTER TABLE route_cycles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON route_cycles FROM anon, authenticated;
+GRANT ALL ON route_cycles TO service_role;
+
+CREATE INDEX IF NOT EXISTS idx_orders_extended_reach_run
+  ON orders(pickup_date, extended_reach_band) WHERE extended_reach_band IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION public.create_booking(p JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -762,7 +829,8 @@ BEGIN
     express_surcharge, environmental_fee, sales_tax, total, payment_id, payment_status,
     square_customer_id, square_card_id, notes, idempotency_key,
     hold_payment_id, hold_amount, hold_expires_at, hold_status,
-    payment_terms_accepted_at, payment_terms_version
+    payment_terms_accepted_at, payment_terms_version,
+    zone_id, distance_miles, extended_reach_band, extended_reach_fee, frequency
   )
   SELECT
     r.order_number, r.customer_id, r.address_id, 'booked', r.order_type, r.pickup_date, r.pickup_window,
@@ -771,7 +839,9 @@ BEGIN
     r.total, r.payment_id, coalesce(r.payment_status, 'pending'), r.square_customer_id, r.square_card_id,
     r.notes, v_key,
     r.hold_payment_id, r.hold_amount, r.hold_expires_at, coalesce(r.hold_status, 'none'),
-    r.payment_terms_accepted_at, r.payment_terms_version
+    r.payment_terms_accepted_at, r.payment_terms_version,
+    r.zone_id, r.distance_miles, r.extended_reach_band, coalesce(r.extended_reach_fee, 0),
+    coalesce(r.frequency, 'one_time')
   FROM jsonb_populate_record(NULL::orders, p->'order') r
   RETURNING * INTO v_order;
 

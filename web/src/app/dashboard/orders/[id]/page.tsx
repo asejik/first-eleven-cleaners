@@ -9,7 +9,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { Button, Card, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
-import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
+import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE, EXTENDED_REACH_LABEL } from '@/lib/constants';
 import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import { QuoteApprovalCard } from '@/components/orders/QuoteApprovalCard';
@@ -58,6 +58,7 @@ export default function OrderDetailPage() {
   const financials = calculateOrderFinancials({
     subtotal: order.subtotal,
     discountAmount: order.discount_amount || 0,
+    extendedReachFee: Number(order.extended_reach_fee) || 0,
   });
 
   // Judged in Dallas time, not on the phone's clock (P05 AR-10)
@@ -312,6 +313,12 @@ export default function OrderDetailPage() {
                 <div className={styles.discountRow}>
                   <span>Promo Discount ({order.promo_code})</span>
                   <span>-${order.discount_amount.toFixed(2)}</span>
+                </div>
+              )}
+              {financials.extendedReachFee > 0 && (
+                <div className={styles.totalRow}>
+                  <span>{EXTENDED_REACH_LABEL}</span>
+                  <span>${financials.extendedReachFee.toFixed(2)}</span>
                 </div>
               )}
               <div className={styles.totalRow}>

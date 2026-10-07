@@ -124,6 +124,8 @@ export async function GET(
                     subtotal: dbOrder.subtotal,
                     express_surcharge: dbOrder.express_surcharge,
                     discount_amount: dbOrder.discount_amount,
+                    // Zone 5 delivery fee (client 2026-10-07, 8C)
+                    extended_reach_fee: dbOrder.extended_reach_fee,
                     environmental_fee: dbOrder.environmental_fee,
                     sales_tax: dbOrder.sales_tax,
                     total: dbOrder.total,
