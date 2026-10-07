@@ -2,14 +2,20 @@
 
 import { useState } from 'react';
 import { Button, Card } from '@/components/ui';
-import { SUPPORT_PHONE } from '@/lib/constants';
+import { SUPPORT_PHONE, DRY_CLEAN_PRICES } from '@/lib/constants';
+import type { Order } from '@/types';
 
 /**
  * The two taps on the itemized ticket (client 2026-10-06, Part A): "Looks good" closes the
  * loop; "Something's off" opens a Make It Right claim staff resolve the same day. Shown on
  * the tracking page, which guests reach through the link in their receipt.
  */
-export function TicketFeedbackCard({ orderId }: { orderId: string }) {
+const money = (n: number | null | undefined) => `$${(Number(n) || 0).toFixed(2)}`;
+/** Booking stores catalog keys, intake stores labels: show a label either way */
+const itemLabel = (garmentType: string) =>
+  garmentType === 'wash_fold' ? 'Wash & Fold' : DRY_CLEAN_PRICES[garmentType]?.label || garmentType;
+
+export function TicketFeedbackCard({ orderId, ticket }: { orderId: string; ticket?: Order['ticket'] }) {
   const [mode, setMode] = useState<'choose' | 'report' | 'done'>('choose');
   const [message, setMessage] = useState('');
   const [reply, setReply] = useState('');
@@ -39,6 +45,40 @@ export function TicketFeedbackCard({ orderId }: { orderId: string }) {
   return (
     <Card variant="bordered" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
       <h2 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>Your itemized ticket</h2>
+      {ticket && (
+        <table style={{ width: '100%', marginTop: 'var(--space-3)', fontSize: 'var(--text-sm)', borderCollapse: 'collapse' }}>
+          <tbody>
+            {ticket.items.map((item, i) => (
+              <tr key={i}>
+                <td style={{ padding: '4px 0' }}>
+                  {item.quantity}x {itemLabel(item.garment_type)}
+                </td>
+                <td style={{ textAlign: 'right' }}>{money(item.subtotal)}</td>
+              </tr>
+            ))}
+            {[
+              ['Express surcharge', ticket.express_surcharge, '+'],
+              ['Discount', ticket.discount_amount, '-'],
+              ['Environmental fee', ticket.environmental_fee, '+'],
+              ['Sales tax', ticket.sales_tax, '+'],
+            ]
+              .filter(([, amount]) => Number(amount) > 0)
+              .map(([label, amount, sign]) => (
+                <tr key={String(label)}>
+                  <td style={{ padding: '4px 0', color: 'var(--color-text-secondary)' }}>{label}</td>
+                  <td style={{ textAlign: 'right', color: 'var(--color-text-secondary)' }}>
+                    {sign}
+                    {money(amount as number)}
+                  </td>
+                </tr>
+              ))}
+            <tr>
+              <td style={{ padding: '6px 0', fontWeight: 700, borderTop: '1px solid var(--color-gray-200)' }}>Total charged</td>
+              <td style={{ textAlign: 'right', fontWeight: 700, borderTop: '1px solid var(--color-gray-200)' }}>{money(ticket.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
       {mode === 'done' ? (
         <p role="status" style={{ margin: 'var(--space-2) 0 0' }}>{reply}</p>
       ) : (

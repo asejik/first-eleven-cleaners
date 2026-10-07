@@ -55,7 +55,7 @@ export default function PublicTrackingPage() {
         {order?.card_needed && <PayNowCard orderId={order.id} amountDue={Number(order.hold_amount) || 0} mode="hold" />}
 
         {order && ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'].includes(order.status) && (
-          <TicketFeedbackCard orderId={order.id} />
+          <TicketFeedbackCard orderId={order.id} ticket={order.ticket} />
         )}
 
         {order ? (

@@ -109,6 +109,16 @@ export interface Order {
   amount_due?: number;
   /** Public tracking: the card hold was declined before pickup and a new card is needed (Part A) */
   card_needed?: boolean;
+  /** Public tracking, once itemized: the ticket lines and amounts charged (Part A) */
+  ticket?: {
+    items: Array<{ garment_type: string; quantity: number; unit_price: number; subtotal: number }>;
+    subtotal: number;
+    express_surcharge?: number | null;
+    discount_amount?: number | null;
+    environmental_fee?: number | null;
+    sales_tax?: number | null;
+    total: number;
+  };
   hold_amount?: number | null;
   /** Card hold and Payment Needed ladder (Mission Control, Part A) */
   hold_status?: string | null;

@@ -101,6 +101,8 @@ describe('Public order tracking exposes only the tracking view (SEC-07)', () => 
   });
 
   it('returns only tracking fields to a visitor with the UUID link', async () => {
+    // Before intake there is no ticket yet
+    state.order = { ...fullOrder, status: 'picked_up' };
     const res = await get(ORDER_ID);
     const { order } = await res.json();
 
@@ -121,6 +123,17 @@ describe('Public order tracking exposes only the tracking view (SEC-07)', () => 
     expect(order.photos[0].photo_url).not.toContain('/object/public/');
     const json = JSON.stringify(order);
     for (const secret of ['Gate code', 'KICKOFF15', '56.83', 'Marcus', '100 Test St', 'PAY1']) {
+      expect(json).not.toContain(secret);
+    }
+  });
+
+  it('shows the itemized ticket once the order is weighed, and still nothing else private (owner decision 2026-10-07)', async () => {
+    state.order = { ...fullOrder, items: [{ garment_type: 'dress', quantity: 4, unit_price: 15.99, subtotal: 63.96, notes: 'private note' }] };
+    const { order } = await (await get(ORDER_ID)).json();
+    expect(order.ticket).toMatchObject({ total: 56.83, subtotal: 59.96, discount_amount: 8.99 });
+    expect(order.ticket.items).toEqual([{ garment_type: 'dress', quantity: 4, unit_price: 15.99, subtotal: 63.96 }]);
+    const json = JSON.stringify(order);
+    for (const secret of ['Gate code', 'KICKOFF15', 'Marcus', '100 Test St', 'PAY1', 'private note']) {
       expect(json).not.toContain(secret);
     }
   });

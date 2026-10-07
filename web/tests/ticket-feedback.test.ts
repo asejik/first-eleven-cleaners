@@ -103,7 +103,7 @@ describe('"Looks good" / "Something\'s off" on the itemized ticket', () => {
 
   it('the tracking page shows the two taps once the order is itemized', () => {
     const page = readFileSync(join(__dirname, '..', 'src', 'app', 'track', '[orderId]', 'page.tsx'), 'utf8');
-    expect(page).toContain('<TicketFeedbackCard orderId={order.id} />');
+    expect(page).toContain('<TicketFeedbackCard orderId={order.id} ticket={order.ticket} />');
   });
 });
 

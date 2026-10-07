@@ -8,6 +8,9 @@ import { withSignedPhotoUrls } from '@/lib/storage';
 import { amountOwed } from '@/lib/payment-recovery';
 import { releaseOrderHold } from '@/lib/payment-capture';
 
+/** Stages with an itemized ticket the tracking link shows (Part A) */
+const TICKET_STAGES = ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'];
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -80,7 +83,9 @@ export async function GET(
         }
 
         // Public tracking (SMS/email links): return only what the tracking page shows (SEC-07).
-        // Items, events, totals, discounts, address, notes and payment data stay private.
+        // Events, address, notes, promo code and payment data stay private. Once the order is
+        // weighed and itemized, the link holder sees the itemized ticket the receipt points to
+        // (owner decision 2026-10-07, Part A): lines and the amounts charged.
         if (!customer) {
           const trackingView = {
             id: dbOrder.id,
@@ -100,6 +105,24 @@ export async function GET(
             // Card hold declined 2 days before pickup: the link holder can add a new card (Part A)
             ...(dbOrder.status === 'booked' && dbOrder.hold_status === 'declined'
               ? { card_needed: true, hold_amount: Number(dbOrder.hold_amount) || 0 }
+              : {}),
+            ...(TICKET_STAGES.includes(dbOrder.status)
+              ? {
+                  ticket: {
+                    items: ((dbOrder.items || []) as Array<Record<string, unknown>>).map((item) => ({
+                      garment_type: item.garment_type,
+                      quantity: item.quantity,
+                      unit_price: item.unit_price,
+                      subtotal: item.subtotal,
+                    })),
+                    subtotal: dbOrder.subtotal,
+                    express_surcharge: dbOrder.express_surcharge,
+                    discount_amount: dbOrder.discount_amount,
+                    environmental_fee: dbOrder.environmental_fee,
+                    sales_tax: dbOrder.sales_tax,
+                    total: dbOrder.total,
+                  },
+                }
               : {}),
             photos: ((dbOrder.photos || []) as Array<Record<string, unknown>>).map((photo) => ({
               id: photo.id,
