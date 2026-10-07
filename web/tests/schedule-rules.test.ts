@@ -95,7 +95,7 @@ describe('Booking API enforces the schedule (PR-12)', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer: { full_name: 'Sched Tester', email: 'sched@example.com', phone: '2145550100' },
-          address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
+          address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75205' },
           services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: 20 },
           consents: { payment_terms: true },
           schedule,

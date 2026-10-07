@@ -37,8 +37,10 @@ import {
   isRoutineFrequency,
   formatLongDate,
   dispatchThresholdMessage,
+  extendedReachStartLine,
 } from '@/lib/coverage';
-import { runBookingCount, dispatchRunIfReady, bandThreshold } from '@/lib/extended-reach';
+import { runBookingCount, runDeliveriesDue, isRunDispatched, dispatchRunIfReady, bandThreshold, runStatusLine } from '@/lib/extended-reach';
+import { extendedReachTurnaroundLine } from '@/lib/constants';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
 import { phoneSchema } from '@/lib/phone';
@@ -199,7 +201,10 @@ export async function POST(request: Request) {
     if (resolution.status !== 'served') {
       return NextResponse.json(
         {
-          error: `Not in your area yet: ${validated.address.zip} is beyond our delivery routes. Join the waitlist and we'll tell you when we reach you.`,
+          error:
+            resolution.status === 'waitlist' && resolution.reason === 'zone5_not_started'
+              ? `${extendedReachStartLine(coverage.extendedReach)} Join the waitlist and we'll tell you when your route opens.`
+              : `Not in your area yet: ${validated.address.zip} is beyond our delivery routes. Join the waitlist and we'll tell you when we reach you.`,
           code: 'WAITLIST',
         },
         { status: 400 }
@@ -362,9 +367,12 @@ export async function POST(request: Request) {
     // close a few days ahead, so the threshold is decided before any card hold)
     if (band) {
       const earliestRun = earliestExtendedReachRun(todayTexasStr, coverage.extendedReach);
+      if (!earliestRun) {
+        return NextResponse.json({ error: extendedReachStartLine(coverage.extendedReach), code: 'WAITLIST' }, { status: 400 });
+      }
       if (validated.schedule.pickup_date < earliestRun || !isZoneRouteDay(zone, validated.schedule.pickup_date, coverage)) {
         return NextResponse.json(
-          { error: `Extended Reach pickups run on alternate ${coverage.extendedReach.routeDay}s. The next one you can book is ${formatLongDate(nextZoneRouteDay(zone, earliestRun, coverage))}.` },
+          { error: `Extended Reach pickups run on ${coverage.extendedReach.routeDay}s. The next one you can book is ${formatLongDate(nextZoneRouteDay(zone, earliestRun, coverage))}.` },
           { status: 400 }
         );
       }
@@ -739,12 +747,17 @@ export async function POST(request: Request) {
               });
             }
 
-            // Zone 5: where this run stands now (this booking included); reaching the threshold
-            // tells everyone in the run the date (client 8D)
-            let routeThreshold: { booked: number; threshold: number } | undefined;
+            // Zone 5: where this run stands now (this booking included). It's confirmed when the
+            // threshold is met or a delivery is already due that day; reaching it tells
+            // everyone picked up on the run the date (client, revised)
+            let routeThreshold: { booked: number; threshold: number; deliveriesDue: number; dispatched: boolean } | undefined;
             if (band) {
-              const booked = await runBookingCount(supabase, validated.schedule.pickup_date, band.id);
-              routeThreshold = { booked, threshold: bandThreshold(coverage.extendedReach, band.id) };
+              const [booked, deliveriesDue, dispatched] = await Promise.all([
+                runBookingCount(supabase, validated.schedule.pickup_date, band.id),
+                runDeliveriesDue(supabase, validated.schedule.pickup_date, band.id),
+                isRunDispatched(supabase, validated.schedule.pickup_date, band.id),
+              ]);
+              routeThreshold = { booked, threshold: bandThreshold(coverage.extendedReach, band.id), deliveriesDue, dispatched };
               runAfterResponse(
                 () => dispatchRunIfReady(supabase, { runDate: validated.schedule.pickup_date, band: band.id, reach: coverage.extendedReach }),
                 'Zone 5 route threshold'
@@ -774,7 +787,7 @@ export async function POST(request: Request) {
                   // Guests get an account invitation in the email (CLAUDE.md 5A, P05 AR-14)
                   signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
                   ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : { deliveredOn: formatLongDate(deliveryDateStr) }),
-                  ...(routeThreshold ? { routeThresholdLine: dispatchThresholdMessage(routeThreshold.booked, routeThreshold.threshold) } : {}),
+                  ...(routeThreshold ? { routeThresholdLine: runStatusLine(routeThreshold, coverage.extendedReach) } : {}),
               }),
               'booking confirmation'
             );
@@ -873,7 +886,7 @@ export async function POST(request: Request) {
           trackingUrl: `${origin}/track/${createdOrder.id}`,
           signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
           ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : { deliveredOn: formatLongDate(deliveryDateStr) }),
-          ...(band ? { routeThresholdLine: dispatchThresholdMessage(1, band.dispatchThreshold) } : {}),
+          ...(band ? { routeThresholdLine: `${dispatchThresholdMessage(1, band.dispatchThreshold)} ${extendedReachTurnaroundLine(coverage.extendedReach)}` } : {}),
       }),
       'booking confirmation'
     );
@@ -892,7 +905,7 @@ export async function POST(request: Request) {
         zone_id: zone.id,
         is_guest: isGuest,
       },
-      ...(band ? { route_threshold: { booked: 1, threshold: band.dispatchThreshold } } : {}),
+      ...(band ? { route_threshold: { booked: 1, threshold: band.dispatchThreshold, deliveriesDue: 0, dispatched: false } } : {}),
       order_number: orderNumber,
       message: 'Your pickup has been confirmed and scheduled!',
     });

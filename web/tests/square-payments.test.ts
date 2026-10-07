@@ -133,7 +133,7 @@ function bookingRequest(paymentToken: string | null, pickupDate: string = nextMo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       customer: { full_name: 'Pay Tester', email: 'pay.tester@example.com', phone: '2145550100' },
-      address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
+      address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75205' },
       services: { type: 'dry_clean', dry_clean_items: [{ garment_type: 'dress', quantity: 4 }], estimated_weight_lbs: 0 },
       schedule: { pickup_date: pickupDate, pickup_window: 'morning', express_tier: 'standard', frequency: 'one_time' },
       payment_method: { card_brand: 'visa', last_4: '1111', payment_token: paymentToken },

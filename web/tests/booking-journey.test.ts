@@ -67,24 +67,24 @@ const BookingSchema = z.object({
 describe('Booking Journey E2E Integration Tests', () => {
   describe('Step 1: Address, Zone Resolution, and City Mapping', () => {
     // Express is switched off until the plant confirms in writing (client 2026-10-07, 8E)
-    it('correctly maps Zone 1 (Dallas Core) with $45 minimum (Express off until the plant confirms)', () => {
-      const zone = resolveZoneByZip('75201');
+    it('correctly maps Zone 1 (North Core: Plano) with $45 minimum (Express off until the plant confirms)', () => {
+      const zone = resolveZoneByZip('75024');
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_1');
       expect(zone?.minimumOrder).toBe(45);
       expect(zone?.expressEligible).toBe(false);
     });
 
-    it('correctly maps Zone 2 (North Dallas / Plano) with $60 minimum (Express off until the plant confirms)', () => {
-      const zone = resolveZoneByZip('75024');
+    it('correctly maps Zone 2 (Dallas Central: Downtown) with $60 minimum (Express off until the plant confirms)', () => {
+      const zone = resolveZoneByZip('75201');
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_2');
       expect(zone?.minimumOrder).toBe(60);
       expect(zone?.expressEligible).toBe(false);
     });
 
-    it('correctly maps Zone 3 (Fort Worth Metro) with $80 minimum and scheduled routes (Express unavailable)', () => {
-      const zone = resolveZoneByZip('76102');
+    it('correctly maps Zone 3 (Outer Ring: Denton) with $80 minimum and scheduled routes (Express unavailable)', () => {
+      const zone = resolveZoneByZip('76201');
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_3');
       expect(zone?.minimumOrder).toBe(80);
@@ -92,8 +92,8 @@ describe('Booking Journey E2E Integration Tests', () => {
       expect(zone?.routeScheduleLabel).toContain('Mon & Thu');
     });
 
-    it('correctly maps Zone 4 (Outer DFW / Denton) with $100 minimum and gates Express', () => {
-      const zone = resolveZoneByZip('76201');
+    it('correctly maps Zone 4 (Far Metroplex: Fort Worth) with $100 minimum and gates Express', () => {
+      const zone = resolveZoneByZip('76102');
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_4');
       expect(zone?.minimumOrder).toBe(100);
@@ -200,14 +200,14 @@ describe('Booking Journey E2E Integration Tests', () => {
 
   describe('Step 5: Zone Minimum Protection', () => {
     it('blocks checkout when order subtotal is below zone minimum', () => {
-      const zone3 = resolveZoneByZip('76102'); // Fort Worth ($80 min)
+      const zone3 = resolveZoneByZip('76201'); // Denton ($80 min)
       const lowSubtotal = 50;
       const gap = getZoneMinimumGap(lowSubtotal, zone3);
       expect(gap).toBe(30);
     });
 
     it('permits checkout when order meets or exceeds zone minimum', () => {
-      const zone3 = resolveZoneByZip('76102');
+      const zone3 = resolveZoneByZip('76201');
       const qualifiedSubtotal = 95;
       const gap = getZoneMinimumGap(qualifiedSubtotal, zone3);
       expect(gap).toBe(0);

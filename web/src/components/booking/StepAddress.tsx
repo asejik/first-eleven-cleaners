@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, Input, Button } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { resolveZoneByZip, ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
-import { dispatchThresholdMessage, formatLongDate, type ExtendedReachQuote } from '@/lib/coverage';
+import { formatLongDate, type ExtendedReachQuote } from '@/lib/coverage';
 import type { AddressCoverage } from '@/hooks/useCoverage';
 import styles from '@/app/book/page.module.css';
 
@@ -34,6 +34,8 @@ interface StepAddressProps {
   extendedReach: ExtendedReachQuote | null;
   isRoutine: boolean;
   onJoinRoutine: () => void;
+  /** "Extended Reach begins ..." / "coming soon": shown to Zone 5 addresses before the first run */
+  extendedReachStart: string;
   isValid: boolean;
   onContinue: () => void;
 }
@@ -64,6 +66,7 @@ export function StepAddress({
   extendedReach,
   isRoutine,
   onJoinRoutine,
+  extendedReachStart,
   isValid,
   onContinue,
 }: StepAddressProps) {
@@ -81,6 +84,7 @@ export function StepAddress({
 
   const cleanedZip = (zip || '').trim().replace(/[^\d]/g, '');
   const isWaitlist = addressCoverage.resolution.status === 'waitlist';
+  const zone5NotStarted = addressCoverage.resolution.status === 'waitlist' && addressCoverage.resolution.reason === 'zone5_not_started';
   const nextRun = extendedReach?.runs[0];
 
   // "Not in your area yet": join the waitlist with the contact details above (client 8C)
@@ -298,9 +302,13 @@ export function StepAddress({
               )}
               <p className={styles.extendedReachNote}>
                 ${extendedReach.minimumOrder.toFixed(0)} order minimum, plus the delivery fee. Tax and the environmental fee apply to the delivery fee like any line.
+                {' '}{extendedReach.turnaround}
                 {nextRun && (
                   <>
-                    {' '}Next route: {formatLongDate(nextRun.date)}. {dispatchThresholdMessage(nextRun.booked, nextRun.threshold)}
+                    {' '}Next route: {formatLongDate(nextRun.date)}.{' '}
+                    {nextRun.dispatched
+                      ? 'This route is confirmed.'
+                      : `Your route runs when ${nextRun.threshold} neighbors book. Currently ${Math.min(nextRun.booked, nextRun.threshold)} of ${nextRun.threshold}.`}
                   </>
                 )}
               </p>
@@ -314,9 +322,11 @@ export function StepAddress({
         <div className={styles.zoneOutOfArea} role="status">
           <span style={{ fontSize: '24px', lineHeight: 1 }}>📍</span>
           <div>
-            <div className={styles.zoneOutOfAreaTitle}>Not in your area yet</div>
+            <div className={styles.zoneOutOfAreaTitle}>{zone5NotStarted ? 'Extended Reach' : 'Not in your area yet'}</div>
             <div className={styles.zoneOutOfAreaText}>
-              This address is beyond our delivery routes for now. Join the waitlist and we&apos;ll let you know as soon as we reach you.
+              {zone5NotStarted
+                ? `${extendedReachStart} Join the waitlist to hear when your route opens.`
+                : "This address is beyond our delivery routes for now. Join the waitlist and we'll let you know as soon as we reach you."}
             </div>
             {waitlist.state === 'done' ? (
               <p className={styles.zoneOutOfAreaText} style={{ marginTop: 'var(--space-2)', fontWeight: 700 }}>

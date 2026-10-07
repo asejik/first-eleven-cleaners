@@ -48,11 +48,19 @@ export async function POST(request: Request) {
         city: entry.city || null,
         zip: entry.zip.trim(),
         miles: resolution.status === 'waitlist' ? resolution.miles : null,
+        // Zone 5 before its first run: tell these people when Extended Reach starts
+        reason: resolution.status === 'waitlist' ? resolution.reason : 'beyond',
         source: entry.source,
       });
       if (error) throw error;
     }
-    return NextResponse.json({ success: true, message: "You're on the list. We'll let you know as soon as we reach your area." });
+    return NextResponse.json({
+      success: true,
+      message:
+        resolution.status === 'waitlist' && resolution.reason === 'zone5_not_started'
+          ? "You're on the list. We'll message you when Extended Reach starts in your area."
+          : "You're on the list. We'll let you know as soon as we reach your area.",
+    });
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message || 'Please check your details.' }, { status: 400 });

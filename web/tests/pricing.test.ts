@@ -160,8 +160,8 @@ describe('Pricing Engine & Business Rules', () => {
       expect(zone?.routeDays.length).toBe(6);
     });
 
-    it('resolves Zone 2 (North Dallas Corridor) with $60 minimum and express eligibility', () => {
-      const zone = resolveZoneByZip('75034'); // Frisco
+    it('resolves Zone 2 (Dallas Central & Mid-Cities) with $60 minimum and express eligibility', () => {
+      const zone = resolveZoneByZip('75201'); // Downtown Dallas
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_2');
       expect(zone?.minimumOrder).toBe(60.0);
@@ -169,8 +169,8 @@ describe('Pricing Engine & Business Rules', () => {
       expect(ZONE_EXPRESS_ELIGIBLE.zone_2).toBe(true);
     });
 
-    it('resolves Zone 3 (Tarrant & West Metro) with $80 minimum, Mon/Thu routes, no Express', () => {
-      const zone = resolveZoneByZip('76107'); // Fort Worth
+    it('resolves Zone 3 (Outer Ring) with $80 minimum, Mon/Thu routes, no Express', () => {
+      const zone = resolveZoneByZip('76201'); // Denton
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_3');
       expect(zone?.minimumOrder).toBe(80.0);
@@ -178,8 +178,8 @@ describe('Pricing Engine & Business Rules', () => {
       expect(zone?.routeDays).toEqual(['Monday', 'Thursday']);
     });
 
-    it('resolves Zone 4 (Extended North Texas) with $100 minimum and Tue/Fri routes', () => {
-      const zone = resolveZoneByZip('76201'); // Denton
+    it('resolves Zone 4 (Far Metroplex) with $100 minimum and Tue/Fri routes', () => {
+      const zone = resolveZoneByZip('76107'); // Fort Worth Cultural District
       expect(zone).not.toBeNull();
       expect(zone?.id).toBe('zone_4');
       expect(zone?.minimumOrder).toBe(100.0);

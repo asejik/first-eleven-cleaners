@@ -281,5 +281,5 @@ export interface BookingSubmissionResult {
   order_number: string;
   message: string;
   /** Zone 5: the run's bookings (this one included) against its threshold */
-  route_threshold?: { booked: number; threshold: number };
+  route_threshold?: { booked: number; threshold: number; deliveriesDue: number; dispatched: boolean };
 }

@@ -28,7 +28,7 @@ test.describe('Booking with a screen reader', () => {
     await page.getByLabel('Email').fill('sr.check@example.com');
     await page.getByLabel('Mobile Phone').fill('(214) 555-0100');
     await page.getByLabel('Street Address').fill('100 Main St');
-    await page.getByLabel('ZIP Code').fill('75201');
+    await page.getByLabel('ZIP Code').fill('75205');
     await page.getByRole('button', { name: /Continue to Garments/ }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: 'What Are We Cleaning?' })).toBeFocused();

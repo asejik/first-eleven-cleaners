@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { texasDate } from '@/lib/texas-time';
+import { extendedReachTurnaroundLine } from '@/lib/constants';
 import {
   DEFAULT_COVERAGE,
   resolveCoverage,
@@ -39,6 +40,7 @@ function localQuote(resolution: CoverageResolution, coverage: Coverage): Extende
   const reach = coverage.extendedReach;
   const line = extendedReachFeeLine(resolution.band, false, reach);
   const threshold = resolution.band.dispatchThreshold;
+  const firstRun = earliestExtendedReachRun(texasDate(), reach);
   return {
     band: resolution.band.id,
     fullFee: line?.fullFee ?? 0,
@@ -46,7 +48,15 @@ function localQuote(resolution: CoverageResolution, coverage: Coverage): Extende
     routineDiscountPercent: reach.routineDiscountPercent,
     minimumOrder: reach.minimumOrder,
     threshold,
-    runs: extendedReachRunDates(earliestExtendedReachRun(texasDate(), reach), 3, reach).map((date) => ({ date, booked: 0, threshold, dispatched: false })),
+    turnaround: extendedReachTurnaroundLine(reach),
+    // No runs until Mission Control sets the first one
+    runs: (firstRun ? extendedReachRunDates(firstRun, 3, reach) : []).map((date) => ({
+      date,
+      booked: 0,
+      threshold,
+      deliveriesDue: 0,
+      dispatched: false,
+    })),
   };
 }
 

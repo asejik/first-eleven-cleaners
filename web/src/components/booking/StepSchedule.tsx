@@ -115,6 +115,7 @@ export function StepSchedule({
                 🚐 {selectedRun.dispatched
                   ? 'This route is confirmed and will run.'
                   : `${dispatchThresholdMessage(selectedRun.booked, selectedRun.threshold)} If it doesn't fill, your pickup moves to the next route and we'll tell you.`}
+                {extendedReach && ` ${extendedReach.turnaround}`}
               </p>
             )}
           </div>
@@ -292,7 +293,7 @@ export function StepSchedule({
             color: '#334155',
           }}>
             {detectedZone?.id === 'zone_5' ? (
-              <><strong>⏱️ Standard turnaround on Extended Reach routes.</strong> 24-Hour Express isn&apos;t offered beyond the Metroplex.</>
+              <><strong>⏱️ {extendedReach?.turnaround || 'Extended Reach: back on the next run.'}</strong> 24-Hour Express isn&apos;t offered beyond the Metroplex.</>
             ) : (
               <><strong>⏱️ Standard 48-Hour Care.</strong> 24-Hour Express is coming soon. Every pickup receives our signature 48-hour match-ready turnaround.</>
             )}

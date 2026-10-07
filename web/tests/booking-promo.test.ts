@@ -81,7 +81,7 @@ function booking(promo: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       customer: { full_name: 'Promo Tester', email: 'promo.tester@example.com', phone: '2145550100' },
-      address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
+      address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75205' },
       services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: 20 },
       consents: { payment_terms: true },
       schedule: { pickup_date: d.toISOString().split('T')[0], pickup_window: 'morning', express_tier: 'standard' },

@@ -68,7 +68,7 @@ function booking(consent: boolean) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       customer: { full_name: 'Someone Else', email: 'victim@example.com', phone: '2145550100' },
-      address: { street: '1 Attacker Way', city: 'Dallas', state: 'TX', zip: '75201' },
+      address: { street: '1 Attacker Way', city: 'Dallas', state: 'TX', zip: '75205' },
       services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: 15 },
       schedule: { pickup_date: d.toISOString().split('T')[0], pickup_window: 'morning', express_tier: 'standard' },
       consents: { sms_order_updates: consent, sms_promotions: consent, payment_terms: true },

@@ -20,13 +20,16 @@ import { addDaysToDate, dayOfWeek } from '@/lib/texas-time';
 import { estimatedDeliveryDate, type ScheduleTier } from '@/lib/schedule';
 
 /**
- * Coverage rules (client 2026-10-07, request 8). Safe on the client and the server.
+ * Coverage rules (client 2026-10-07, request 8, revised). Safe on the client and the server.
  *
- * - Zones 1-4 follow the ZIP lists in constants.ts (the client's display lists).
- * - Anything else is placed by DRIVING distance from the hub (lib/distance.ts): Zone 5
- *   Extended Reach in its bands (45-60 mi, 60-80 mi), the waitlist beyond 80 mi, and Zone 4
- *   for an unlisted Metroplex ZIP inside 45 mi. Without a distance, Zone 5 towns use their
- *   approximate miles and other North Texas ZIPs are Zone 4.
+ * - The ZIP-to-zone table decides Zones 1-4 (no distance lookup). It starts from the lists in
+ *   constants.ts and is edited in Mission Control.
+ * - Any other ZIP is placed by DRIVING distance from the hub (lib/distance.ts): Zones 1-4 by
+ *   their bands (0-15, 15-25, 25-35, 35-45 mi), Zone 5 Extended Reach in its bands (45-60,
+ *   60-80 mi), the waitlist beyond 80 mi. Those ZIPs are logged for review (Mission Control).
+ *   Without a distance, Zone 5 towns use their approximate miles and other North Texas ZIPs
+ *   are Zone 4.
+ * - Zone 5 is on the waitlist until Mission Control sets the first run date.
  * - Every value is editable in Mission Control (lib/coverage-settings.ts); constants.ts holds
  *   the starting values.
  */
@@ -43,6 +46,8 @@ export interface CoverageSettings {
   /** 24-Hour Express master switch (client 8E: off until the plant confirms in writing) */
   expressEnabled: boolean;
   zones: Record<MetroZoneId, MetroZoneSettings>;
+  /** ZIP code -> Zone 1-4 (the client's lists; edited in Mission Control) */
+  zipZones: Record<string, MetroZoneId>;
   extendedReach: ExtendedReachConfig;
 }
 
@@ -56,6 +61,7 @@ export const DEFAULT_COVERAGE_SETTINGS: CoverageSettings = {
       return [id, { minimumOrder: z.minimumOrder, routeDays: [...z.routeDays], expressEligible: ZONE_EXPRESS_ELIGIBLE[id], minMiles: z.minMiles, maxMiles: z.maxMiles }];
     })
   ) as Record<MetroZoneId, MetroZoneSettings>,
+  zipZones: Object.fromEntries(METRO_ZONE_IDS.flatMap((id) => ZONE_CONFIG[id].zipCodes.map((zip) => [zip, id]))),
   extendedReach: EXTENDED_REACH_DEFAULTS,
 };
 
@@ -87,6 +93,7 @@ export function buildCoverage(settings: CoverageSettings = DEFAULT_COVERAGE_SETT
         expressLabel: zoneExpressLabel(expressEligible),
         minMiles: s.minMiles,
         maxMiles: s.maxMiles,
+        zipCodes: Object.keys(settings.zipZones).filter((zip) => settings.zipZones[zip] === id).sort(),
       };
       return [id, zone];
     })
@@ -110,7 +117,7 @@ const days = (v: unknown, fallback: RouteDayName[]) =>
 export function mergeCoverageSettings(saved: unknown): CoverageSettings {
   const d = DEFAULT_COVERAGE_SETTINGS;
   if (!saved || typeof saved !== 'object') return d;
-  const s = saved as Partial<{ expressEnabled: unknown; zones: Record<string, Record<string, unknown>>; extendedReach: Record<string, unknown> }>;
+  const s = saved as Partial<{ expressEnabled: unknown; zones: Record<string, Record<string, unknown>>; zipZones: unknown; extendedReach: Record<string, unknown> }>;
   const zones = Object.fromEntries(
     METRO_ZONE_IDS.map((id) => {
       const z = s.zones?.[id] || {};
@@ -137,10 +144,22 @@ export function mergeCoverageSettings(saved: unknown): CoverageSettings {
       dispatchThreshold: Math.max(1, Math.round(num(b.dispatchThreshold, band.dispatchThreshold))),
     };
   });
-  const firstRunDate = typeof e.firstRunDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.firstRunDate) ? e.firstRunDate : de.firstRunDate;
+  // A saved first run date, or none (null) once one is cleared
+  const firstRunDate =
+    typeof e.firstRunDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.firstRunDate)
+      ? e.firstRunDate
+      : e.firstRunDate === null
+        ? null
+        : de.firstRunDate;
+  // The saved ZIP table replaces the default one whole (it holds removals too)
+  const savedZips = s.zipZones && typeof s.zipZones === 'object' ? Object.entries(s.zipZones as Record<string, unknown>) : null;
+  const zipZones = savedZips
+    ? Object.fromEntries(savedZips.filter(([zip, id]) => /^\d{5}$/.test(zip) && (METRO_ZONE_IDS as string[]).includes(String(id)))) as Record<string, MetroZoneId>
+    : d.zipZones;
   return {
     expressEnabled: typeof s.expressEnabled === 'boolean' ? s.expressEnabled : d.expressEnabled,
     zones,
+    zipZones,
     extendedReach: {
       minimumOrder: num(e.minimumOrder, de.minimumOrder),
       routineDiscountPercent: Math.min(100, num(e.routineDiscountPercent, de.routineDiscountPercent)),
@@ -165,9 +184,14 @@ export type CoverageResolution =
       miles: number | null;
       /** Zone 5 only */
       band: ExtendedReachBand | null;
+      /** Not on the ZIP table: placed by distance (logged for review in Mission Control) */
+      byDistance?: boolean;
     }
-  /** Beyond the last band, or outside North Texas: no booking, the waitlist instead */
-  | { status: 'waitlist'; miles: number | null };
+  /**
+   * No booking, the waitlist instead: beyond the last band, outside North Texas, or Zone 5
+   * before its first run is set ("Extended Reach is coming soon").
+   */
+  | { status: 'waitlist'; miles: number | null; reason: 'beyond' | 'zone5_not_started'; band?: ExtendedReachBand | null };
 
 const zip5Of = (zip: string) => {
   const cleaned = (zip || '').trim().replace(/[^\d]/g, '');
@@ -199,16 +223,26 @@ export function resolveCoverage(
   const distance = miles ?? fallbackMiles(zip5);
   const reach = coverage.extendedReach;
   if (distance !== null) {
-    if (distance > reach.waitlistBeyondMiles) return { status: 'waitlist', miles: distance };
+    if (distance > reach.waitlistBeyondMiles) return { status: 'waitlist', miles: distance, reason: 'beyond' };
     const band = extendedReachBand(distance, reach);
-    if (band) return { status: 'served', zone: coverage.extendedReachZone, miles: distance, band };
-    // An unlisted Metroplex ZIP inside the bands: the outer Metroplex zone
-    return { status: 'served', zone: coverage.zones.zone_4, miles: distance, band: null };
+    if (band) {
+      if (!reach.firstRunDate) return { status: 'waitlist', miles: distance, reason: 'zone5_not_started', band };
+      return { status: 'served', zone: coverage.extendedReachZone, miles: distance, band, byDistance: true };
+    }
+    return { status: 'served', zone: metroZoneByMiles(distance, coverage), miles: distance, band: null, byDistance: true };
   }
 
-  // No distance: other North Texas ZIPs (750-754, 760-762) are Zone 4, as before
-  if (/^(75[0-4]|76[0-2])\d{2}$/.test(zip5)) return { status: 'served', zone: coverage.zones.zone_4, miles: null, band: null };
-  return { status: 'waitlist', miles: null };
+  // No distance: other North Texas ZIPs (750-754, 760-762) are Zone 4
+  if (/^(75[0-4]|76[0-2])\d{2}$/.test(zip5)) return { status: 'served', zone: coverage.zones.zone_4, miles: null, band: null, byDistance: true };
+  return { status: 'waitlist', miles: null, reason: 'beyond' };
+}
+
+/** The Zone 1-4 band a distance falls in (0-15, 15-25, 25-35, 35-45 mi); Zone 4 if none does. */
+export function metroZoneByMiles(miles: number, coverage: Coverage = DEFAULT_COVERAGE): ZoneConfig {
+  return (
+    coverage.zonesList.find((z, i) => (i === 0 ? miles >= z.minMiles : miles > z.minMiles) && miles <= z.maxMiles) ??
+    coverage.zones.zone_4
+  );
 }
 
 /** What a Zone 5 address shows the moment it resolves (from /api/coverage/resolve). */
@@ -219,8 +253,13 @@ export interface ExtendedReachQuote {
   routineDiscountPercent: number;
   minimumOrder: number;
   threshold: number;
-  /** The next runs this address can book, with the neighbors booked on each */
-  runs: Array<{ date: string; booked: number; threshold: number; dispatched: boolean }>;
+  /** "Extended Reach: picked up Wednesday, back the next Wednesday." */
+  turnaround: string;
+  /**
+   * The next runs this address can book: the pickups booked, the deliveries due that day, and
+   * whether pickups are accepted (threshold met or a delivery run already due)
+   */
+  runs: Array<{ date: string; booked: number; threshold: number; deliveriesDue: number; dispatched: boolean }>;
 }
 
 // --- Routine members (client 8C) -------------------------------------------------------
@@ -229,7 +268,8 @@ export type Frequency = 'one_time' | 'weekly' | 'biweekly';
 
 /**
  * A Routine member is a customer on a recurring plan (Weekly or Bi-Weekly). "Join the Routine"
- * picks Bi-Weekly, which matches Zone 5's bi-weekly route.
+ * picks Bi-Weekly. The standing Routine subscription (client 2026-10-07, revised) replaces this
+ * per-booking choice in a later change.
  */
 export function isRoutineFrequency(frequency: Frequency | null | undefined): boolean {
   return frequency === 'weekly' || frequency === 'biweekly';
@@ -277,14 +317,16 @@ export function nextZoneRouteDay(zone: ZoneConfig, fromDate: string, coverage: C
 const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
 
-/** True on a Zone 5 run date: the first run, then every cadenceWeeks weeks. */
+/** True on a Zone 5 run date: the first run, then every cadenceWeeks weeks (none until it's set). */
 export function isExtendedReachRunDate(date: string, reach: ExtendedReachConfig = DEFAULT_COVERAGE.extendedReach): boolean {
+  if (!reach.firstRunDate) return false;
   const diff = daysBetween(reach.firstRunDate, date);
   return diff >= 0 && diff % (7 * reach.cadenceWeeks) === 0;
 }
 
-/** The next `count` Zone 5 run dates on or after this date. */
+/** The next `count` Zone 5 run dates on or after this date (none until the first run is set). */
 export function extendedReachRunDates(fromDate: string, count: number, reach: ExtendedReachConfig = DEFAULT_COVERAGE.extendedReach): string[] {
+  if (!reach.firstRunDate) return [];
   const period = 7 * reach.cadenceWeeks;
   const diff = daysBetween(reach.firstRunDate, fromDate);
   const steps = diff <= 0 ? 0 : Math.ceil(diff / period);
@@ -293,14 +335,20 @@ export function extendedReachRunDates(fromDate: string, count: number, reach: Ex
 }
 
 /** The earliest Zone 5 run that can still be booked (bookings close a few days before). */
-export function earliestExtendedReachRun(today: string, reach: ExtendedReachConfig = DEFAULT_COVERAGE.extendedReach): string {
-  return extendedReachRunDates(addDaysToDate(today, reach.bookingNoticeDays), 1, reach)[0];
+export function earliestExtendedReachRun(today: string, reach: ExtendedReachConfig = DEFAULT_COVERAGE.extendedReach): string | null {
+  return extendedReachRunDates(addDaysToDate(today, reach.bookingNoticeDays), 1, reach)[0] ?? null;
+}
+
+/** The run a pickup on this run date comes back on: the next run (weekly: 7 days later). */
+export function nextExtendedReachRun(runDate: string, reach: ExtendedReachConfig = DEFAULT_COVERAGE.extendedReach): string {
+  return addDaysToDate(runDate, 7 * reach.cadenceWeeks);
 }
 
 /**
  * Delivery date for a pickup in this zone. The plant turnaround comes first (2 plant days,
  * Express 1, alterations 5); Zones 3 and 4 then deliver on their next route day (client 8B:
- * a Zone 4 Friday pickup is delivered Tuesday). Zone 5 has standard turnaround.
+ * a Zone 4 Friday pickup is delivered Tuesday). Zone 5 comes back on the next run: picked up
+ * Wednesday, back the next Wednesday (client, revised).
  */
 export function zoneDeliveryDate(
   zone: ZoneConfig | null | undefined,
@@ -309,8 +357,9 @@ export function zoneDeliveryDate(
   { alterations = false }: { alterations?: boolean } = {},
   coverage: Coverage = DEFAULT_COVERAGE
 ): string {
+  if (zone?.id === 'zone_5') return nextExtendedReachRun(pickupDate, coverage.extendedReach);
   const ready = estimatedDeliveryDate(pickupDate, tier, { alterations });
-  if (!zone || zone.id === 'zone_5' || zone.routeDays.length >= ALL_ROUTE_DAYS.length) return ready;
+  if (!zone || zone.routeDays.length >= ALL_ROUTE_DAYS.length) return ready;
   return nextZoneRouteDay(zone, ready, coverage);
 }
 
@@ -322,6 +371,16 @@ export function feeLabel(fee: number): string {
 /** "Tuesday, October 20" for a YYYY-MM-DD date. */
 export function formatLongDate(date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
+
+/** Zone 5 line for a run that is going out (threshold met, or a delivery run already due). */
+export const ROUTE_CONFIRMED_LINE = 'Your Extended Reach route is confirmed.';
+
+/** "Extended Reach begins Wednesday, November 4. We'll message you." (or coming soon, before it's set) */
+export function extendedReachStartLine(reach: ExtendedReachConfig = DEFAULT_COVERAGE.extendedReach): string {
+  return reach.firstRunDate
+    ? `Extended Reach begins ${formatLongDate(reach.firstRunDate)}. We'll message you.`
+    : "Extended Reach is coming soon. We'll message you.";
 }
 
 /** Zone 5 threshold line shown at booking and in the confirmation (client 8D). */
