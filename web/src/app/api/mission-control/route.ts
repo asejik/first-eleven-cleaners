@@ -49,7 +49,7 @@ const ORDER_COLUMNS = `
         updated_at,
         customer:customers!customer_id(id, full_name, email, phone, role),
         address:addresses(id, street, unit, city, state, zip, delivery_notes),
-        items:order_items(id, order_id, garment_type, service_type, quantity, unit_price, subtotal, notes),
+        items:order_items(id, order_id, garment_type, service_type, quantity, unit_price, subtotal, notes, quote_status, quoted_unit_price, quote_requested_at, quote_reminder_stage),
         photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
         events:order_events(id, order_id, status, timestamp, note, triggered_by)
       `;

@@ -110,10 +110,16 @@ export async function GET(
               ? {
                   ticket: {
                     items: ((dbOrder.items || []) as Array<Record<string, unknown>>).map((item) => ({
+                      id: item.id,
                       garment_type: item.garment_type,
                       quantity: item.quantity,
                       unit_price: item.unit_price,
                       subtotal: item.subtotal,
+                      // Quotes the customer can approve or decline (Parts B-D)
+                      quote_status: item.quote_status,
+                      quoted_unit_price: item.quoted_unit_price,
+                      // Alterations: the customer's own fit instruction
+                      ...(item.service_type === 'alteration' ? { notes: item.notes } : {}),
                     })),
                     subtotal: dbOrder.subtotal,
                     express_surcharge: dbOrder.express_surcharge,

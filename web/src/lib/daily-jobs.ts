@@ -4,7 +4,8 @@ import { addDaysToDate, texasDate } from '@/lib/texas-time';
 import { HOLD_LEAD_DAYS } from '@/lib/payment-hold';
 import { amountOwed } from '@/lib/payment-recovery';
 import { messagingService } from '@/lib/messaging';
-import { getAppBaseUrl } from '@/lib/constants';
+import { getAppBaseUrl, DRY_CLEAN_PRICES } from '@/lib/constants';
+import { estimatedDeliveryDate } from '@/lib/schedule';
 import { reportError } from '@/lib/error-reporting';
 
 /**
@@ -206,6 +207,94 @@ export async function runPaymentNeededLadder(supabase: AdminClient, now: Date = 
               : 'Payment still needed after 7 days: flagged for an owner decision.',
         triggered_by: 'Daily Payment Job',
       });
+    }
+  }
+  return result;
+}
+
+export interface QuoteLadderResult {
+  reminded: number;
+  callsDue: number;
+  returned: number;
+}
+
+/**
+ * 4. Quote ladder (client 2026-10-06, Parts B-D): a quote above the 25% band gets a reminder
+ * after 24 h and a staff call after 48 h; with no answer after 5 business days the item is
+ * returned unaltered at no charge, with the rest of the order.
+ */
+export async function runQuoteLadder(supabase: AdminClient, now: Date = new Date()): Promise<QuoteLadderResult> {
+  const result: QuoteLadderResult = { reminded: 0, callsDue: 0, returned: 0 };
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('id, order_id, garment_type, quantity, quoted_unit_price, quote_requested_at, quote_reminder_stage, notes, order:orders!inner(id, order_number, status, customer:customers!customer_id(full_name, phone, email))')
+    .eq('quote_status', 'awaiting_approval')
+    .not('quote_requested_at', 'is', null)
+    .limit(200);
+
+  for (const item of items || []) {
+    const order = (Array.isArray(item.order) ? item.order[0] : item.order) as
+      | { id: string; order_number?: string | null; status: string; customer?: Customer | Customer[] | null }
+      | null;
+    if (!order || order.status === 'cancelled') continue;
+    const requested = item.quote_requested_at as string;
+    const hours = (now.getTime() - new Date(requested).getTime()) / HOUR;
+    const stage = Number(item.quote_reminder_stage) || 0;
+    const orderRef = order.order_number || order.id.slice(0, 8);
+    const label = DRY_CLEAN_PRICES[item.garment_type]?.label || item.garment_type;
+    const amount = (Number(item.quoted_unit_price) || 0) * item.quantity;
+    const link = `${getAppBaseUrl()}/track/${order.id}`;
+
+    // 5 business (plant) days without an answer: returned unaltered, no charge
+    if (estimatedDeliveryDate(texasDate(new Date(requested)), 'standard', { alterations: true }) <= texasDate(now)) {
+      const { data: done } = await supabase
+        .from('order_items')
+        .update({
+          quote_status: 'returned',
+          quote_decided_at: now.toISOString(),
+          subtotal: 0,
+          notes: [item.notes, 'No answer after 5 business days: returned unaltered, no charge'].filter(Boolean).join(' · '),
+        })
+        .eq('id', item.id)
+        .eq('quote_status', 'awaiting_approval')
+        .select('id');
+      if (!done || done.length === 0) continue;
+      result.returned += 1;
+      await supabase.from('order_events').insert({
+        order_id: order.id,
+        status: 'quote_returned',
+        note: `No answer to the quote for ${label} after 5 business days: returned unaltered at no charge.`,
+        triggered_by: 'Daily Quote Job',
+      });
+      await notify(
+        order,
+        '🧵 Returned unaltered',
+        `Eleven at First Eleven Cleaners: we didn't hear back about the quote for your ${label.toLowerCase()} on Order #${orderRef}, so it comes back unaltered at no charge with the rest of your order.`,
+        'weighed_itemized'
+      );
+      continue;
+    }
+
+    let next = stage;
+    if (stage === 0 && hours >= LADDER.reminderAfterHours) {
+      await notify(
+        order,
+        '🧵 Reminder: your quote needs your OK',
+        `Eleven at First Eleven Cleaners: a reminder that ${label} on Order #${orderRef} is quoted at $${amount.toFixed(2)}. Approve or decline here: ${link} With no answer after 5 business days it comes back unaltered at no charge.`,
+        'weighed_itemized'
+      );
+      next = 1;
+      result.reminded += 1;
+    } else if (stage === 1 && hours >= LADDER.staffCallAfterHours) {
+      reportError('daily-job/quote-call', `Call the customer about a quote on order ${orderRef}`, {
+        alert: true,
+        details: `Order ${orderRef}: ${label} quoted at $${amount.toFixed(2)} has waited 48 hours. Please call the customer today (Mission Control > Quotes awaiting approval).`,
+      });
+      next = 2;
+      result.callsDue += 1;
+    }
+    if (next !== stage) {
+      await supabase.from('order_items').update({ quote_reminder_stage: next }).eq('id', item.id).eq('quote_reminder_stage', stage);
     }
   }
   return result;

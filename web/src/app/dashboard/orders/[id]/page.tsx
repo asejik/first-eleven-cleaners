@@ -12,6 +12,7 @@ import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTime
 import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
 import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
+import { QuoteApprovalCard } from '@/components/orders/QuoteApprovalCard';
 import styles from './page.module.css';
 
 export default function OrderDetailPage() {
@@ -105,6 +106,9 @@ export default function OrderDetailPage() {
             </ButtonLink>
           </div>
         </div>
+
+        {/* Quotes waiting for the customer's OK (Parts B-D) */}
+        <QuoteApprovalCard orderId={order.id} items={order.items || []} />
 
         {/* Order Hero Card */}
         <Card variant="bordered" padding="lg" className={styles.headerCard}>

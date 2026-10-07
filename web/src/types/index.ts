@@ -111,7 +111,16 @@ export interface Order {
   card_needed?: boolean;
   /** Public tracking, once itemized: the ticket lines and amounts charged (Part A) */
   ticket?: {
-    items: Array<{ garment_type: string; quantity: number; unit_price: number; subtotal: number }>;
+    items: Array<{
+      id?: string;
+      garment_type: string;
+      quantity: number;
+      unit_price: number;
+      subtotal: number;
+      quote_status?: string;
+      quoted_unit_price?: number | null;
+      notes?: string | null;
+    }>;
     subtotal: number;
     express_surcharge?: number | null;
     discount_amount?: number | null;
