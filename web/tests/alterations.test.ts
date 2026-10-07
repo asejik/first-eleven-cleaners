@@ -100,3 +100,22 @@ describe('Eleven and llms.txt know the alterations', () => {
     expect(buildLlmsTxt()).toContain('### Alterations (per item)');
   });
 });
+
+describe("Eleven's built-in answers about alterations", () => {
+  it('answers fitting questions with the client sentence', async () => {
+    const { SimulatedAIEngineProvider } = await import('@/lib/ai');
+    const engine = new SimulatedAIEngineProvider();
+    expect((await engine.generateResponse('Can you do a suit fitting?', [])).content).toBe(ALTERATIONS_NOT_OFFERED);
+    expect((await engine.generateResponse('Could you take in my dress?', [])).content).toBe(ALTERATIONS_NOT_OFFERED);
+  });
+
+  it('answers alteration questions with prices, instructions, quotes and turnaround', async () => {
+    const { SimulatedAIEngineProvider } = await import('@/lib/ai');
+    const { content } = await new SimulatedAIEngineProvider().generateResponse('How much to hem pants?', []);
+    expect(content).toContain('Pants hem (plain): $29.99');
+    expect(content).toContain('3-5 business days');
+    expect(content).toContain('tag it MATCH');
+    expect(content).toContain('up to 25% above the listed price is charged automatically');
+    expect(content).toContain("aren't available with 24-Hour Express");
+  });
+});
