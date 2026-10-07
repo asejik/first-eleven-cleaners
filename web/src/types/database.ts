@@ -535,6 +535,111 @@ export type Database = {
           },
         ];
       };
+      app_settings: {
+        Row: {
+          key: string;
+          value: Json;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value: Json;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          key?: string;
+          value?: Json;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      distance_cache: {
+        Row: {
+          address_key: string;
+          miles: number;
+          created_at: string;
+        };
+        Insert: {
+          address_key: string;
+          miles: number;
+          created_at?: string;
+        };
+        Update: {
+          address_key?: string;
+          miles?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      route_cycles: {
+        Row: {
+          run_date: string;
+          band: string;
+          status: string;
+          dispatched_at: string | null;
+          dispatched_by: string | null;
+          notified_at: string | null;
+        };
+        Insert: {
+          run_date: string;
+          band: string;
+          status?: string;
+          dispatched_at?: string | null;
+          dispatched_by?: string | null;
+          notified_at?: string | null;
+        };
+        Update: {
+          run_date?: string;
+          band?: string;
+          status?: string;
+          dispatched_at?: string | null;
+          dispatched_by?: string | null;
+          notified_at?: string | null;
+        };
+        Relationships: [];
+      };
+      waitlist: {
+        Row: {
+          id: string;
+          full_name: string | null;
+          email: string | null;
+          phone: string | null;
+          street: string | null;
+          city: string | null;
+          zip: string;
+          miles: number | null;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          full_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          street?: string | null;
+          city?: string | null;
+          zip: string;
+          miles?: number | null;
+          source?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          street?: string | null;
+          city?: string | null;
+          zip?: string;
+          miles?: number | null;
+          source?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       order_payments: {
         Row: {
           id: string;
@@ -622,6 +727,11 @@ export type Database = {
           payment_terms_version: string | null;
           payment_needed_since: string | null;
           payment_reminder_stage: number;
+          zone_id: string | null;
+          distance_miles: number | null;
+          extended_reach_band: string | null;
+          extended_reach_fee: number;
+          frequency: string;
         };
         Insert: {
           id?: string;
@@ -665,6 +775,11 @@ export type Database = {
           payment_terms_version?: string | null;
           payment_needed_since?: string | null;
           payment_reminder_stage?: number;
+          zone_id?: string | null;
+          distance_miles?: number | null;
+          extended_reach_band?: string | null;
+          extended_reach_fee?: number;
+          frequency?: string;
         };
         Update: {
           id?: string;
@@ -708,6 +823,11 @@ export type Database = {
           payment_terms_version?: string | null;
           payment_needed_since?: string | null;
           payment_reminder_stage?: number;
+          zone_id?: string | null;
+          distance_miles?: number | null;
+          extended_reach_band?: string | null;
+          extended_reach_fee?: number;
+          frequency?: string;
         };
         Relationships: [
           {
