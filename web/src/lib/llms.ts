@@ -13,12 +13,13 @@ import {
   FAILED_PICKUP_FEE,
   PICKUP_WINDOWS,
   PROCESSING_HOURS,
-  ZONE_CONFIG,
+  EXTENDED_REACH_LABEL,
   SUPPORT_PHONE,
   SUPPORT_EMAIL,
 } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
+import { DEFAULT_COVERAGE, feeLabel, type Coverage } from '@/lib/coverage';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const catalogLine = (item: CatalogItem) =>
@@ -30,9 +31,10 @@ const percent = (rate: number, digits = 0) => `${(rate * 100).toFixed(digits)}%`
  * Prices, fees and zones come from constants.ts so this can't drift from what
  * the booking page charges. The About facts were confirmed by the owner (P05).
  */
-export function buildLlmsTxt(): string {
-  const zones = Object.values(ZONE_CONFIG);
-  const expressZones = zones.filter((z) => z.expressEligible).map((z) => z.name).join(' and ');
+export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
+  const zones = coverage.zonesList;
+  const reach = coverage.extendedReach;
+  const reachZone = coverage.extendedReachZone;
   const windows = PICKUP_WINDOWS.map((w) => `${w.label} ${w.start}-${w.end}`).join(', ');
   const morning = PICKUP_WINDOWS.find((w) => w.id === 'morning')!;
 
@@ -67,13 +69,15 @@ export function buildLlmsTxt(): string {
     '',
     '### 24-Hour Express ("Match-Ready Tomorrow")',
     `- Picked up in the morning window (${morning.start}-${morning.end}) and delivered the next morning by ${morning.end}.`,
+    ...(coverage.expressEnabled ? [] : ['- Coming soon: not bookable yet.']),
     '- Monday-Thursday pickups only (the plant is closed on weekends), limited daily slots. Book by 9 PM for next-morning pickup, or by 7 AM for same-day morning pickup.',
     `- Surcharge: +${percent(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (no separate dollar minimum; the zone order minimum applies).`,
-    `- Available in ${expressZones} only. Formal wear, evening gowns, wedding dresses, household items and other specialty items are excluded.`,
+    '- Zones 1 and 2 only. Formal wear, evening gowns, wedding dresses, household items and other specialty items are excluded.',
     `- If an Express delivery misses the ${morning.end} window, the Express surcharge is refunded.`,
     '',
     '### Fees shown at checkout',
-    '- Pickup and delivery: free in every zone (each zone has an order minimum instead).',
+    '- Pickup and delivery: free across the DFW Metroplex, Zones 1-4 (each zone has an order minimum instead).',
+    `- ${EXTENDED_REACH_LABEL} (Zone 5, beyond the Metroplex): ${reach.bands.map((b) => `${feeLabel(b.fee)} at ${b.minMiles}-${b.maxMiles} miles`).join(', ')} by driving distance, ${reach.routineDiscountPercent}% off for Routine members (Weekly or Bi-Weekly plan). Taxed like any line.`,
     `- ${percent(ENVIRONMENTAL_FEE_RATE)} environmental fee.`,
     `- ${percent(TX_SALES_TAX_RATE, 2)} Texas sales tax.`,
     `- ${money(FAILED_PICKUP_FEE)} failed pickup or delivery fee may apply if the driver can't complete a pickup or delivery in the confirmed window (first occurrence waived).`,
@@ -88,6 +92,8 @@ export function buildLlmsTxt(): string {
       (z) =>
         `- ${z.name}: ${money(z.minimumOrder)} minimum, ${z.routeScheduleLabel}, ${z.expressEligible ? 'Express eligible' : 'No Express'}. Areas: ${z.cities.join(', ')}.`,
     ),
+    `- ${reachZone.name}: ${money(reach.minimumOrder)} minimum plus the ${EXTENDED_REACH_LABEL} fee, bi-weekly routes (${reach.routeDay}s) that run once ${reach.bands.map((b) => `${b.dispatchThreshold} (Band ${b.id})`).join(' or ')} neighbors book, standard turnaround, No Express. Areas: ${reachZone.cities.join(', ')}.`,
+    `- Zones 1-4 follow their area lists; other addresses are placed by driving distance from our plant. Zones 3 and 4 deliver on their next route day (a Zone 4 Friday pickup is delivered Tuesday). Beyond ${reach.waitlistBeyondMiles} miles: not served yet, join the waitlist at ${SITE_URL}/book.`,
     '',
     '## Make It Right Guarantee',
     `If you are not satisfied with the cleaning or pressing of a garment, tell us within 7 days of delivery and we re-clean it free. Terms: ${SITE_URL}/terms`,

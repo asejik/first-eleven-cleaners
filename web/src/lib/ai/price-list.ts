@@ -9,8 +9,9 @@ import {
   ENVIRONMENTAL_FEE_RATE,
   TX_SALES_TAX_RATE,
   EXPRESS_SURCHARGE_PERCENT,
-  ZONE_CONFIG,
+  EXTENDED_REACH_LABEL,
 } from '@/lib/constants';
+import { DEFAULT_COVERAGE, feeLabel, type Coverage } from '@/lib/coverage';
 
 /**
  * Price text for the Eleven concierge, generated from the booking catalog (P03 PR-21) so the
@@ -56,18 +57,47 @@ export function plantScheduleLine(lang: 'en' | 'es' = 'en'): string {
 
 export function feesLine(lang: 'en' | 'es' = 'en'): string {
   return lang === 'es'
-    ? `Se agregan un cargo ambiental de ${pct(ENVIRONMENTAL_FEE_RATE)} y el impuesto de Texas de ${pct(TX_SALES_TAX_RATE)}. Recogida y entrega gratis.`
-    : `A ${pct(ENVIRONMENTAL_FEE_RATE)} environmental fee and ${pct(TX_SALES_TAX_RATE)} Texas sales tax are added at checkout. Pickup and delivery are free.`;
+    ? `Se agregan un cargo ambiental de ${pct(ENVIRONMENTAL_FEE_RATE)} y el impuesto de Texas de ${pct(TX_SALES_TAX_RATE)}. Recogida y entrega gratis en todo el Metroplex (la Zona 5, Extended Reach, tiene un cargo de entrega).`
+    : `A ${pct(ENVIRONMENTAL_FEE_RATE)} environmental fee and ${pct(TX_SALES_TAX_RATE)} Texas sales tax are added at checkout. Pickup and delivery are free across the DFW Metroplex (Zones 1-4); Zone 5 Extended Reach has a delivery fee.`;
 }
 
-export function zoneMinimumLines(): string[] {
-  return Object.values(ZONE_CONFIG).map(
-    (z) => `${z.name}: ${money(z.minimumOrder)} order minimum, ${z.routeScheduleLabel}${z.expressEligible ? ', 24-Hour Express available' : ''}`
-  );
+/**
+ * The five zones (client 2026-10-07, request 8), from the live coverage settings: Zones 1-4
+ * with their distance bands, minimums, route days and Express; then Zone 5.
+ */
+export function zoneMinimumLines(coverage: Coverage = DEFAULT_COVERAGE): string[] {
+  return [
+    ...coverage.zonesList.map(
+      (z) =>
+        `${z.name} (about ${z.minMiles}-${z.maxMiles} mi from the plant): ${money(z.minimumOrder)} order minimum, free delivery, ${z.routeScheduleLabel}${z.expressEligible ? ', 24-Hour Express Mon-Thu' : ', no Express'}. Areas: ${z.cities.join(', ')}.`
+    ),
+    ...extendedReachLines(coverage),
+  ];
 }
 
-export function expressLine(): string {
-  return `24-Hour Express: +${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (the zone order minimum still applies), Monday-Thursday morning pickups in eligible zones.`;
+/** Zone 5: distance bands, fee, minimum, Routine discount, threshold, cadence, waitlist. */
+export function extendedReachLines(coverage: Coverage = DEFAULT_COVERAGE): string[] {
+  const r = coverage.extendedReach;
+  const z = coverage.extendedReachZone;
+  return [
+    `${z.name} (beyond the Metroplex): ${money(r.minimumOrder)} order minimum plus an ${EXTENDED_REACH_LABEL} fee by driving distance from the plant: ${r.bands
+      .map((b) => `${b.minMiles}-${b.maxMiles} mi ${feeLabel(b.fee)} (route runs at ${b.dispatchThreshold} bookings)`)
+      .join('; ')}. The fee is its own line, taxed like any line. Routine members (Weekly or Bi-Weekly plan) get ${r.routineDiscountPercent}% off the fee. No Express. Areas: ${z.cities.join(', ')}.`,
+    `Zone 5 routes run every ${r.cadenceWeeks === 1 ? 'week' : `${r.cadenceWeeks} weeks`} on ${r.routeDay}s, only once enough neighbors book; below the threshold, bookings move to the next route automatically and the customer is told. Standard turnaround.`,
+    `Beyond ${r.waitlistBeyondMiles} miles: no booking yet; the customer can join the waitlist on the booking page ("Not in your area yet").`,
+  ];
+}
+
+/** How the zone is chosen, and route-day delivery (client 8A-8B). */
+export function zoneRulesLine(): string {
+  return `Zones 1-4 follow their published area lists; other addresses are placed by driving distance from our plant in North Dallas (don't share the plant's street address). Zones 3 and 4 pick up on their route days and deliver on the next route day once the plant has the order ready (a Zone 4 Friday pickup is delivered Tuesday). The booking page shows the exact zone, fee and dates for an address.`;
+}
+
+export function expressLine(coverage: Coverage = DEFAULT_COVERAGE): string {
+  if (!coverage.expressEnabled) {
+    return `24-Hour Express is coming soon (+${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal, Monday-Thursday morning pickups, Zones 1 and 2). It can't be booked yet; every order gets our 48-hour turnaround.`;
+  }
+  return `24-Hour Express: +${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (the zone order minimum still applies), Monday-Thursday morning pickups in Zones 1 and 2.`;
 }
 
 /** Bullet list for chat replies. */
