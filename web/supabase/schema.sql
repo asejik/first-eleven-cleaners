@@ -137,12 +137,26 @@ CREATE TABLE IF NOT EXISTS order_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   garment_type VARCHAR(100) NOT NULL,
-  service_type VARCHAR(50) NOT NULL DEFAULT 'dry_clean' CHECK (service_type IN ('dry_clean', 'wash_fold')),
+  service_type VARCHAR(50) NOT NULL DEFAULT 'dry_clean' CONSTRAINT order_items_service_type_check
+    CHECK (service_type IN ('dry_clean', 'wash_fold', 'alteration')),
   quantity INT NOT NULL DEFAULT 1,
   unit_price NUMERIC(10, 2) NOT NULL,
   subtotal NUMERIC(10, 2) NOT NULL,
-  notes TEXT
+  notes TEXT,
+  -- Alterations and quotes (20261007_alterations_quotes.sql)
+  details JSONB, -- fit instruction and notes for an alteration
+  -- none | pending | within_band | awaiting_approval | approved | declined | returned
+  quote_status VARCHAR(20) NOT NULL DEFAULT 'none' CONSTRAINT order_items_quote_status_check
+    CHECK (quote_status IN ('none', 'pending', 'within_band', 'awaiting_approval', 'approved', 'declined', 'returned')),
+  quoted_unit_price NUMERIC(10, 2),
+  quote_requested_at TIMESTAMPTZ,
+  -- 0 quote sent, 1 reminder sent (24 h), 2 staff call due (48 h)
+  quote_reminder_stage SMALLINT NOT NULL DEFAULT 0 CONSTRAINT order_items_quote_reminder_stage_check
+    CHECK (quote_reminder_stage BETWEEN 0 AND 2),
+  quote_decided_at TIMESTAMPTZ
 );
+CREATE INDEX IF NOT EXISTS idx_order_items_awaiting_quote ON order_items(quote_requested_at)
+  WHERE quote_status = 'awaiting_approval';
 
 -- 6b. ORDER PAYMENTS: one row per Square payment (hold, top-up, charge, quote).
 -- Server only: RLS on, no policies, no grants (20261007_payment_holds.sql)
@@ -174,8 +188,8 @@ CREATE TABLE IF NOT EXISTS garment_photos (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   order_item_id UUID REFERENCES order_items(id) ON DELETE SET NULL,
-  photo_type VARCHAR(50) NOT NULL CHECK (
-    photo_type IN ('intake', 'return', 'delivery_proof', 'pickup_proof')
+  photo_type VARCHAR(50) NOT NULL CONSTRAINT garment_photos_photo_type_check CHECK (
+    photo_type IN ('intake', 'return', 'delivery_proof', 'pickup_proof', 'customer_reference')
   ),
   photo_url TEXT NOT NULL,
   condition_notes TEXT,
@@ -761,8 +775,9 @@ BEGIN
   FROM jsonb_populate_record(NULL::orders, p->'order') r
   RETURNING * INTO v_order;
 
-  INSERT INTO order_items (order_id, garment_type, service_type, quantity, unit_price, subtotal, notes)
-  SELECT v_order.id, i.garment_type, i.service_type, i.quantity, i.unit_price, i.subtotal, i.notes
+  INSERT INTO order_items (order_id, garment_type, service_type, quantity, unit_price, subtotal, notes, details, quote_status)
+  SELECT v_order.id, i.garment_type, i.service_type, i.quantity, i.unit_price, i.subtotal, i.notes, i.details,
+    coalesce(i.quote_status, 'none')
   FROM jsonb_populate_recordset(NULL::order_items, coalesce(p->'items', '[]'::jsonb)) i;
 
   INSERT INTO order_events (order_id, status, note, triggered_by)
