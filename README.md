@@ -28,7 +28,9 @@ graph TD
 ## 🚀 Key System Features
 
 ### 1. 🧺 Customer Experience PWA (`/`, `/book`, `/dashboard`, `/track/[orderId]`)
-* **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning and household item selector (napkins have a dozen price; "from" items such as wedding dresses and drapes are quoted at intake), and morning/evening pickup windows. First-time customers book without creating an account.
+* **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning, household and alteration item selector (napkins have a dozen price; "from" items such as wedding dresses, drapes and some alterations are confirmed at intake), and morning/evening pickup windows.
+* **Alterations:** hems, zippers, elastic, buttons, repairs and pinned adjustments (waist, jacket sides and sleeves). Each piece needs a fit instruction at booking: a measurement, a garment to match (tagged MATCH), pins, an amount or a description; buttons are one line with a quantity; a general repair can carry a photo. Buttons alone can't be booked, alterations can't share an order with Express, and an order with alterations returns together after 3-5 business days. Fitting-based work (dress take-ins, suit fittings) is not offered yet.
+* **Quotes:** "from" prices are confirmed at intake. Up to 25% above the listed price is charged with the order (the customer agrees at checkout); anything higher waits for the customer's Approve / Decline on the private link or dashboard, with a reminder at 24 h, a staff call at 48 h, and the item returned unaltered at no charge after 5 business days. The rest of the order never waits. First-time customers book without creating an account.
 * **Server-Checked Schedule (Dallas time):** Standard pickups need 2 days' notice, never on Sunday, up to 60 days ahead. The plant runs Monday to Friday, so delivery is 2 plant days after pickup (Thursday pickups come back Monday; Friday and Saturday pickups Tuesday, and Saturday bookings say so). **24-Hour Express** is Mon-Thu, morning window only, delivered the next plant day, with 7 AM (same-day) and 9 PM (next-day) cutoffs, a +50% surcharge, and specialty garments and household items excluded. Window and Express capacity are enforced.
 * **Safe Checkout:** Prices are recomputed on the server in whole cents. Each booking (order, items, promo use) is saved in one database transaction, and a double-click or retry returns the first order instead of booking twice.
 * **See It as You Pay It:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and a hold is placed for the estimate x 1.20 (at least $45 or the zone minimum): at booking when pickup is within 2 days, otherwise by the daily job 2 days before pickup. Checkout requires accepting the payment terms. Intake captures the actual itemized, taxed total automatically (lowering the hold, or capturing it and charging the rest), and the receipt carries the ticket, photos and two taps: *Looks good* or *Something's off* (opens a Make It Right claim). A declined card makes the order **Payment Needed**: cleaning continues, delivery waits until it's paid. Cancelling a pickup releases the hold.
@@ -44,7 +46,8 @@ graph TD
 * **Delivered & Completed Archive:** Searchable ledger with date filters, revenue and volume metrics, proof-of-delivery photos, and printable receipts.
 * **Central Intake Station:** Weight recording, dry-cleaning itemization, camera capture and photo upload (resized on device), flaw notes, the customer's care preferences (starch, fold or hang, detergent), and automatic charge of the card on file.
 * **Payments & Financials:** Payment states (Authorized / Captured / Payment Needed / Card needed before pickup) on every order, daily watch lists (call today, Payment Needed with its reminder step, cards needed before pickup, holds expiring within 48 hours), per-order tax and fee records, every Square payment in `order_payments`, collected-revenue ledger, Payment Needed recovery (retry, pay link, mark paid), and Square refunds for claims and late Express deliveries.
-* **Daily Job (`/api/cron/daily`, Vercel Cron 14:00 UTC):** places the 2-days-before holds, marks holds Square let expire, and runs the Payment Needed ladder (customer reminder at 24 h, staff call at 48 h, owner decision at 7 days).
+* **Daily Job (`/api/cron/daily`, Vercel Cron 14:00 UTC):** places the 2-days-before holds, marks holds Square let expire, and runs the Payment Needed ladder (customer reminder at 24 h, staff call at 48 h, owner decision at 7 days) and the quote ladder (reminder, staff call, returned unaltered after 5 business days).
+* **Quotes awaiting approval** appear in Mission Control's watch lists; 48-hour quotes join the call list.
 * **Make It Right Claims Center:** Resolution presets for *🔄 Free Re-Clean*, *💰 Refund (through Square)*, or *💬 Care Explanation*.
 * **Message Log:** Feed of the latest 200 SMS/WhatsApp messages (one database row per message) with **`🚨 AI Escalations`**. Status messages go out automatically when an order moves stage; only an admin can re-send the current status.
 * **Staff Roster & Roles:** Driver and intake specialist accounts; roles are managed here and enforced server-side.
@@ -91,7 +94,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 | **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
 | **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
 | **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
-| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 667 unit tests across 96 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
+| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 713 unit tests across 99 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
 
 ---
 
@@ -230,7 +233,7 @@ Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` w
 
 ### 8. Testing & Verification
 ```bash
-npm test                                   # 667 Vitest tests
+npm test                                   # 713 Vitest tests
 npx vitest run tests/pricing.test.ts       # a single test file
 npx vitest run -t "test name"              # a single test by name
 npx tsc --noEmit                           # type check
