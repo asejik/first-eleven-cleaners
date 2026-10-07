@@ -18,6 +18,7 @@ import {
   SUPPORT_EMAIL,
 } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
+import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const catalogLine = (item: CatalogItem) =>
@@ -57,6 +58,12 @@ export function buildLlmsTxt(): string {
     '',
     '### Household (per item)',
     ...catalogItems('household').map(([, item]) => catalogLine(item)),
+    '',
+    '### Alterations (per item)',
+    ...catalogItems('alteration').map(([, item]) => catalogLine(item)),
+    '- Turnaround 3-5 business days; the whole order returns together. Not available with 24-Hour Express.',
+    '- Each piece needs a fit instruction at booking: a measurement, a garment to match (tagged MATCH), pins, an amount, or a description. "From" prices are confirmed after intake photos.',
+    `- ${ALTERATIONS_NOT_OFFERED}`,
     '',
     '### 24-Hour Express ("Match-Ready Tomorrow")',
     `- Picked up in the morning window (${morning.start}-${morning.end}) and delivered the next morning by ${morning.end}.`,

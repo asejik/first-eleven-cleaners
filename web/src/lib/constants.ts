@@ -202,7 +202,10 @@ export const TX_SALES_TAX_RATE = 0.0825; // 8.25% Texas State & Local Sales Tax
 export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Sustainability Fee
 export const FAILED_PICKUP_FEE = 15.00; // $15 Failed service attempt fee
 
-export type CatalogCategory = 'dry_clean' | 'household';
+export type CatalogCategory = 'dry_clean' | 'household' | 'alteration';
+
+/** How a customer tells the plant what to do with an alteration (client 2026-10-06) */
+export type InstructionType = 'measurement' | 'match' | 'pinned' | 'amount' | 'description';
 
 export interface CatalogItem {
   label: string;
@@ -215,6 +218,12 @@ export interface CatalogItem {
   note?: string;
   /** Price for every full dozen; the pieces left over never cost more than another dozen */
   dozenPrice?: number;
+  /** Alterations: the fit instructions this item accepts (one is required per piece) */
+  instructions?: InstructionType[];
+  /** Alterations: one line with a quantity and one description for the set (buttons) */
+  setWithQuantity?: boolean;
+  /** Alterations: the customer may attach a photo at booking (general repair) */
+  photoAllowed?: boolean;
 }
 
 /**
@@ -255,6 +264,18 @@ export const DRY_CLEAN_PRICES: Record<string, CatalogItem> = {
   napkin: { label: 'Napkin', price: 5.99, category: 'household', dozenPrice: 64.99, note: '$64.99 per dozen' },
   drapes_short: { label: 'Drapes (short panel, unlined)', price: 29.99, category: 'household', fromPrice: true, note: 'Lined drapes quoted at intake' },
   drapes_long: { label: 'Drapes (long panel, unlined)', price: 49.99, category: 'household', fromPrice: true, note: 'Lined drapes quoted at intake' },
+  // Alterations (client 2026-10-06). Fixed price: bookable at the listed price. "From"
+  // items: the price is confirmed after the intake photos, before any charge.
+  hem_plain: { label: 'Pants hem (plain)', price: 29.99, category: 'alteration', instructions: ['measurement', 'match', 'pinned'] },
+  hem_cuff: { label: 'Pants hem (with cuff)', price: 34.99, category: 'alteration', instructions: ['measurement', 'match', 'pinned'] },
+  hem_jeans: { label: 'Jeans hem (original hem kept)', price: 39.99, category: 'alteration', instructions: ['measurement', 'match', 'pinned'] },
+  zipper: { label: 'Pants zipper replacement', price: 35.99, category: 'alteration', instructions: ['description'], note: 'Tell us where, plus color and length if known' },
+  elastic: { label: 'Elastic waistband replacement', price: 35.99, category: 'alteration', instructions: ['description'], note: 'Waistband or cuff' },
+  button: { label: 'Button replacement (each)', price: 5.99, category: 'alteration', instructions: ['description'], setWithQuantity: true, note: 'Which buttons; match existing or your own buttons' },
+  general_repair: { label: 'General repair / mending', price: 27.99, category: 'alteration', fromPrice: true, instructions: ['description'], photoAllowed: true, note: 'Confirmed at intake' },
+  waist: { label: 'Pants waist in or out', price: 39.99, category: 'alteration', fromPrice: true, instructions: ['amount', 'pinned'], note: 'Confirmed after intake photos' },
+  sleeve: { label: 'Jacket sleeve shorten', price: 49.99, category: 'alteration', fromPrice: true, instructions: ['amount', 'pinned'], note: 'Confirmed after intake photos' },
+  sides: { label: 'Jacket sides in or out', price: 44.99, category: 'alteration', fromPrice: true, instructions: ['amount', 'pinned'], note: 'Confirmed after intake photos' },
 };
 
 /** Catalog entries of one category, in menu order. */
@@ -333,11 +354,13 @@ export const EXPRESS_EXCLUDED_GARMENTS = [
   'stain_remediation',
 ] as const;
 
-/** Specialty garments and every household item need the full care timeline: no Express online. */
+/** Specialty garments, every household item and every alteration need the full care timeline: no Express online. */
 export function isExpressExcluded(garmentType: string): boolean {
+  const category = DRY_CLEAN_PRICES[garmentType]?.category;
   return (
     (EXPRESS_EXCLUDED_GARMENTS as readonly string[]).includes(garmentType) ||
-    DRY_CLEAN_PRICES[garmentType]?.category === 'household'
+    category === 'household' ||
+    category === 'alteration'
   );
 }
 
