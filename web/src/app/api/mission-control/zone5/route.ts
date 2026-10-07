@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
-import { getCoverage } from '@/lib/coverage-settings';
+import { getCoverage, getCoverageSettings } from '@/lib/coverage-settings';
 import { isExtendedReachRunDate } from '@/lib/coverage';
 import { upcomingRunSummaries, dispatchRunIfReady } from '@/lib/extended-reach';
 import { recordAdminAction } from '@/lib/audit-log';
@@ -23,17 +23,21 @@ export async function GET(request: Request) {
     const auth = await verifyApiAuth(['admin'], request);
     if (auth.errorResponse) return auth.errorResponse;
     const coverage = await getCoverage();
-    if (!isSupabaseConfigured()) return NextResponse.json({ runs: [], waitlist: [] });
+    if (!isSupabaseConfigured()) return NextResponse.json({ runs: [], waitlist: [], resolutionLog: [] });
     const supabase = createAdminClient();
-    const [runs, { data: waitlist }] = await Promise.all([
+    const [runs, { data: waitlist }, { data: log }, settings] = await Promise.all([
       upcomingRunSummaries(supabase, coverage),
       supabase
         .from('waitlist')
-        .select('id, full_name, email, phone, city, zip, miles, source, created_at')
+        .select('id, full_name, email, phone, city, zip, miles, source, reason, created_at')
         .order('created_at', { ascending: false })
         .limit(100),
+      supabase.from('zone_resolution_log').select('zip, miles, zone_id, band, first_seen_at, last_seen_at').order('last_seen_at', { ascending: false }).limit(300),
+      getCoverageSettings(),
     ]);
-    return NextResponse.json({ runs, waitlist: waitlist || [] });
+    // ZIPs placed by distance and still not on the ZIP table (client: "so I can assign them")
+    const resolutionLog = (log || []).filter((row) => !settings.zipZones[row.zip]);
+    return NextResponse.json({ runs, waitlist: waitlist || [], resolutionLog });
   } catch (err: unknown) {
     return apiError('api/mission-control/zone5', err, 500);
   }

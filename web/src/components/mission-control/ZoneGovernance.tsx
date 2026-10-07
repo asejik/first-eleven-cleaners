@@ -6,7 +6,7 @@ import { Card, Badge, Button } from '@/components/ui';
 import { ALL_ROUTE_DAYS, ZONE_CONFIG, COVERAGE_HUB, type RouteDayName, type MetroZoneId } from '@/lib/constants';
 import { METRO_ZONE_IDS, type CoverageSettings } from '@/lib/coverage';
 import { useUIStore } from '@/stores/ui-store';
-import { ExtendedReachPanel } from './ExtendedReachPanel';
+import { ExtendedReachPanel, type ResolutionLogRow } from './ExtendedReachPanel';
 
 /**
  * Coverage settings (client 2026-10-07, request 8): zone minimums, route days and distance
@@ -77,6 +77,18 @@ export function ZoneGovernance() {
   // The form edits a copy; null until the first change (then it holds the whole draft)
   const [draft, setDraft] = useState<CoverageSettings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newZip, setNewZip] = useState('');
+  const [newZipZone, setNewZipZone] = useState<MetroZoneId>('zone_1');
+  const [openZips, setOpenZips] = useState<MetroZoneId | null>(null);
+  // ZIPs placed by driving distance and not on the table yet (shared with the Zone 5 panel)
+  const { data: zone5 } = useQuery({
+    queryKey: ['zone5'],
+    queryFn: async (): Promise<{ resolutionLog: ResolutionLogRow[] }> => {
+      const res = await fetch('/api/mission-control/zone5');
+      if (!res.ok) throw new Error('Could not load Zone 5');
+      return res.json();
+    },
+  });
   const settings = draft ?? data?.settings ?? null;
 
   const update = (fn: (s: CoverageSettings) => CoverageSettings) => {
@@ -85,6 +97,13 @@ export function ZoneGovernance() {
   const setZone = (id: MetroZoneId, patch: Partial<CoverageSettings['zones'][MetroZoneId]>) =>
     update((s) => ({ ...s, zones: { ...s.zones, [id]: { ...s.zones[id], ...patch } } }));
   const setReach = (patch: Partial<CoverageSettings['extendedReach']>) => update((s) => ({ ...s, extendedReach: { ...s.extendedReach, ...patch } }));
+  const assignZip = (zip: string, zone: MetroZoneId | null) =>
+    update((s) => {
+      const zipZones = { ...s.zipZones };
+      if (zone) zipZones[zip] = zone;
+      else delete zipZones[zip];
+      return { ...s, zipZones };
+    });
   const setBand = (i: number, patch: Partial<CoverageSettings['extendedReach']['bands'][number]>) =>
     update((s) => ({ ...s, extendedReach: { ...s.extendedReach, bands: s.extendedReach.bands.map((b, j) => (j === i ? { ...b, ...patch } : b)) } }));
 
@@ -109,6 +128,8 @@ export function ZoneGovernance() {
       setSaving(false);
     }
   };
+
+  const zipsOf = (id: MetroZoneId) => (settings ? Object.keys(settings.zipZones).filter((zip) => settings.zipZones[zip] === id).sort() : []);
 
   if (isLoading) return <p style={{ color: '#cbd5e1' }}>Loading coverage settings…</p>;
   if (error || !settings) return <p style={{ color: '#fca5a5' }}>{(error as Error)?.message || 'Could not load the coverage settings.'}</p>;
@@ -136,7 +157,7 @@ export function ZoneGovernance() {
             <Badge variant="gold">Saved settings</Badge>
           </div>
           <p style={{ fontSize: '13px', color: '#cbd5e1', margin: 0, maxWidth: '780px', lineHeight: 1.5 }}>
-            Zones 1–4 follow their ZIP lists; any other address is placed by driving distance from {COVERAGE_HUB.name} ({COVERAGE_HUB.address}). Changes apply to new bookings within a minute; booked orders keep their price.
+            Zones 1–4 follow the ZIP table; any other address is placed by driving distance from {COVERAGE_HUB.name} ({COVERAGE_HUB.address}). Changes apply to new bookings within a minute; booked orders keep their price.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -181,17 +202,116 @@ export function ZoneGovernance() {
                 <input id={`${id}-express`} type="checkbox" checked={zone.expressEligible} onChange={(e) => setZone(id, { expressEligible: e.target.checked })} />
                 Offer Express here (while the switch is on)
               </label>
-              <p style={help}>{base.zipCodes.length} ZIP codes on this zone&apos;s list.</p>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setOpenZips(openZips === id ? null : id)}
+                  style={{ background: 'transparent', border: 'none', color: '#38bdf8', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0, minHeight: '32px' }}
+                  aria-expanded={openZips === id}
+                >
+                  {zipsOf(id).length} ZIP codes on this zone&apos;s list {openZips === id ? '(hide)' : '(edit)'}
+                </button>
+                {openZips === id && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                    {zipsOf(id).map((zip) => (
+                      <span key={zip} style={{ fontSize: '12px', background: '#070b14', border: '1px solid #334155', borderRadius: '6px', padding: '2px 4px 2px 8px', color: '#e2e8f0' }}>
+                        {zip}
+                        <button
+                          type="button"
+                          onClick={() => assignZip(zip, null)}
+                          aria-label={`Remove ${zip} from ${base.name}`}
+                          style={{ background: 'transparent', border: 'none', color: '#fca5a5', cursor: 'pointer', marginLeft: '4px', minWidth: '24px', minHeight: '24px' }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Card>
           );
         })}
       </div>
 
+      {/* The ZIP-to-zone table: add a ZIP, and the ZIPs placed by distance (client, revised) */}
+      <Card variant="bordered" padding="lg" style={{ ...panel, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: 0 }}>ZIP codes</h3>
+          <p style={help}>The ZIP table decides Zones 1–4 with no distance lookup. A ZIP that isn&apos;t on it is placed by driving distance and listed below so you can add it.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div>
+            <label htmlFor="add-zip" style={label}>ZIP code</label>
+            <input id="add-zip" inputMode="numeric" maxLength={5} value={newZip} onChange={(e) => setNewZip(e.target.value.replace(/\D/g, ''))} style={{ ...input, width: '110px' }} />
+          </div>
+          <div>
+            <label htmlFor="add-zip-zone" style={label}>Zone</label>
+            <select id="add-zip-zone" value={newZipZone} onChange={(e) => setNewZipZone(e.target.value as MetroZoneId)} style={{ ...input, width: '220px' }}>
+              {METRO_ZONE_IDS.map((id) => <option key={id} value={id}>{ZONE_CONFIG[id].name}</option>)}
+            </select>
+          </div>
+          <Button
+            variant="outlineLight"
+            size="sm"
+            disabled={newZip.length !== 5}
+            onClick={() => {
+              assignZip(newZip, newZipZone);
+              setNewZip('');
+            }}
+          >
+            Add to zone
+          </Button>
+          {newZip.length === 5 && settings.zipZones[newZip] && (
+            <span style={{ fontSize: '12px', color: '#fde68a' }}>Now in {ZONE_CONFIG[settings.zipZones[newZip]].name}; adding moves it.</span>
+          )}
+        </div>
+        <div>
+          <strong style={{ color: '#fef08a', fontSize: '13px' }}>Placed by distance (not on the table)</strong>
+          {!zone5?.resolutionLog?.length ? (
+            <p style={help}>None yet.</p>
+          ) : (
+            <div style={{ overflowX: 'auto', marginTop: '8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['ZIP', 'Miles', 'Placed in', 'Last seen', 'Add to'].map((h) => (
+                      <th key={h} style={{ padding: '6px 8px', borderBottom: '1px solid #1e293b', fontSize: '11px', color: '#94a3b8', textAlign: 'left', textTransform: 'uppercase' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {zone5.resolutionLog.filter((row) => !settings.zipZones[row.zip]).map((row) => (
+                    <tr key={row.zip}>
+                      <td style={{ padding: '6px 8px', color: '#e2e8f0', fontSize: '13px' }}>{row.zip}</td>
+                      <td style={{ padding: '6px 8px', color: '#e2e8f0', fontSize: '13px' }}>{row.miles != null ? Number(row.miles).toFixed(1) : 'unknown'}</td>
+                      <td style={{ padding: '6px 8px', color: '#e2e8f0', fontSize: '13px' }}>
+                        {row.zone_id === 'waitlist' ? 'Waitlist' : row.zone_id.replace('zone_', 'Zone ')}{row.band ? ` · Band ${row.band}` : ''}
+                      </td>
+                      <td style={{ padding: '6px 8px', color: '#94a3b8', fontSize: '12px' }}>{new Date(row.last_seen_at).toLocaleDateString()}</td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {METRO_ZONE_IDS.map((id) => (
+                            <Button key={id} variant={row.zone_id === id ? 'outlineGold' : 'ghostLight'} size="sm" onClick={() => assignZip(row.zip, id)}>
+                              {id.replace('zone_', 'Zone ')}
+                            </Button>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Card>
+
       {/* Zone 5 */}
       <Card variant="bordered" padding="lg" style={{ ...panel, display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div>
           <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: 0 }}>Zone 5 — Extended Reach</h3>
-          <p style={help}>Beyond the Metroplex. Fee by driving distance; the route runs once enough neighbors book. Beyond the last band, the waitlist.</p>
+          <p style={help}>Beyond the Metroplex. Fee by driving distance; picked up on a run, back on the next run. New pickups are accepted once enough neighbors book or a delivery is due that day. Beyond the last band, the waitlist.</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           <NumberField id="z5-min" text="Order minimum ($)" value={reach.minimumOrder} onChange={(v) => setReach({ minimumOrder: v })} hint="The delivery fee is on top." />
@@ -206,8 +326,12 @@ export function ZoneGovernance() {
           </div>
           <div>
             <label htmlFor="z5-first" style={label}>First run date</label>
-            <input id="z5-first" type="date" value={reach.firstRunDate} onChange={(e) => setReach({ firstRunDate: e.target.value })} style={input} />
-            <p style={help}>Later runs follow every {reach.cadenceWeeks} week(s).</p>
+            <input id="z5-first" type="date" value={reach.firstRunDate ?? ''} onChange={(e) => setReach({ firstRunDate: e.target.value || null })} style={input} />
+            <p style={help}>
+              {reach.firstRunDate
+                ? `Later runs follow every ${reach.cadenceWeeks} week(s).`
+                : 'Blank: Zone 5 addresses join the waitlist ("Extended Reach is coming soon") until you set it.'}
+            </p>
           </div>
           <NumberField id="z5-notice" text="Booking closes (days before)" value={reach.bookingNoticeDays} onChange={(v) => setReach({ bookingNoticeDays: v })} hint="At least 3: the run is decided 2 days before." />
         </div>
