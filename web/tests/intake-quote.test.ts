@@ -46,7 +46,7 @@ describe('Intake quotes for "from" items', () => {
     ['jacket', 30, /fixed price and can't be quoted/],
     ['not_an_item', 30, /fixed price and can't be quoted/],
     ['evening_gown', 50.555, /dollars and cents/],
-    ['evening_gown', MAX_QUOTED_UNIT_PRICE + 1, /more than 25% above/],
+    ['evening_gown', MAX_QUOTED_UNIT_PRICE + 1, /looks too high/],
   ])('refuses %s quoted at %d', (key, quoted, message) => {
     const line = priceIntakeLine(key, 1, quoted);
     expect(line.ok).toBe(false);
@@ -63,7 +63,7 @@ describe('Intake API and screen use the quote rule', () => {
 
   it('validates quotes before the card is charged and records them', () => {
     expect(api).toContain('quoted_unit_price: z.number(');
-    expect(api).toContain('priceIntakeLine(item.garment_type, qty, item.quoted_unit_price)');
+    expect(api).toContain('priceIntakeLine(item.garment_type, qty, item.quoted_unit_price, { allowApproval: true })');
     expect(api.indexOf('priceIntakeLine(')).toBeLessThan(api.indexOf('captureOrderPayment(supabase'));
     expect(api).toContain("action: 'order.intake_price_quote'");
     expect(api).toContain('Quoted at intake: $');
@@ -71,7 +71,7 @@ describe('Intake API and screen use the quote rule', () => {
 
   it('the intake screen sends the quote and blocks an invalid one', () => {
     const ws = read('components/mission-control/IntakeTicketWorkspace.tsx');
-    expect(ws).toContain('priceIntakeLine(key, dryCleanCounts[key], quoteFor(key))');
+    expect(ws).toContain('priceIntakeLine(key, dryCleanCounts[key], quoteFor(key), { allowApproval: true })');
     expect(ws).toContain('quoted_unit_price: quoteFor(k)');
     expect(ws).toContain('quoteErrors.length > 0');
   });

@@ -14,10 +14,28 @@ export const QUOTE_BAND_PERCENT = 125;
 const UNKNOWN_ITEM_PRICE = 8.99;
 
 export type IntakeLinePrice =
-  | { ok: true; unitPrice: number; subtotal: number; quote?: { listed: number; quoted: number } }
+  | {
+      ok: true;
+      unitPrice: number;
+      subtotal: number;
+      quote?: { listed: number; quoted: number };
+      /** Quoted more than 25% above the from-price: not charged until the customer approves (Part C) */
+      awaitingApproval?: boolean;
+    }
   | { ok: false; error: string };
 
-export function priceIntakeLine(garmentType: string, quantity: number, quotedUnitPrice?: number): IntakeLinePrice {
+/** The highest price per piece the customer agreed to at checkout (125% of the from-price), in cents. */
+export function quoteBandMaxCents(fromPrice: number): number {
+  return Math.floor((Math.round(fromPrice * 100) * QUOTE_BAND_PERCENT) / 100);
+}
+
+export function priceIntakeLine(
+  garmentType: string,
+  quantity: number,
+  quotedUnitPrice?: number,
+  /** Intake: a quote above the band goes to the customer for approval instead of being refused */
+  { allowApproval = false }: { allowApproval?: boolean } = {}
+): IntakeLinePrice {
   const item = DRY_CLEAN_PRICES[garmentType];
 
   if (quotedUnitPrice === undefined || (item && quotedUnitPrice === item.price)) {
@@ -38,14 +56,23 @@ export function priceIntakeLine(garmentType: string, quantity: number, quotedUni
   if (quotedCents < Math.round(item.price * 100)) {
     return { ok: false, error: `The quoted price for ${label} can't be below its starting price of $${item.price.toFixed(2)}.` };
   }
-  // The customer agreed at checkout to quotes up to 25% above the from-price; more needs
-  // their OK, which arrives with the quote-approval step (client 2026-10-06, Part C)
-  const bandMaxCents = Math.floor((Math.round(item.price * 100) * QUOTE_BAND_PERCENT) / 100);
-  if (quotedCents > bandMaxCents) {
-    return { ok: false, error: `The quoted price for ${label} is more than 25% above its starting price. Without the customer's OK it can be at most $${(bandMaxCents / 100).toFixed(2)}; call the customer before quoting more.` };
-  }
   if (quotedCents > MAX_QUOTED_UNIT_PRICE * 100) {
     return { ok: false, error: `The quoted price for ${label} looks too high (over $${MAX_QUOTED_UNIT_PRICE}). Please re-check it.` };
+  }
+  // The customer agreed at checkout to quotes up to 25% above the from-price; more needs their
+  // OK (client 2026-10-06): intake sends the quote and charges nothing for the item until then
+  const bandMaxCents = quoteBandMaxCents(item.price);
+  if (quotedCents > bandMaxCents) {
+    if (!allowApproval) {
+      return { ok: false, error: `The quoted price for ${label} is more than 25% above its starting price. Without the customer's OK it can be at most $${(bandMaxCents / 100).toFixed(2)}.` };
+    }
+    return {
+      ok: true,
+      unitPrice: item.price,
+      subtotal: 0,
+      quote: { listed: item.price, quoted: quotedCents / 100 },
+      awaitingApproval: true,
+    };
   }
   return {
     ok: true,

@@ -21,6 +21,7 @@ import { checkIntakeAllowed } from '@/lib/order-lifecycle';
 import { texasDate, texasDayStartUtc } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
+import type { Database } from '@/types/database';
 import { priceIntakeLine } from '@/lib/intake-quote';
 import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
@@ -46,6 +47,11 @@ const IntakeSchema = z.object({
     .max(20)
     .default([]),
   intake_notes: z.string().max(2000).default(''),
+  // Alterations booked with the order (kept as booked): the confirmed price for "from" items
+  alteration_lines: z
+    .array(z.object({ item_id: z.guid(), confirmed_unit_price: z.number().positive().optional() }))
+    .max(30)
+    .default([]),
 });
 
 export const dynamic = 'force-dynamic';
@@ -112,7 +118,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { order_id, weight_lbs, dry_clean_items, photos, intake_notes } = parsed.data;
+    const { order_id, weight_lbs, dry_clean_items, photos, intake_notes, alteration_lines } = parsed.data;
 
     const supabase = createAdminClient();
 
@@ -177,7 +183,13 @@ export async function POST(request: Request) {
       unit_price: number;
       subtotal: number;
       notes?: string;
+      quote_status?: 'awaiting_approval' | 'within_band';
+      quoted_unit_price?: number;
+      quote_requested_at?: string;
     }> = [];
+    /** Quotes above the 25% band: sent to the customer, not charged now (client 2026-10-06) */
+    const quotesForApproval: Array<{ item: string; quantity: number; listed: number; quoted: number }> = [];
+    const nowIso = new Date().toISOString();
 
     if (washFoldSubtotal > 0) {
       orderItemsToInsert.push({
@@ -199,15 +211,18 @@ export async function POST(request: Request) {
       const qty = item.quantity;
       if (qty <= 0) continue;
       const priceMeta = DRY_CLEAN_PRICES[item.garment_type];
-      const line = priceIntakeLine(item.garment_type, qty, item.quoted_unit_price);
+      const line = priceIntakeLine(item.garment_type, qty, item.quoted_unit_price, { allowApproval: true });
       if (!line.ok) {
         return NextResponse.json({ error: line.error }, { status: 400 });
       }
       dryCleanSubtotal += line.subtotal;
       const label = priceMeta ? priceMeta.label : item.garment_type;
       if (line.quote) intakeQuotes.push({ item: label, quantity: qty, ...line.quote });
+      if (line.quote && line.awaitingApproval) quotesForApproval.push({ item: label, quantity: qty, ...line.quote });
       const quoteNote = line.quote
-        ? `Quoted at intake: $${line.quote.quoted.toFixed(2)} each (from $${line.quote.listed.toFixed(2)})`
+        ? line.awaitingApproval
+          ? `Quote $${line.quote.quoted.toFixed(2)} each (from $${line.quote.listed.toFixed(2)}) awaiting the customer's OK`
+          : `Quoted at intake: $${line.quote.quoted.toFixed(2)} each (from $${line.quote.listed.toFixed(2)})`
         : '';
 
       orderItemsToInsert.push({
@@ -218,10 +233,50 @@ export async function POST(request: Request) {
         unit_price: line.unitPrice,
         subtotal: line.subtotal,
         notes: [quoteNote, item.notes].filter(Boolean).join(' · ') || undefined,
+        ...(line.quote
+          ? line.awaitingApproval
+            ? { quote_status: 'awaiting_approval' as const, quoted_unit_price: line.quote.quoted, quote_requested_at: nowIso }
+            : { quote_status: 'within_band' as const, quoted_unit_price: line.quote.quoted }
+          : {}),
       });
     }
 
-    const subtotal = Number((washFoldSubtotal + dryCleanSubtotal).toFixed(2));
+    // Alterations stay as booked (with their fit instructions); fixed prices are charged now,
+    // "from" prices as confirmed here: within 25% charged now, higher sent for approval
+    const { data: bookedAlterations } = await supabase
+      .from('order_items')
+      .select('id, garment_type, quantity, unit_price, notes, quote_status')
+      .eq('order_id', order.id)
+      .eq('service_type', 'alteration');
+    const alterationUpdates: Array<{ id: string; values: Database['public']['Tables']['order_items']['Update'] }> = [];
+    let alterationSubtotal = 0;
+    for (const booked of bookedAlterations || []) {
+      // Already decided by the customer (a re-weigh before charging): keep as is
+      if (['approved', 'declined', 'returned'].includes(booked.quote_status)) continue;
+      const confirmed = alteration_lines.find((l) => l.item_id === booked.id)?.confirmed_unit_price;
+      const line = priceIntakeLine(booked.garment_type, booked.quantity, confirmed, { allowApproval: true });
+      if (!line.ok) {
+        return NextResponse.json({ error: line.error }, { status: 400 });
+      }
+      alterationSubtotal += line.subtotal;
+      const label = DRY_CLEAN_PRICES[booked.garment_type]?.label || booked.garment_type;
+      if (line.quote) intakeQuotes.push({ item: label, quantity: booked.quantity, ...line.quote });
+      if (line.quote && line.awaitingApproval) quotesForApproval.push({ item: label, quantity: booked.quantity, ...line.quote });
+      alterationUpdates.push({
+        id: booked.id,
+        values: line.awaitingApproval
+          ? { quote_status: 'awaiting_approval', quoted_unit_price: line.quote?.quoted, quote_requested_at: nowIso, quote_reminder_stage: 0, subtotal: 0 }
+          : {
+              unit_price: line.unitPrice,
+              subtotal: line.subtotal,
+              ...(DRY_CLEAN_PRICES[booked.garment_type]?.fromPrice
+                ? { quote_status: 'within_band', quoted_unit_price: line.unitPrice }
+                : {}),
+            },
+      });
+    }
+
+    const subtotal = Number((washFoldSubtotal + dryCleanSubtotal + alterationSubtotal).toFixed(2));
 
     // Final total uses the same rules as booking (SEC-06): Express surcharge, promo and
     // recurring-plan discounts as percentages of the weighed subtotal, environmental fee, tax.
@@ -257,10 +312,14 @@ export async function POST(request: Request) {
     });
     const finalTotal = financials.finalTotal;
 
-    // 3. Clear old items and insert fresh itemized breakdown
-    await supabase.from('order_items').delete().eq('order_id', order.id);
+    // 3. Replace the cleaning lines with the weighed itemization; alteration lines (with their
+    // fit instructions) are kept and updated in place
+    await supabase.from('order_items').delete().eq('order_id', order.id).neq('service_type', 'alteration');
     if (orderItemsToInsert.length > 0) {
       await supabase.from('order_items').insert(orderItemsToInsert);
+    }
+    for (const update of alterationUpdates) {
+      await supabase.from('order_items').update(update.values).eq('id', update.id).eq('order_id', order.id);
     }
 
     // 4. Insert Garment Photos (Resolving base64 to Supabase Storage CDN)
@@ -411,6 +470,20 @@ export async function POST(request: Request) {
       };
 
       runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'intake notification');
+
+      // Quotes above the 25% band: the customer approves or declines from the tracking link or
+      // their dashboard; the rest of the order goes ahead either way (client 2026-10-06)
+      if (quotesForApproval.length > 0) {
+        const lines = quotesForApproval
+          .map((q) => `${q.quantity > 1 ? `${q.quantity}x ` : ''}${q.item}: $${q.quoted.toFixed(2)}${q.quantity > 1 ? ' each' : ''} (listed from $${q.listed.toFixed(2)})`)
+          .join('; ');
+        const quotePayload: MessagePayload = {
+          ...payload,
+          customTitle: '🧵 Your quote needs your OK',
+          customMessage: `Eleven at First Eleven Cleaners: after inspecting Order #${order.order_number || order.id.slice(0, 8)} we priced ${lines}. That's more than 25% above the listed price, so we need your OK first. Approve or decline here: ${origin}/track/${order.id} Everything else in your order goes ahead; if you decline, the item comes back unaltered at no charge.`,
+        };
+        runAfterResponse(() => messagingService.dispatchStageNotification(quotePayload), 'quote notification');
+      }
     }
 
     return NextResponse.json({
@@ -422,7 +495,11 @@ export async function POST(request: Request) {
       payment_id: paymentId,
       subtotal,
       total: finalTotal,
+      quotes_awaiting_approval: quotesForApproval.length,
       warning: [
+        quotesForApproval.length > 0
+          ? `${quotesForApproval.length} quoted item(s) are more than 25% above the listed price: the customer has been asked to approve them, and they were not charged now.`
+          : null,
         isPaymentFailed ? `The card was declined for $${amountDue.toFixed(2)}. The order is marked Payment Needed: cleaning can go ahead, delivery waits until it's paid.` : null,
         unsavedPhotoCount > 0 ? `${unsavedPhotoCount} photo(s) could not be saved. Please retake and re-upload them.` : null,
       ].filter(Boolean).join(' ') || undefined,

@@ -388,6 +388,63 @@ describe('Intake charges the saved card for the full taxed total (SEC-05, SEC-06
     expect(update?.payment_needed_since).toEqual(expect.any(String));
   });
 
+  describe('alterations at intake (client 2026-10-06, Parts B-D)', () => {
+    const HEM_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+    const SLEEVE_ID = 'aaaaaaaa-0000-4000-8000-000000000002';
+    const alterations = [
+      { id: HEM_ID, garment_type: 'hem_plain', quantity: 1, unit_price: 29.99, notes: 'Measurement: finished length 31 in', quote_status: 'none' },
+      { id: SLEEVE_ID, garment_type: 'sleeve', quantity: 1, unit_price: 49.99, notes: 'Pinned: Garment is pinned; alter to the pins.', quote_status: 'pending' },
+    ];
+    const alterationIntake = (sleevePrice: number) =>
+      intakePOST(
+        new Request('http://localhost/api/intake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: baseOrder.id,
+            weight_lbs: 0,
+            dry_clean_items: [],
+            alteration_lines: [{ item_id: HEM_ID }, { item_id: SLEEVE_ID, confirmed_unit_price: sleevePrice }],
+          }),
+        })
+      );
+    const itemUpdate = (id: string) => writes.find((w) => w.table === 'order_items' && w.op === 'update' && (w.values as Row).subtotal !== undefined && JSON.stringify(w).includes('quote') === (id === SLEEVE_ID))?.values;
+
+    it('validation example: a sleeve confirmed at $59.99 (within 25% of $49.99) is charged with the order', async () => {
+      fixtures.orders = { ...baseOrder, express_tier: 'standard', promo_code: null, notes: null };
+      fixtures.order_items = alterations as unknown as Row;
+      stubSquare({ '/payments': { status: 200, body: { payment: { id: 'PAY_ALT', status: 'COMPLETED' } } } });
+      const body = await (await alterationIntake(59.99)).json();
+      // $29.99 hem + $59.99 sleeve = $89.98, + 3% fee + 8.25% tax
+      const expected = calculateOrderFinancials({ subtotal: 89.98 });
+      expect(body.total).toBe(expected.finalTotal);
+      expect(body.quotes_awaiting_approval).toBe(0);
+      expect(itemUpdate(SLEEVE_ID)).toMatchObject({ quote_status: 'within_band', unit_price: 59.99, subtotal: 59.99 });
+      // The cleaning lines are replaced, but never the alteration lines
+      expect(writes.some((w) => w.table === 'order_items' && w.op === 'insert' && JSON.stringify(w.values).includes('hem_plain'))).toBe(false);
+    });
+
+    it('sends a sleeve confirmed above $62.48 to the customer and charges only the rest', async () => {
+      fixtures.orders = { ...baseOrder, express_tier: 'standard', promo_code: null, notes: null };
+      fixtures.order_items = alterations as unknown as Row;
+      stubSquare({ '/payments': { status: 200, body: { payment: { id: 'PAY_ALT2', status: 'COMPLETED' } } } });
+      const body = await (await alterationIntake(70)).json();
+      expect(body.total).toBe(calculateOrderFinancials({ subtotal: 29.99 }).finalTotal);
+      expect(body.quotes_awaiting_approval).toBe(1);
+      expect(body.warning).toContain('asked to approve');
+      expect(itemUpdate(SLEEVE_ID)).toMatchObject({ quote_status: 'awaiting_approval', quoted_unit_price: 70, subtotal: 0, quote_reminder_stage: 0 });
+    });
+
+    it('refuses a confirmed price below the from-price', async () => {
+      fixtures.orders = { ...baseOrder, express_tier: 'standard', promo_code: null, notes: null };
+      fixtures.order_items = alterations as unknown as Row;
+      stubSquare({});
+      const res = await alterationIntake(40);
+      expect(res.status).toBe(400);
+      expect(squareCalls).toHaveLength(0);
+    });
+  });
+
   it('puts an order with no card on file on Payment Hold and never uses a test token', async () => {
     fixtures.orders = { ...baseOrder, square_customer_id: null, square_card_id: null, payment_id: 'cnon:old-token' };
     stubSquare({});
