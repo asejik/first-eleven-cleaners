@@ -78,7 +78,7 @@ tsconfig.tsbuildinfo
 web/tsconfig.tsbuildinfo
 
 # --- Testing & Code Coverage ---
-coverage/
+/coverage/
 web/coverage/
 .nyc_output/
 test-results/

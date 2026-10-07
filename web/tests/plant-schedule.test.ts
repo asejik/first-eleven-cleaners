@@ -56,8 +56,10 @@ describe('Delivery dates count plant days (Mon-Fri)', () => {
   });
 
   it('the booking API and the booking screens use the shared rule', () => {
-    expect(read('app/api/bookings/route.ts')).toContain('estimatedDeliveryDate(validated.schedule.pickup_date');
-    expect(read('hooks/useBookingState.ts')).toContain('estimatedDeliveryDate(pickupDateStr, tier, { alterations: hasAlterations })');
+    // Through zoneDeliveryDate(): the plant rule first, then the zone's route day (client 8B)
+    expect(read('app/api/bookings/route.ts')).toContain('zoneDeliveryDate(zone, validated.schedule.pickup_date');
+    expect(read('hooks/useBookingState.ts')).toContain('zoneDeliveryDate(zone, pickupDateStr, tier, { alterations: hasAlterations }, coverage)');
+    expect(read('lib/coverage.ts')).toContain('estimatedDeliveryDate(pickupDate, tier, { alterations })');
   });
 });
 

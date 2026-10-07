@@ -14,7 +14,7 @@ test.describe('Guest booking', () => {
     await skipCookieBanner(page);
   });
 
-  test('reaches Review with the right subtotal, and Express is blocked for specialty items', async ({ page }) => {
+  test('reaches Review with the right subtotal; Express is not offered while it is switched off', async ({ page }) => {
     await page.goto('/book');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Where Should We Pick Up?');
 
@@ -34,14 +34,30 @@ test.describe('Guest booking', () => {
     // Express is offered only on Monday-Thursday pickups, so don't depend on today's weekday
     await page.getByLabel('Pickup Date').fill(nextExpressDay());
 
-    // A formal dress is a specialty item: Express is unavailable, with the reason shown
-    await expect(page.getByRole('button', { name: /24-Hr Express/ })).toBeDisabled();
-    await expect(page.getByText(/Express isn.t available for this order/)).toBeVisible();
+    // Express stays off until the plant confirms in writing (client 2026-10-07, 8E)
+    await expect(page.getByText(/24-Hour Express is coming soon/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /24-Hr Express/ })).toHaveCount(0);
     await page.getByRole('button', { name: /Review Order & Pricing/ }).click();
 
     // 2 x $8.99 + $27.99
     const subtotalRow = page.locator('div', { hasText: /^Garment Subtotal/ }).last();
     await expect(subtotalRow).toContainText('$45.97');
+  });
+
+  // Client 2026-10-07, 8C: Zone 5 shows its fee line the moment the address resolves;
+  // beyond the routes, the waitlist
+  test('Extended Reach shows its fee and the Routine price; far addresses get the waitlist', async ({ page }) => {
+    await page.goto('/book');
+    await page.getByLabel('Street Address').fill('100 Fort Worth Hwy');
+    await page.getByLabel('ZIP Code').fill('76086'); // Weatherford
+    await expect(page.getByText('Zone 5 — Extended Reach').first()).toBeVisible();
+    await expect(page.getByText(/Extended Reach delivery: \$35 → \$17\.50 for Routine members/)).toBeVisible();
+    await page.getByRole('button', { name: 'Join the Routine' }).click();
+    await expect(page.getByText(/\$17\.50 \(Routine member\)/)).toBeVisible();
+
+    await page.getByLabel('ZIP Code').fill('90210');
+    await expect(page.getByText('Not in your area yet')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Join the waitlist' })).toBeVisible();
   });
 
   test('the Eleven concierge opens', async ({ page }) => {

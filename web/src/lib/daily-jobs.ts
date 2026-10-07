@@ -48,6 +48,9 @@ async function notify(
   });
 }
 
+/** The same customer message, for the Zone 5 route jobs (lib/extended-reach.ts). */
+export const notifyOrderCustomer = notify;
+
 export interface HoldRunResult {
   placed: number;
   declined: number;

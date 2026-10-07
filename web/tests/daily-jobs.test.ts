@@ -39,6 +39,8 @@ vi.mock('@/lib/supabase/admin', () => ({
         lt: () => b,
         lte: () => b,
         not: () => b,
+        is: () => b,
+        order: () => b,
         limit: () => b,
         maybeSingle: async () => ({ data: singleRow[table] ?? null, error: null }),
         then: (resolve: (r: unknown) => unknown) =>

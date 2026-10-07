@@ -8,6 +8,11 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }),
 }));
 vi.mock('@/lib/messaging', () => ({ messagingService: { dispatchStageNotification: vi.fn(async () => ({})) } }));
+// Express switched on (it starts off until the plant confirms, client 2026-10-07, 8E)
+vi.mock('@/lib/coverage-settings', async () => {
+  const { buildCoverage, DEFAULT_COVERAGE_SETTINGS } = await import('@/lib/coverage');
+  return { getCoverage: async () => buildCoverage({ ...DEFAULT_COVERAGE_SETTINGS, expressEnabled: true }) };
+});
 vi.mock('@/lib/rate-limiter', () => ({
   checkRateLimitAsync: async () => ({ allowed: true, remaining: 9 }),
   getClientIp: () => '127.0.0.1',

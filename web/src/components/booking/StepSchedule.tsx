@@ -1,6 +1,7 @@
 import { Card, Input, Badge, Button } from '@/components/ui';
 import type { ZoneConfig } from '@/lib/constants';
 import { isExpressPickupDay, isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
+import { dispatchThresholdMessage, type ExtendedReachQuote } from '@/lib/coverage';
 import styles from '@/app/book/page.module.css';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -38,6 +39,12 @@ interface StepScheduleProps {
   isExpressCapacityFull?: boolean;
   nextAvailableExpressDate?: string;
   detectedZone?: ZoneConfig | null;
+  /** Zones with set route days pick from these dates (Zone 3/4 route days, Zone 5 runs; client 8B-8C) */
+  routeDates?: string[] | null;
+  /** Zone 5: the runs with the neighbors booked on each */
+  extendedReach?: ExtendedReachQuote | null;
+  /** The 24-Hour Express switch (off until the plant confirms, client 8E) */
+  expressEnabled?: boolean;
   isValid: boolean;
   onBack: () => void;
   onContinue: () => void;
@@ -63,11 +70,16 @@ export function StepSchedule({
   isExpressCapacityFull = false,
   nextAvailableExpressDate = 'the next business day',
   detectedZone,
+  routeDates = null,
+  extendedReach = null,
+  expressEnabled = false,
   isValid,
   onBack,
   onContinue,
 }: StepScheduleProps) {
   const isExpressDay = Boolean(pickupDate) && isExpressPickupDay(pickupDate);
+  const runFor = (date: string) => extendedReach?.runs.find((r) => r.date === date);
+  const selectedRun = runFor(pickupDate);
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>When Should We Pick Up?</h1>
@@ -76,6 +88,37 @@ export function StepSchedule({
       </p>
 
       <div className={styles.scheduleBox}>
+        {routeDates && routeDates.length > 0 ? (
+          <div className={styles.windowSelection}>
+            <span className={styles.fieldLabel} id="route-date-label">
+              Pickup Date ({detectedZone?.id === 'zone_5' ? 'Extended Reach route days' : detectedZone?.routeScheduleLabel}):
+            </span>
+            <div className={styles.routeDateOptions} role="group" aria-labelledby="route-date-label">
+              {routeDates.map((date) => {
+                const run = runFor(date);
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    className={`${styles.windowCard} ${pickupDate === date ? styles.selectedWindow : ''}`}
+                    onClick={() => setPickupDate(date)}
+                    aria-pressed={pickupDate === date}
+                  >
+                    <strong>{formatDisplayDate(date)}</strong>
+                    {run && <span>{run.dispatched ? 'Route confirmed' : `${Math.min(run.booked, run.threshold)} of ${run.threshold} booked`}</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedRun && (
+              <p className={styles.expressNote} style={{ marginTop: 'var(--space-2)' }}>
+                🚐 {selectedRun.dispatched
+                  ? 'This route is confirmed and will run.'
+                  : `${dispatchThresholdMessage(selectedRun.booked, selectedRun.threshold)} If it doesn't fill, your pickup moves to the next route and we'll tell you.`}
+              </p>
+            )}
+          </div>
+        ) : (
         <Input
           label="Pickup Date"
           type="date"
@@ -119,6 +162,7 @@ export function StepSchedule({
           }
           required
         />
+        )}
 
         {/* Real-time Turnaround & Delivery Timeline Card */}
         {pickupDate && (
@@ -236,7 +280,24 @@ export function StepSchedule({
 
         {/* Express Tier Turnaround Speed Selector:
             Offered ONLY in Express-eligible zones (Zone 1 & 2), on Monday-Thursday morning windows. */}
-        {!detectedZone?.expressEligible ? (
+        {!detectedZone?.expressEligible && (!expressEnabled || detectedZone?.id === 'zone_5') ? (
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderLeft: '4px solid #64748b',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-lg)',
+            marginTop: 'var(--space-2)',
+            fontSize: 'var(--text-xs)',
+            color: '#334155',
+          }}>
+            {detectedZone?.id === 'zone_5' ? (
+              <><strong>⏱️ Standard turnaround on Extended Reach routes.</strong> 24-Hour Express isn&apos;t offered beyond the Metroplex.</>
+            ) : (
+              <><strong>⏱️ Standard 48-Hour Care.</strong> 24-Hour Express is coming soon. Every pickup receives our signature 48-hour match-ready turnaround.</>
+            )}
+          </div>
+        ) : !detectedZone?.expressEligible ? (
           <div style={{
             background: '#f8fafc',
             border: '1px solid #cbd5e1',

@@ -9,8 +9,8 @@ import {
   ROUTES,
   FAILED_PICKUP_FEE,
   calculateOrderFinancials,
-  resolveZoneByZip,
   getZoneMinimumGap,
+  EXTENDED_REACH_LABEL,
   catalogItems,
   catalogPriceLabel,
   catalogLineTotal,
@@ -20,6 +20,7 @@ import {
 import { Card, ButtonLink } from '@/components/ui';
 import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
+import { useCoverage, useAddressCoverage } from '@/hooks/useCoverage';
 import styles from './page.module.css';
 
 export default function PricingPage() {
@@ -28,6 +29,10 @@ export default function PricingPage() {
   const [dryCleanQuantities, setDryCleanQuantities] = useState<Record<string, number>>({});
   const [selectedExpress, setSelectedExpress] = useState<'standard' | 'express_24hr'>('standard');
   const [calcZip, setCalcZip] = useState<string>('75205');
+  // "Join the Routine" in the calculator shows the Routine price of the Zone 5 fee (client 8C)
+  const [calcRoutine, setCalcRoutine] = useState(false);
+  const coverage = useCoverage();
+  const calcCoverage = useAddressCoverage({ zip: calcZip }, coverage);
 
   const updateQuantity = (key: string, delta: number) => {
     setDryCleanQuantities((prev) => {
@@ -51,13 +56,18 @@ export default function PricingPage() {
   const calculatedDryClean = catalogSubtotal(dryCleanQuantities);
 
   const subtotal = calculatedWashFold + calculatedDryClean;
-  const calcZone = resolveZoneByZip(calcZip);
+  const calcZone = calcCoverage.resolution.status === 'served' ? calcCoverage.resolution.zone : null;
+  const calcWaitlist = calcCoverage.resolution.status === 'waitlist';
   const zoneGap = getZoneMinimumGap(subtotal, calcZone);
+  // Zone 5: the fee line appears the moment the ZIP resolves, before any item is added
+  const reach = calcZone?.id === 'zone_5' ? calcCoverage.extendedReach : null;
+  const reachFee = reach ? (calcRoutine ? reach.routineFee : reach.fullFee) : 0;
 
   const financials = calculateOrderFinancials({
     subtotal,
     isExpress: selectedExpress === 'express_24hr' && Boolean(calcZone?.expressEligible),
     discountPercent: 0,
+    extendedReachFee: reachFee,
   });
 
   const totalDryCleanItems = Object.values(dryCleanQuantities).reduce((a, b) => a + b, 0);
@@ -306,7 +316,20 @@ export default function PricingPage() {
                         <span style={{ color: 'var(--color-green-dark)' }}>${calcZone.minimumOrder.toFixed(0)} min</span>
                       </div>
                       <div className={styles.zoneSpecsSummary}>
-                        {calcZone.routeScheduleLabel} · {calcZone.expressEligible ? '⚡ 24-Hr Express Eligible' : 'Standard 48-Hr Only'}
+                        {calcZone.routeScheduleLabel} · {calcZone.expressEligible ? calcZone.expressLabel : 'Standard 48-Hr Only'}
+                      </div>
+                    </div>
+                  ) : calcCoverage.checking ? (
+                    <div className={styles.zoneInfoCard}>
+                      <div className={styles.zoneSpecsSummary}>Checking this ZIP code&hellip;</div>
+                    </div>
+                  ) : calcWaitlist ? (
+                    <div className={styles.zoneInfoCard} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                      <div className={styles.zoneNameBadge} style={{ color: '#dc2626' }}>
+                        <span>📍 Not in your area yet</span>
+                      </div>
+                      <div className={styles.zoneSpecsSummary} style={{ color: 'var(--color-text-secondary)' }}>
+                        This ZIP is beyond our routes for now. Enter your address on the booking page to join the waitlist.
                       </div>
                     </div>
                   ) : (
@@ -322,7 +345,7 @@ export default function PricingPage() {
 
                   {subtotal > 0 && calcZone && zoneGap > 0 && (
                     <div className={styles.zoneGapAlert}>
-                      ⚠️ Current subtotal is ${zoneGap.toFixed(2)} below your area&apos;s ${calcZone.minimumOrder.toFixed(0)} minimum. Delivery is always free once minimum is met.
+                      ⚠️ Current subtotal is ${zoneGap.toFixed(2)} below your area&apos;s ${calcZone.minimumOrder.toFixed(0)} minimum.{reach ? ' The Extended Reach delivery fee is on top of the minimum.' : ' Delivery is always free once minimum is met.'}
                     </div>
                   )}
                 </div>
@@ -426,17 +449,36 @@ export default function PricingPage() {
                       <span>+${financials.expressSurcharge.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className={styles.breakdownRow}>
-                    <span>Door-to-Door Pickup &amp; Delivery</span>
-                    <span className={styles.freeBadge}>FREE</span>
-                  </div>
+                  {reach ? (
+                    <>
+                      <div className={styles.breakdownRow}>
+                        <span>{EXTENDED_REACH_LABEL}{calcRoutine ? ' (Routine member)' : ''}</span>
+                        <span>+${reachFee.toFixed(2)}</span>
+                      </div>
+                      {!calcRoutine && (
+                        <div className={styles.breakdownRow}>
+                          <span style={{ fontSize: 'var(--text-xs)' }}>
+                            {EXTENDED_REACH_LABEL}: ${reach.fullFee.toFixed(0)} → ${reach.routineFee.toFixed(2)} for Routine members
+                          </span>
+                          <button type="button" className={styles.routineButton} onClick={() => setCalcRoutine(true)}>
+                            Join the Routine
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className={styles.breakdownRow}>
+                      <span>Door-to-Door Pickup &amp; Delivery</span>
+                      <span className={styles.freeBadge}>FREE</span>
+                    </div>
+                  )}
                   <div className={styles.breakdownRow}>
                     <span>Area Minimum {calcZone ? `(${calcZone.badge})` : ''}</span>
                     <span style={{ fontWeight: '600', color: 'var(--color-navy)' }}>
                       {calcZone ? `$${calcZone.minimumOrder.toFixed(0)}.00` : 'DFW Delivery'}
                     </span>
                   </div>
-                  {financials.subtotal > 0 && (
+                  {financials.netSubtotal > 0 && (
                     <>
                       <div className={styles.breakdownRow}>
                         <span>Environmental Fee (3%)</span>

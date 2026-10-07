@@ -10,8 +10,9 @@ import { messagingService } from '@/lib/messaging';
 import {
   getAppBaseUrl,
   ROUTES,
-  resolveZoneByZip,
   getZoneMinimumGap,
+  extendedReachFee,
+  EXTENDED_REACH_LABEL,
   isExpressExcluded,
   DRY_CLEAN_PRICES,
   EXPRESS_DAILY_SLOT_CAP,
@@ -25,7 +26,19 @@ import { checkAlterationLine, buttonsOnlyError, instructionText } from '@/lib/al
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
-import { validateSchedule, estimatedDeliveryDate } from '@/lib/schedule';
+import { validateSchedule } from '@/lib/schedule';
+import { getCoverage } from '@/lib/coverage-settings';
+import { resolveAddressCoverage } from '@/lib/distance';
+import {
+  isZoneRouteDay,
+  nextZoneRouteDay,
+  zoneDeliveryDate,
+  earliestExtendedReachRun,
+  isRoutineFrequency,
+  formatLongDate,
+  dispatchThresholdMessage,
+} from '@/lib/coverage';
+import { runBookingCount, dispatchRunIfReady, bandThreshold } from '@/lib/extended-reach';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
 import { phoneSchema } from '@/lib/phone';
@@ -179,16 +192,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Resolve Zone & Validate Delivery Coverage
-    const zone = resolveZoneByZip(validated.address.zip);
-    if (!zone) {
+    // 1. Resolve the zone: the Zone 1-4 ZIP lists, else driving distance from the hub (Zone 5
+    // Extended Reach bands; beyond them, the waitlist). Client 2026-10-07, request 8.
+    const coverage = await getCoverage();
+    const resolution = await resolveAddressCoverage(validated.address, coverage);
+    if (resolution.status !== 'served') {
       return NextResponse.json(
         {
-          error: `ZIP code ${validated.address.zip} is outside our Dallas–Fort Worth Metroplex service area. We currently serve Dallas, Collin, Tarrant, Denton, and surrounding North Texas communities.`,
+          error: `Not in your area yet: ${validated.address.zip} is beyond our delivery routes. Join the waitlist and we'll tell you when we reach you.`,
+          code: 'WAITLIST',
         },
         { status: 400 }
       );
     }
+    const zone = resolution.zone;
+    const band = resolution.band;
+    // Zone 5: the Extended Reach fee, half off for Routine members (Weekly or Bi-Weekly plan)
+    const isRoutine = isRoutineFrequency(validated.schedule.frequency);
+    const reachFee = band ? extendedReachFee(band, isRoutine, coverage.extendedReach) : 0;
 
     // 1b. Alterations: every piece needs a valid fit instruction; buttons alone can't be booked
     const alterationItems = validated.services.alteration_items;
@@ -307,9 +328,11 @@ export async function POST(request: Request) {
       promoDiscountPercent,
       promoDiscountAmount,
       frequency: validated.schedule.frequency,
+      extendedReachFee: reachFee,
     });
 
-    // 5. Enforce Zone Minimum (F010 Fix)
+    // 5. Enforce Zone Minimum (F010 Fix). Zone 5: the minimum is on the garments; the delivery
+    // fee is on top.
     const zoneMinimumGap = getZoneMinimumGap(computed.subtotal, zone);
     if (zoneMinimumGap > 0) {
       return NextResponse.json(
@@ -335,23 +358,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
     }
 
-    const pickup = new Date(validated.schedule.pickup_date + 'T12:00:00');
-    const dayOfWeek = pickup.getDay();
-
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
-    const selectedDayName = dayNames[dayOfWeek];
-    if (!(zone.routeDays as readonly string[]).includes(selectedDayName)) {
+    // Route days: Zone 3 Mon & Thu, Zone 4 Tue & Fri, Zone 5 its bi-weekly run dates (which
+    // close a few days ahead, so the threshold is decided before any card hold)
+    if (band) {
+      const earliestRun = earliestExtendedReachRun(todayTexasStr, coverage.extendedReach);
+      if (validated.schedule.pickup_date < earliestRun || !isZoneRouteDay(zone, validated.schedule.pickup_date, coverage)) {
+        return NextResponse.json(
+          { error: `Extended Reach pickups run on alternate ${coverage.extendedReach.routeDay}s. The next one you can book is ${formatLongDate(nextZoneRouteDay(zone, earliestRun, coverage))}.` },
+          { status: 400 }
+        );
+      }
+    } else if (!isZoneRouteDay(zone, validated.schedule.pickup_date, coverage)) {
       return NextResponse.json(
         { error: `${zone.name} is serviced on ${zone.routeDays.join(', ')}. Please select an active route day.` },
         { status: 400 }
       );
     }
 
-    // 6. Delivery date: 2 plant days after pickup (Express: 1); the plant runs Mon-Fri
-    // An order with alterations returns together on the alteration date (3-5 business days)
-    const deliveryDateStr = estimatedDeliveryDate(validated.schedule.pickup_date, isExpress ? 'express_24hr' : 'standard', {
+    // 6. Delivery date: 2 plant days after pickup (Express: 1; alterations 5, returned together);
+    // the plant runs Mon-Fri. Zones 3 and 4 deliver on their next route day.
+    const deliveryDateStr = zoneDeliveryDate(zone, validated.schedule.pickup_date, isExpress ? 'express_24hr' : 'standard', {
       alterations: hasAlterations,
-    });
+    }, coverage);
     const orderNumber = `F11-${todayTexasStr.slice(0, 4)}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     let isGuest = true;
 
@@ -636,11 +664,17 @@ export async function POST(request: Request) {
                 hold_status: placedHold ? 'held' : savedCard ? 'scheduled' : 'none',
                 payment_terms_accepted_at: new Date().toISOString(),
                 payment_terms_version: PAYMENT_TERMS_VERSION,
+                zone_id: zone.id,
+                distance_miles: resolution.miles,
+                extended_reach_band: band?.id ?? null,
+                extended_reach_fee: reachFee,
+                frequency: validated.schedule.frequency,
                 notes: [
                   validated.address.delivery_notes,
                   validated.schedule.frequency && validated.schedule.frequency !== 'one_time'
                     ? `Recurring Plan: ${validated.schedule.frequency === 'weekly' ? 'Weekly' : 'Bi-Weekly'}`
                     : null,
+                  band ? `${EXTENDED_REACH_LABEL} (Band ${band.id}): $${reachFee.toFixed(2)}${isRoutine ? ' (Routine member)' : ''}` : null,
                 ].filter(Boolean).join(' | ') || null,
               },
               // Authoritative computed item list
@@ -705,6 +739,18 @@ export async function POST(request: Request) {
               });
             }
 
+            // Zone 5: where this run stands now (this booking included); reaching the threshold
+            // tells everyone in the run the date (client 8D)
+            let routeThreshold: { booked: number; threshold: number } | undefined;
+            if (band) {
+              const booked = await runBookingCount(supabase, validated.schedule.pickup_date, band.id);
+              routeThreshold = { booked, threshold: bandThreshold(coverage.extendedReach, band.id) };
+              runAfterResponse(
+                () => dispatchRunIfReady(supabase, { runDate: validated.schedule.pickup_date, band: band.id, reach: coverage.extendedReach }),
+                'Zone 5 route threshold'
+              );
+            }
+
             // 7. Dispatch stage notification for 'booked' (sends SMS/WhatsApp and/or Resend email)
             // Sent after the response, kept alive until it finishes (PR-17)
             const origin = getAppBaseUrl();
@@ -727,7 +773,8 @@ export async function POST(request: Request) {
                   trackingUrl: `${origin}/track/${insertedOrder.id}`,
                   // Guests get an account invitation in the email (CLAUDE.md 5A, P05 AR-14)
                   signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
-                  ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : {}),
+                  ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : { deliveredOn: formatLongDate(deliveryDateStr) }),
+                  ...(routeThreshold ? { routeThresholdLine: dispatchThresholdMessage(routeThreshold.booked, routeThreshold.threshold) } : {}),
               }),
               'booking confirmation'
             );
@@ -741,7 +788,11 @@ export async function POST(request: Request) {
                 express_surcharge: computed.financials.expressSurcharge,
                 sales_tax: computed.financials.salesTax,
                 environmental_fee: computed.financials.environmentalFee,
+                extended_reach_fee: computed.financials.extendedReachFee,
+                delivery_date: deliveryDateStr,
+                zone_id: zone.id,
               },
+              ...(routeThreshold ? { route_threshold: routeThreshold } : {}),
               order_number: orderNumber,
               message: 'Your pickup has been confirmed and scheduled!',
             });
@@ -821,6 +872,8 @@ export async function POST(request: Request) {
           total: computed.financials.finalTotal,
           trackingUrl: `${origin}/track/${createdOrder.id}`,
           signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
+          ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : { deliveredOn: formatLongDate(deliveryDateStr) }),
+          ...(band ? { routeThresholdLine: dispatchThresholdMessage(1, band.dispatchThreshold) } : {}),
       }),
       'booking confirmation'
     );
@@ -834,8 +887,12 @@ export async function POST(request: Request) {
         express_surcharge: computed.financials.expressSurcharge,
         sales_tax: computed.financials.salesTax,
         environmental_fee: computed.financials.environmentalFee,
+        extended_reach_fee: computed.financials.extendedReachFee,
+        delivery_date: deliveryDateStr,
+        zone_id: zone.id,
         is_guest: isGuest,
       },
+      ...(band ? { route_threshold: { booked: 1, threshold: band.dispatchThreshold } } : {}),
       order_number: orderNumber,
       message: 'Your pickup has been confirmed and scheduled!',
     });

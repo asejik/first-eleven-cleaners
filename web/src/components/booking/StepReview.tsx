@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, Input, Button } from '@/components/ui';
-import { DRY_CLEAN_PRICES, ROUTES, catalogLineTotal, type ZoneConfig } from '@/lib/constants';
+import { DRY_CLEAN_PRICES, ROUTES, catalogLineTotal, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
+import type { ExtendedReachQuote } from '@/lib/coverage';
 import { isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
 import { draftToLine, instructionText, type AlterationDraft } from '@/lib/alterations';
 import styles from '@/app/book/page.module.css';
@@ -49,6 +50,11 @@ interface StepReviewProps {
   getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr', hasAlterations?: boolean) => string;
   detectedZone?: ZoneConfig | null;
   zoneMinimumGap?: number;
+  /** Zone 5: the Extended Reach fee as its own line (client 2026-10-07, 8C) */
+  extendedReach?: ExtendedReachQuote | null;
+  extendedReachFee?: number;
+  isRoutine?: boolean;
+  onJoinRoutine?: () => void;
   onBack: () => void;
   onContinue: () => void;
 }
@@ -88,10 +94,33 @@ export function StepReview({
   getEstimatedDeliveryDate,
   detectedZone,
   zoneMinimumGap = 0,
+  extendedReach = null,
+  extendedReachFee = 0,
+  isRoutine = false,
+  onJoinRoutine,
   onBack,
   onContinue,
 }: StepReviewProps) {
   const isExpress24 = expressTier === 'express_24hr';
+  // Free across the Metroplex; Zone 5 shows its delivery fee line instead
+  const deliveryLine = (rowClass: string) =>
+    extendedReach ? (
+      <div className={rowClass}>
+        <span>
+          {EXTENDED_REACH_LABEL}
+          {isRoutine && extendedReach.routineFee < extendedReach.fullFee && ' (Routine member)'}
+        </span>
+        <span>
+          {isRoutine && extendedReach.routineFee < extendedReach.fullFee && <s style={{ marginRight: 6 }}>${extendedReach.fullFee.toFixed(2)}</s>}
+          +${extendedReachFee.toFixed(2)}
+        </span>
+      </div>
+    ) : (
+      <div className={rowClass}>
+        <span>Door-to-Door Delivery</span>
+        <span className={styles.freeText}>FREE</span>
+      </div>
+    );
   return (
     <Card variant="bordered" padding="lg" className={styles.flowCard}>
       <h1 className={styles.cardTitle}>Review Your Order</h1>
@@ -177,10 +206,17 @@ export function StepReview({
               </span>
             </div>
           )}
-          <div className={styles.summaryLine}>
-            <span>Door-to-Door Delivery</span>
-            <span className={styles.freeText}>FREE</span>
-          </div>
+          {deliveryLine(styles.summaryLine)}
+          {extendedReach && !isRoutine && onJoinRoutine && (
+            <div className={styles.extendedReachRoutine}>
+              <span>
+                {EXTENDED_REACH_LABEL}: ${extendedReach.fullFee.toFixed(0)} → ${extendedReach.routineFee.toFixed(2)} for Routine members
+              </span>
+              <Button variant="outline" size="sm" onClick={onJoinRoutine}>
+                Join the Routine
+              </Button>
+            </div>
+          )}
           {detectedZone && (
             <div className={styles.summaryLine}>
               <span>Area Coverage Minimum</span>
@@ -230,7 +266,7 @@ export function StepReview({
                 Add ${zoneMinimumGap.toFixed(2)} to reach your area&apos;s ${detectedZone.minimumOrder.toFixed(0)} minimum
               </div>
               <div className={styles.gapNoticeText}>
-                {detectedZone.name} has a ${detectedZone.minimumOrder.toFixed(0)} order minimum for complimentary door-to-door courier service. Your garment subtotal is currently ${subtotal.toFixed(2)}. Please add more dry clean garments or increase wash &amp; fold weight to proceed.
+                {detectedZone.name} has a ${detectedZone.minimumOrder.toFixed(0)} order minimum{extendedReach ? ', plus the Extended Reach delivery fee' : ' for complimentary door-to-door courier service'}. Your garment subtotal is currently ${subtotal.toFixed(2)}. Please add more dry clean garments or increase wash &amp; fold weight to proceed.
               </div>
             </div>
           </div>
@@ -270,10 +306,7 @@ export function StepReview({
               <span>-${discountAmount.toFixed(2)}</span>
             </div>
           )}
-          <div className={styles.totalRow}>
-            <span>Door-to-Door Delivery</span>
-            <span style={{ color: 'var(--color-green)', fontWeight: 'bold' }}>FREE</span>
-          </div>
+          {deliveryLine(styles.totalRow)}
           {environmentalFee !== undefined && environmentalFee > 0 && (
             <div className={styles.totalRow}>
               <span>Environmental Fee (3%)</span>
