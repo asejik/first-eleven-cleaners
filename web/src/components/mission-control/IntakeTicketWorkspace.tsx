@@ -5,7 +5,7 @@ import { useSubmitIntake } from '@/hooks/useIntake';
 import { Button, Badge } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { DRY_CLEAN_PRICES, WASH_FOLD_PRICE_PER_LB, WASH_FOLD_MINIMUM_LBS, catalogPriceLabel, type OrderStatusKey } from '@/lib/constants';
-import { priceIntakeLine } from '@/lib/intake-quote';
+import { priceIntakeLine, quoteBandMaxCents } from '@/lib/intake-quote';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/intake/page.module.css';
 import { prepareImageForUpload } from '@/lib/image-upload';
@@ -26,6 +26,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
     const counts: Record<string, number> = {};
     if (order.items && order.items.length > 0) {
       order.items.forEach((item) => {
+        if (item.service_type === 'alteration') return; // alterations have their own panel
         const matchingKey = Object.keys(DRY_CLEAN_PRICES).find(
           (k) => DRY_CLEAN_PRICES[k].label === item.garment_type
         ) || item.garment_type;
@@ -40,13 +41,26 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
   const [quotedPrices, setQuotedPrices] = useState<Record<string, string>>(() => {
     const quotes: Record<string, string> = {};
     (order.items || []).forEach((item) => {
+      if (item.service_type === 'alteration') return;
       const key = Object.keys(DRY_CLEAN_PRICES).find((k) => DRY_CLEAN_PRICES[k].label === item.garment_type);
-      if (key && DRY_CLEAN_PRICES[key].fromPrice && Number(item.unit_price) > DRY_CLEAN_PRICES[key].price) {
-        quotes[key] = Number(item.unit_price).toFixed(2);
+      const quoted = Number(item.quoted_unit_price) || Number(item.unit_price);
+      if (key && DRY_CLEAN_PRICES[key].fromPrice && quoted > DRY_CLEAN_PRICES[key].price) {
+        quotes[key] = quoted.toFixed(2);
       }
     });
     return quotes;
   });
+  // Alterations booked with the order (kept as booked), and the confirmed price per piece for
+  // "from" items, keyed by order item id (client 2026-10-06, Parts B-D)
+  const alterationItems = useMemo(() => (order.items || []).filter((i) => i.service_type === 'alteration'), [order.items]);
+  const [confirmedPrices, setConfirmedPrices] = useState<Record<string, string>>(() => {
+    const prices: Record<string, string> = {};
+    (order.items || []).forEach((item) => {
+      if (item.service_type === 'alteration' && item.quoted_unit_price) prices[item.id] = Number(item.quoted_unit_price).toFixed(2);
+    });
+    return prices;
+  });
+  const customerPhotos = useMemo(() => (order.photos || []).filter((p) => p.photo_type === 'customer_reference'), [order.photos]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -148,13 +162,23 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
     const typed = (quotedPrices[key] || '').trim();
     return typed && DRY_CLEAN_PRICES[key]?.fromPrice ? Number(typed) : undefined;
   };
+  // Quotes more than 25% above the from-price go to the customer for approval (not charged now)
   const linePrices = Object.keys(dryCleanCounts)
     .filter((key) => (dryCleanCounts[key] || 0) > 0)
-    .map((key) => ({ key, line: priceIntakeLine(key, dryCleanCounts[key], quoteFor(key)) }));
-  const quoteErrors = linePrices.flatMap(({ line }) => (line.ok ? [] : [line.error]));
+    .map((key) => ({ key, line: priceIntakeLine(key, dryCleanCounts[key], quoteFor(key), { allowApproval: true }) }));
+  const confirmedFor = (itemId: string): number | undefined => {
+    const typed = (confirmedPrices[itemId] || '').trim();
+    return typed ? Number(typed) : undefined;
+  };
+  const alterationPrices = alterationItems
+    .filter((item) => !['approved', 'declined', 'returned'].includes(item.quote_status || ''))
+    .map((item) => ({ item, line: priceIntakeLine(item.garment_type, item.quantity, confirmedFor(item.id), { allowApproval: true }) }));
+  const quoteErrors = [...linePrices, ...alterationPrices].flatMap(({ line }) => (line.ok ? [] : [line.error]));
   const dryCleanSubtotal = linePrices.reduce((acc, { line }) => acc + (line.ok ? line.subtotal : 0), 0);
+  const alterationSubtotal = alterationPrices.reduce((acc, { line }) => acc + (line.ok ? line.subtotal : 0), 0);
+  const awaitingCount = [...linePrices, ...alterationPrices].filter(({ line }) => line.ok && line.awaitingApproval).length;
 
-  const subtotal = washFoldSubtotal + dryCleanSubtotal;
+  const subtotal = washFoldSubtotal + dryCleanSubtotal + alterationSubtotal;
   const discount = order.discount_amount || 0;
   const total = Math.max(0, subtotal - discount);
 
@@ -179,6 +203,10 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
         order_id: order.id,
         weight_lbs: weightLbs,
         dry_clean_items: dryCleanItemsArray,
+        alteration_lines: alterationItems.map((item) => ({
+          item_id: item.id,
+          ...(confirmedFor(item.id) !== undefined ? { confirmed_unit_price: confirmedFor(item.id) } : {}),
+        })),
         photos: photos,
         advance_to_cleaning: false,
         intake_notes: intakeNotes,
@@ -290,9 +318,10 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
         </h3>
 
         <div className={styles.itemsGrid}>
-          {Object.keys(DRY_CLEAN_PRICES).map((key) => {
+          {Object.keys(DRY_CLEAN_PRICES).filter((key) => DRY_CLEAN_PRICES[key].category !== 'alteration').map((key) => {
             const item = DRY_CLEAN_PRICES[key];
             const qty = dryCleanCounts[key] || 0;
+            const awaiting = linePrices.find((l) => l.key === key)?.line;
             return (
               <div key={key} className={styles.itemCounterCard}>
                 <div>
@@ -315,6 +344,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
                       aria-label={`Quoted price for each ${item.label}`}
                       style={{ width: '90px' }}
                     />
+                    {awaiting?.ok && awaiting.awaitingApproval && <span>needs the customer&apos;s OK</span>}
                   </label>
                 )}
                 <div className={styles.counterActions}>
@@ -339,6 +369,70 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
           })}
         </div>
       </div>
+
+      {/* Alterations booked with the order (client 2026-10-06, Parts B-D) */}
+      {alterationItems.length > 0 && (
+        <div className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>
+            <span>🧵</span> Alterations ({alterationItems.length})
+          </h3>
+          <p className={styles.itemPrice} style={{ margin: '0 0 8px' }}>
+            📸 Photograph the pins, or the garment tagged MATCH, for the Garment Passport. &quot;From&quot; items: enter the
+            confirmed price. Up to 25% above the listed price is charged now; anything higher is sent to the customer to
+            approve and isn&apos;t charged until they do.
+          </p>
+          {alterationItems.map((item) => {
+            const meta = DRY_CLEAN_PRICES[item.garment_type];
+            const decided = ['approved', 'declined', 'returned'].includes(item.quote_status || '');
+            const priced = alterationPrices.find((p) => p.item.id === item.id)?.line;
+            const bandMax = meta?.fromPrice ? quoteBandMaxCents(meta.price) / 100 : null;
+            return (
+              <div key={item.id} className={styles.itemCounterCard} style={{ alignItems: 'flex-start' }}>
+                <div>
+                  <span className={styles.itemLabel}>
+                    {item.quantity > 1 ? `${item.quantity}x ` : ''}
+                    {meta?.label || item.garment_type}
+                  </span>
+                  <span className={styles.itemPrice}>{item.notes}</span>
+                  {decided && <span className={styles.itemPrice}>Customer decision: {item.quote_status}</span>}
+                </div>
+                {meta?.fromPrice && !decided ? (
+                  <label className={styles.itemPrice} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    Confirmed price each $
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={meta.price}
+                      step="0.01"
+                      placeholder={meta.price.toFixed(2)}
+                      value={confirmedPrices[item.id] || ''}
+                      onChange={(e) => setConfirmedPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                      aria-label={`Confirmed price for each ${meta.label}`}
+                      style={{ width: '90px' }}
+                    />
+                    <span>
+                      {priced?.ok && priced.awaitingApproval
+                        ? "needs the customer's OK"
+                        : `charged now (up to $${bandMax?.toFixed(2)})`}
+                    </span>
+                  </label>
+                ) : (
+                  <span className={styles.itemPrice}>${Number(item.subtotal || 0).toFixed(2)}</span>
+                )}
+              </div>
+            );
+          })}
+          {customerPhotos.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+              {customerPhotos.map((photo) => (
+                <button key={photo.id} type="button" onClick={() => onZoomPhoto(photo.photo_url)} style={{ background: 'none', border: '1px solid #334155', borderRadius: '6px', padding: '4px 8px', color: '#cbd5e1', cursor: 'pointer' }}>
+                  Customer photo: {photo.condition_notes || 'repair'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Garment Passport Multi-Angle Photos */}
       <div className={styles.sectionCard}>
@@ -469,6 +563,11 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
           <span style={{ fontSize: 'var(--text-xs)', color: '#94a3b8' }}>ITEMIZED INTAKE TOTAL:</span>
           <span className={styles.subtotalText}>${total.toFixed(2)}</span>
           {discount > 0 && <span className={styles.discountPill}>Promo Discount: -${discount.toFixed(2)} applied</span>}
+          {awaitingCount > 0 && (
+            <span className={styles.discountPill}>
+              {awaitingCount} quoted item{awaitingCount > 1 ? 's' : ''} sent for the customer&apos;s OK: not charged now
+            </span>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
             <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>
               💳 Card on File: Vaulted

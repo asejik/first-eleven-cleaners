@@ -15,6 +15,26 @@ export interface PaymentStateOrder {
   payment_needed_since?: string | null;
   payment_reminder_stage?: number | null;
   pickup_date?: string | null;
+  items?: Array<{
+    id: string;
+    garment_type: string;
+    quantity: number;
+    quote_status?: string;
+    quoted_unit_price?: number | null;
+    quote_requested_at?: string | null;
+    quote_reminder_stage?: number;
+  }> | null;
+}
+
+/** A quote above the 25% band waiting for the customer (Parts B-D). */
+export interface AwaitingQuote {
+  orderId: string;
+  orderNumber: string;
+  itemId: string;
+  garmentType: string;
+  amount: number;
+  requestedAt: string | null;
+  stage: number;
 }
 
 export type PaymentState =
@@ -57,6 +77,10 @@ const HOUR = 60 * 60 * 1000;
 export interface PaymentWatchlists {
   paymentNeeded: PaymentStateOrder[];
   callList: PaymentStateOrder[];
+  /** Quotes above the 25% band waiting for the customer, oldest first */
+  quotesAwaiting: AwaitingQuote[];
+  /** Quotes 48 h old with no answer: call the customer */
+  quoteCalls: AwaitingQuote[];
   cardNeeded: PaymentStateOrder[];
   holdsExpiring: PaymentStateOrder[];
 }
@@ -66,7 +90,24 @@ export function paymentWatchlists(orders: PaymentStateOrder[], now: Date = new D
   const paymentNeeded = active
     .filter((o) => o.payment_status === 'failed')
     .sort((a, b) => String(a.payment_needed_since || '').localeCompare(String(b.payment_needed_since || '')));
+  const quotesAwaiting = active
+    .flatMap((o) =>
+      (o.items || [])
+        .filter((i) => i.quote_status === 'awaiting_approval')
+        .map((i) => ({
+          orderId: o.id,
+          orderNumber: o.order_number || o.id.slice(0, 8),
+          itemId: i.id,
+          garmentType: i.garment_type,
+          amount: Math.round((Number(i.quoted_unit_price) || 0) * i.quantity * 100) / 100,
+          requestedAt: i.quote_requested_at || null,
+          stage: Number(i.quote_reminder_stage) || 0,
+        }))
+    )
+    .sort((a, b) => String(a.requestedAt || '').localeCompare(String(b.requestedAt || '')));
   return {
+    quotesAwaiting,
+    quoteCalls: quotesAwaiting.filter((q) => q.stage >= 2),
     paymentNeeded,
     // Staff call due (48 h) and owner decisions (7 days) both need a person today
     callList: paymentNeeded.filter((o) => (Number(o.payment_reminder_stage) || 0) >= 2),

@@ -19,6 +19,7 @@ import {
 } from '@/lib/constants';
 import { Card, ButtonLink } from '@/components/ui';
 import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
+import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 import styles from './page.module.css';
 
 export default function PricingPage() {
@@ -183,6 +184,26 @@ export default function PricingPage() {
               {renderMenu('household')}
             </Card>
 
+            {/* Alterations Menu (client 2026-10-06) */}
+            <Card variant="bordered" padding="lg" className={styles.priceCard}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <span className={styles.cardIcon}>🧵</span>
+                  <h2 className={styles.cardTitle}>Alterations</h2>
+                </div>
+                <span className={styles.perItemBadge}>3–5 Business Days</span>
+              </div>
+
+              <p className={styles.cardDescription}>
+                Hems, zippers, buttons, repairs, and pinned adjustments. Tell us how for each piece when you book: a
+                measurement, a garment to match (tagged MATCH in the same bag), or pins. &quot;From&quot; prices are confirmed
+                after our intake photos, before any charge. Alterations aren&apos;t available with 24-Hour Express, and your whole
+                order comes back together. {ALTERATIONS_NOT_OFFERED}
+              </p>
+
+              {renderMenu('alteration')}
+            </Card>
+
             {/* 24-Hour Express Card */}
             <Card variant="surface" padding="lg" className={styles.expressCard}>
               <div className={styles.cardHeader}>
@@ -332,7 +353,7 @@ export default function PricingPage() {
                 {/* Dry Clean Summary */}
                 <div className={styles.calcSection}>
                   <div className={styles.calcRowHeader}>
-                    <span>Dry Cleaning &amp; Household:</span>
+                    <span>Dry Cleaning, Household &amp; Alterations:</span>
                     <span>{totalDryCleanItems} items</span>
                   </div>
                   {totalDryCleanItems > 0 ? (
@@ -353,7 +374,7 @@ export default function PricingPage() {
                       })}
                     </ul>
                   ) : (
-                    <p className={styles.emptyNote}>Use the + buttons on the left to add dry cleaning or household items.</p>
+                    <p className={styles.emptyNote}>Use the + buttons on the left to add dry cleaning, household or alteration items.</p>
                   )}
                 </div>
 
@@ -395,7 +416,7 @@ export default function PricingPage() {
                   )}
                   {calculatedDryClean > 0 && (
                     <div className={styles.breakdownRow}>
-                      <span>Dry Cleaning &amp; Household ({totalDryCleanItems} items)</span>
+                      <span>Items ({totalDryCleanItems})</span>
                       <span>${calculatedDryClean.toFixed(2)}</span>
                     </div>
                   )}

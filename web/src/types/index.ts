@@ -111,7 +111,16 @@ export interface Order {
   card_needed?: boolean;
   /** Public tracking, once itemized: the ticket lines and amounts charged (Part A) */
   ticket?: {
-    items: Array<{ garment_type: string; quantity: number; unit_price: number; subtotal: number }>;
+    items: Array<{
+      id?: string;
+      garment_type: string;
+      quantity: number;
+      unit_price: number;
+      subtotal: number;
+      quote_status?: string;
+      quoted_unit_price?: number | null;
+      notes?: string | null;
+    }>;
     subtotal: number;
     express_surcharge?: number | null;
     discount_amount?: number | null;
@@ -142,11 +151,18 @@ interface OrderItem {
   id: string;
   order_id: string;
   garment_type: string;
-  service_type: 'dry_clean' | 'wash_fold';
+  service_type: 'dry_clean' | 'wash_fold' | 'alteration';
   quantity: number;
   unit_price: number;
   subtotal: number;
   notes: string | null;
+  /** Alterations: the fit instruction ({ instruction, notes }) */
+  details?: { instruction?: { type: string }; notes?: string } | null;
+  /** "from" items: none | pending | within_band | awaiting_approval | approved | declined | returned */
+  quote_status?: string;
+  quoted_unit_price?: number | null;
+  quote_requested_at?: string | null;
+  quote_reminder_stage?: number;
 }
 
 // --- Order Event (Status Timeline) ---
@@ -164,7 +180,7 @@ export interface GarmentPhoto {
   id: string;
   order_id: string;
   order_item_id: string | null;
-  photo_type: 'intake' | 'return' | 'delivery_proof' | 'pickup_proof';
+  photo_type: 'intake' | 'return' | 'delivery_proof' | 'pickup_proof' | 'customer_reference';
   photo_url: string;
   condition_notes: string | null;
   captured_by: string | null;

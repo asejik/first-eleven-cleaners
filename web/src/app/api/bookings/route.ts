@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { personNameSchema } from '@/lib/sanitize';
 import type { Order } from '@/types';
+import type { Json } from '@/types/database';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
@@ -12,6 +13,7 @@ import {
   resolveZoneByZip,
   getZoneMinimumGap,
   isExpressExcluded,
+  DRY_CLEAN_PRICES,
   EXPRESS_DAILY_SLOT_CAP,
   PROMO_CODE_LAUNCH,
   PROMO_DISCOUNT_PERCENT,
@@ -19,6 +21,8 @@ import {
 } from '@/lib/constants';
 import { getSquareConfig, saveCardOnFile, createHold, cancelHold, type SavedCard } from '@/lib/square';
 import { holdAmountFor, shouldPlaceHoldNow, PAYMENT_TERMS_VERSION } from '@/lib/payment-hold';
+import { checkAlterationLine, buttonsOnlyError, instructionText } from '@/lib/alterations';
+import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
 import { validateSchedule, estimatedDeliveryDate } from '@/lib/schedule';
@@ -48,6 +52,22 @@ const BookingSchema = z.object({
       quantity: z.number().int().positive(),
     })).optional().default([]),
     estimated_weight_lbs: z.number().nonnegative().optional().default(0),
+    // One line per alteration piece (buttons: one line with a quantity), each with its fit
+    // instruction; lib/alterations.ts checks them (client 2026-10-06, Parts B-D)
+    alteration_items: z.array(z.object({
+      garment_type: z.string(),
+      quantity: z.number().int().positive().max(50).default(1),
+      instruction: z.discriminatedUnion('type', [
+        z.object({ type: z.literal('measurement'), value: z.number(), unit: z.enum(['in', 'cm']) }),
+        z.object({ type: z.literal('match') }),
+        z.object({ type: z.literal('pinned') }),
+        z.object({ type: z.literal('amount'), text: z.string().max(300) }),
+        z.object({ type: z.literal('description'), text: z.string().max(300) }),
+      ]),
+      notes: z.string().max(300).optional(),
+      // General repair: a photo resized on the phone (JPEG/PNG/WebP data URL, about 1 MB at most)
+      photo: z.string().regex(/^data:image\/(jpeg|png|webp);base64,/, 'Photos must be JPEG, PNG or WebP.').max(2_000_000).optional(),
+    })).max(30).optional().default([]),
   }),
   schedule: z.object({
     pickup_date: z.string(),
@@ -170,8 +190,33 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1b. Alterations: every piece needs a valid fit instruction; buttons alone can't be booked
+    const alterationItems = validated.services.alteration_items;
+    for (const line of alterationItems) {
+      const check = checkAlterationLine(line);
+      if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+      if (line.photo && !DRY_CLEAN_PRICES[line.garment_type]?.photoAllowed) {
+        return NextResponse.json({ error: 'A photo can only be added to a general repair.' }, { status: 400 });
+      }
+    }
+    if (alterationItems.filter((l) => l.photo).length > 3) {
+      return NextResponse.json({ error: 'Please add at most 3 photos per booking.' }, { status: 400 });
+    }
+    const buttonsOnly = buttonsOnlyError({
+      itemKeys: [...validated.services.dry_clean_items.map((i) => i.garment_type), ...alterationItems.map((l) => l.garment_type)],
+      hasLaundry: validated.services.estimated_weight_lbs > 0 && validated.services.type !== 'dry_clean',
+    });
+    if (buttonsOnly) return NextResponse.json({ error: buttonsOnly }, { status: 400 });
+    const hasAlterations = alterationItems.length > 0;
+
     // 2. Validate 24-Hour Express Eligibility & Item Exclusions
     const isExpress = validated.schedule.express_tier === 'express_24hr';
+    if (isExpress && hasAlterations) {
+      return NextResponse.json(
+        { error: "24-Hour Express and alterations can't share an order. Book the alterations as a separate order, or choose 48-Hour Standard." },
+        { status: 400 }
+      );
+    }
     if (isExpress) {
       if (!zone.expressEligible) {
         return NextResponse.json(
@@ -251,6 +296,12 @@ export async function POST(request: Request) {
     // 4. Authoritatively Recompute Financials (F006 & F005 Fix)
     const computed = computeBookingFinancials({
       dryCleanItems: validated.services.dry_clean_items,
+      alterationItems: alterationItems.map((line) => ({
+        garment_type: line.garment_type,
+        quantity: line.quantity,
+        notes: [instructionText(line.instruction), line.notes?.trim() ? `Notes: ${line.notes.trim()}` : null].filter(Boolean).join(' · '),
+        details: { instruction: line.instruction, ...(line.notes?.trim() ? { notes: line.notes.trim() } : {}) },
+      })),
       weightLbs: validated.services.estimated_weight_lbs,
       isExpress,
       promoDiscountPercent,
@@ -297,7 +348,10 @@ export async function POST(request: Request) {
     }
 
     // 6. Delivery date: 2 plant days after pickup (Express: 1); the plant runs Mon-Fri
-    const deliveryDateStr = estimatedDeliveryDate(validated.schedule.pickup_date, isExpress ? 'express_24hr' : 'standard');
+    // An order with alterations returns together on the alteration date (3-5 business days)
+    const deliveryDateStr = estimatedDeliveryDate(validated.schedule.pickup_date, isExpress ? 'express_24hr' : 'standard', {
+      alterations: hasAlterations,
+    });
     const orderNumber = `F11-${todayTexasStr.slice(0, 4)}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     let isGuest = true;
 
@@ -597,6 +651,8 @@ export async function POST(request: Request) {
                 unit_price: item.unit_price,
                 subtotal: item.subtotal,
                 notes: item.notes || null,
+                details: (item.details ?? null) as Json,
+                quote_status: item.quote_status ?? 'none',
               })),
               event: {
                 note: `Pickup scheduled for ${validated.schedule.pickup_date} (${validated.schedule.pickup_window === 'morning' ? '7:30-10:00 AM' : '5:00-8:00 PM'})`,
@@ -623,6 +679,20 @@ export async function POST(request: Request) {
                 status: 'approved',
                 note: 'Hold for the estimated total, placed at booking',
               });
+            }
+            // General repair photos, attached to the order's Garment Passport (Parts B-D)
+            if (!result.replay) {
+              for (const line of alterationItems.filter((l) => l.photo)) {
+                const url = await resolveAndUploadPhotoUrl(line.photo, insertedOrder.id, 'customer_reference');
+                if (!url) continue; // an unreadable photo never blocks the booking
+                await supabase.from('garment_photos').insert({
+                  order_id: insertedOrder.id,
+                  photo_type: 'customer_reference',
+                  photo_url: url,
+                  condition_notes: `Customer photo for ${DRY_CLEAN_PRICES[line.garment_type]?.label || line.garment_type}: ${line.instruction.type === 'description' ? line.instruction.text : ''}`.trim(),
+                  captured_by: 'Customer (Web Booking)',
+                });
+              }
             }
             if (result.replay) {
               // A concurrent submit of the same checkout got there first
@@ -657,6 +727,7 @@ export async function POST(request: Request) {
                   trackingUrl: `${origin}/track/${insertedOrder.id}`,
                   // Guests get an account invitation in the email (CLAUDE.md 5A, P05 AR-14)
                   signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
+                  ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : {}),
               }),
               'booking confirmation'
             );

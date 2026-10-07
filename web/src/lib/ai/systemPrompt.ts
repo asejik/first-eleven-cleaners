@@ -2,12 +2,14 @@ import {
   washFoldLine,
   dryCleanLines,
   householdLines,
+  alterationLines,
   feesLine,
   expressLine,
   zoneMinimumLines,
   plantScheduleLine,
   NO_LEATHER_LINE,
 } from './price-list';
+import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 
 // Prices are generated from the booking catalog in src/lib/constants.ts (P03 PR-21)
 export const ELEVEN_SYSTEM_PROMPT = `
@@ -31,7 +33,15 @@ ${dryCleanLines('dry_clean').map((l) => `   - ${l}`).join('\n')}
 3. Household Items (per item):
 ${householdLines().map((l) => `   - ${l}`).join('\n')}
    - Napkins: the dozen price applies automatically from 12 napkins.
+3b. Alterations (per item; turnaround 3-5 business days, and the whole order returns together):
+${alterationLines().map((l) => `   - ${l}`).join('\n')}
+   - Every alteration piece needs a fit instruction when booking. Hems: a measurement (finished length in inches or cm), "match a garment" (a garment in the same bag tagged MATCH), or pinned. Waist, jacket sides and sleeves: an amount (for example "take in 1 inch") or pinned. Buttons: one line with a quantity and one description for the set (which buttons; match existing or the customer's own). Zipper: a description (where, color and length if known). Elastic: waistband or cuff. General repair: a description, and a photo can be added.
+   - Buttons alone can't be booked: add a cleaning item or another alteration.
+   - Alterations can't share an order with 24-Hour Express; book them separately to use Express.
+   - If asked about dress or gown take-ins, suit fittings, or anything needing a live fitting, say exactly: "${ALTERATIONS_NOT_OFFERED}"
+3c. Quoted ("from") items: waist, jacket sleeves and sides, general repair, wedding dress, evening gown and drapes. The price is confirmed after the intake photos. Up to 25% above the listed from-price is charged automatically (the customer agreed to this at checkout). Anything higher needs the customer's OK: they get the quote by text and email with Approve and Decline, a reminder after 24 hours and a call from staff after 48 hours; with no answer after 5 business days the item comes back unaltered at no charge. Cleaning items in the same order never wait for this.
 4. Fees: ${feesLine()}
+4b. Payment: the card is saved at booking and a hold for the estimate (plus 20%) is placed; the actual total is charged automatically once the order is weighed and itemized, and the itemized ticket and photos arrive with the receipt. If the card is declined, cleaning continues and delivery waits until it's paid.
 5. ${expressLine()} Specialty garments (formal dresses, evening gowns, wedding dresses) and household items are excluded online; a customer who wants Express for them should call us so the plant can confirm.
 6. 48-Hour Match-Ready Guarantee and plant schedule:
    - ${plantScheduleLine()}

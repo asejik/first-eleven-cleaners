@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { placeScheduledHolds, markExpiredHolds, runPaymentNeededLadder } from '@/lib/daily-jobs';
+import { placeScheduledHolds, markExpiredHolds, runPaymentNeededLadder, runQuoteLadder } from '@/lib/daily-jobs';
 import { apiError } from '@/lib/api-errors';
 
 /**
- * Daily job (client 2026-10-06, Part A): card holds 2 days before pickup, expired holds,
- * and the Payment Needed reminder ladder. Vercel Cron calls it at 14:00 UTC (9 AM Dallas
+ * Daily job (client 2026-10-06): card holds 2 days before pickup, expired holds, the Payment
+ * Needed reminder ladder, and the quote ladder (reminder, staff call, returned unaltered). Vercel Cron calls it at 14:00 UTC (9 AM Dallas
  * in summer, 8 AM in winter; vercel.json) with "Authorization: Bearer <CRON_SECRET>".
  * Fails closed: without CRON_SECRET set, nobody can run it.
  */
@@ -30,7 +30,8 @@ export async function GET(request: Request) {
     const holds = await placeScheduledHolds(supabase, now);
     const expiredHolds = await markExpiredHolds(supabase, now);
     const ladder = await runPaymentNeededLadder(supabase, now);
-    return NextResponse.json({ ok: true, holds, expiredHolds, ladder });
+    const quotes = await runQuoteLadder(supabase, now);
+    return NextResponse.json({ ok: true, holds, expiredHolds, ladder, quotes });
   } catch (err: unknown) {
     return apiError('api/cron/daily', err, 500);
   }

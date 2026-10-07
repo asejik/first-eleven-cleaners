@@ -2,6 +2,7 @@
 
 import type { Order } from '@/types';
 import { paymentState, paymentWatchlists, ladderStep, type PaymentStateOrder } from '@/lib/payment-state';
+import { DRY_CLEAN_PRICES } from '@/lib/constants';
 
 /**
  * Payment states on each order card (Authorized / Captured / Payment Needed / Card needed)
@@ -50,7 +51,25 @@ const fmt = (iso?: string | null) =>
 
 export function PaymentWatchlists({ orders }: { orders: Order[] }) {
   const lists = paymentWatchlists(orders.map(asState));
-  if (!lists.paymentNeeded.length && !lists.cardNeeded.length && !lists.holdsExpiring.length) return null;
+  if (!lists.paymentNeeded.length && !lists.cardNeeded.length && !lists.holdsExpiring.length && !lists.quotesAwaiting.length) return null;
+  const quoteLabel = (garmentType: string) =>
+    DRY_CLEAN_PRICES[garmentType]?.label || garmentType;
+  const quoteRows = (rows: typeof lists.quotesAwaiting, title: string) =>
+    rows.length > 0 && (
+      <div style={{ flex: '1 1 260px' }}>
+        <h3 style={{ fontSize: 'var(--text-sm)', color: '#ffffff', margin: '0 0 6px' }}>
+          {title} ({rows.length})
+        </h3>
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, fontSize: 'var(--text-xs)', color: '#cbd5e1' }}>
+          {rows.map((q) => (
+            <li key={q.itemId} style={{ padding: '4px 0', borderBottom: '1px solid #1e293b' }}>
+              <strong style={{ color: '#ffffff' }}>#{q.orderNumber}</strong> · {quoteLabel(q.garmentType)} ${q.amount.toFixed(2)} · sent{' '}
+              {fmt(q.requestedAt)} · {['Quote sent', 'Reminder sent', 'Staff call due'][Math.min(q.stage, 2)]}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
 
   const section = (title: string, rows: PaymentStateOrder[], detail: (o: PaymentStateOrder) => string) =>
     rows.length > 0 && (
@@ -73,6 +92,8 @@ export function PaymentWatchlists({ orders }: { orders: Order[] }) {
       aria-label="Payment watch lists"
       style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', background: '#131d35', border: '1px solid #334155', borderRadius: 'var(--radius-lg)', padding: '14px 16px', marginBottom: '16px' }}
     >
+      {quoteRows(lists.quoteCalls, '📞 Call today: quotes')}
+      {quoteRows(lists.quotesAwaiting, '🧵 Quotes awaiting approval')}
       {section('📞 Call today', lists.callList, (o) => `$${(Number(o.amount_due) > 0 ? Number(o.amount_due) : Number(o.total) || 0).toFixed(2)} owed · ${ladderStep(o.payment_reminder_stage)}`)}
       {section('💳 Payment Needed', lists.paymentNeeded, (o) => `$${(Number(o.amount_due) > 0 ? Number(o.amount_due) : Number(o.total) || 0).toFixed(2)} since ${fmt(o.payment_needed_since)} · ${ladderStep(o.payment_reminder_stage)} · delivery held`)}
       {section('🪪 Card needed before pickup', lists.cardNeeded, (o) => `pickup ${o.pickup_date || ''}`)}

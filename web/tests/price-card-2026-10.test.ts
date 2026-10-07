@@ -53,6 +53,17 @@ const EXPECTED: Record<string, number> = {
   napkin: 5.99,
   drapes_short: 29.99,
   drapes_long: 49.99,
+  // Alterations (client 2026-10-06, Parts B-D)
+  hem_plain: 29.99,
+  hem_cuff: 34.99,
+  hem_jeans: 39.99,
+  zipper: 35.99,
+  elastic: 35.99,
+  button: 5.99,
+  general_repair: 27.99,
+  waist: 39.99,
+  sleeve: 49.99,
+  sides: 44.99,
 };
 
 describe('Price card 2026-10', () => {

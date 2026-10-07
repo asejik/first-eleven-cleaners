@@ -41,6 +41,10 @@ export function householdLines(): string[] {
   return dryCleanLines('household');
 }
 
+export function alterationLines(): string[] {
+  return dryCleanLines('alteration');
+}
+
 export const NO_LEATHER_LINE = "We don't clean leather or suede.";
 
 /** Plant schedule and delivery days (client 2026-10-06). */
@@ -71,6 +75,7 @@ export function chatPriceList(lang: 'en' | 'es' = 'en'): string {
   const washLabel = lang === 'es' ? 'Lavandería Wash & Fold' : 'Wash & Fold Laundry';
   const dryLabel = lang === 'es' ? 'Tintorería (por prenda)' : 'Dry Cleaning (per item)';
   const homeLabel = lang === 'es' ? 'Artículos del Hogar (por pieza)' : 'Household (per item)';
+  const altLabel = lang === 'es' ? 'Arreglos (por pieza, 3-5 días hábiles)' : 'Alterations (per item, 3-5 business days)';
   const noLeather = lang === 'es' ? 'No limpiamos cuero ni gamuza.' : NO_LEATHER_LINE;
   return [
     `• **${washLabel}:** ${washFoldLine(lang)}`,
@@ -80,6 +85,9 @@ export function chatPriceList(lang: 'en' | 'es' = 'en'): string {
     '',
     `**${homeLabel}**`,
     ...householdLines().map((l) => `• ${l}`),
+    '',
+    `**${altLabel}**`,
+    ...alterationLines().map((l) => `• ${l}`),
     '',
     `${feesLine(lang)} ${noLeather}`,
   ].join('\n');

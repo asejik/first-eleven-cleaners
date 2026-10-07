@@ -46,6 +46,7 @@ function builder(table: string) {
       filters[col] = val;
       return b;
     },
+    neq: () => b,
     or: () => b,
     in: () => b,
     order: () => b,

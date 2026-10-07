@@ -11,6 +11,7 @@ import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, del
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import { PayNowCard } from '@/components/orders/PayNowCard';
 import { TicketFeedbackCard } from '@/components/orders/TicketFeedbackCard';
+import { QuoteApprovalCard } from '@/components/orders/QuoteApprovalCard';
 import styles from './page.module.css';
 
 export default function PublicTrackingPage() {
@@ -51,6 +52,8 @@ export default function PublicTrackingPage() {
         {order && (order.payment_hold ?? order.payment_status === 'failed') && (
           <PayNowCard orderId={order.id} amountDue={Number(order.amount_due ?? order.total) || 0} />
         )}
+
+        {order?.ticket && <QuoteApprovalCard orderId={order.id} items={order.ticket.items} />}
 
         {order?.card_needed && <PayNowCard orderId={order.id} amountDue={Number(order.hold_amount) || 0} mode="hold" />}
 

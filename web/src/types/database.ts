@@ -486,6 +486,12 @@ export type Database = {
           unit_price: number;
           subtotal: number;
           notes: string | null;
+          details: Json | null;
+          quote_status: string;
+          quoted_unit_price: number | null;
+          quote_requested_at: string | null;
+          quote_reminder_stage: number;
+          quote_decided_at: string | null;
         };
         Insert: {
           id?: string;
@@ -496,6 +502,12 @@ export type Database = {
           unit_price: number;
           subtotal: number;
           notes?: string | null;
+          details?: Json | null;
+          quote_status?: string;
+          quoted_unit_price?: number | null;
+          quote_requested_at?: string | null;
+          quote_reminder_stage?: number;
+          quote_decided_at?: string | null;
         };
         Update: {
           id?: string;
@@ -506,6 +518,12 @@ export type Database = {
           unit_price?: number;
           subtotal?: number;
           notes?: string | null;
+          details?: Json | null;
+          quote_status?: string;
+          quoted_unit_price?: number | null;
+          quote_requested_at?: string | null;
+          quote_reminder_stage?: number;
+          quote_decided_at?: string | null;
         };
         Relationships: [
           {

@@ -5,7 +5,8 @@ import type {
   ConciergeContext,
   IAIEngineProvider,
 } from './types';
-import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE, NO_LEATHER_LINE, plantScheduleLine } from './price-list';
+import { chatPriceList, SUIT_PRICE, DRESS_SHIRT_PRICE, NO_LEATHER_LINE, plantScheduleLine, alterationLines } from './price-list';
+import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 import { WASH_FOLD_MINIMUM_LBS, WASH_FOLD_PRICE_PER_LB } from '@/lib/constants';
 
 export * from './types';
@@ -182,6 +183,30 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
           : `Sorry: ${NO_LEATHER_LINE} We're happy to take care of the rest of your wardrobe.`,
         intent: 'general_faq',
         detectedLanguage: isSpanish ? 'es' : 'en',
+      };
+    }
+
+    // 5c. Fitting-based alterations aren't offered yet (client 2026-10-06, exact wording)
+    if (/\b(fitting|fittings|take in (a |my |the )?(dress|gown)|gown take-?in|dress take-?in|prueba de ropa)\b/i.test(raw)) {
+      return {
+        content: isSpanish
+          ? 'Los arreglos que requieren prueba en persona llegarán pronto. Por ahora hacemos dobladillos, cierres, botones, reparaciones y ajustes con alfileres.'
+          : ALTERATIONS_NOT_OFFERED,
+        intent: 'general_faq',
+        detectedLanguage: isSpanish ? 'es' : 'en',
+      };
+    }
+
+    // 5d. Alterations: prices, fit instructions, quotes and turnaround (Parts B-D)
+    if (/\b(alteration|alterations|alter|hem|hems|hemming|tailor|tailoring|zipper|button|buttons|mend|mending|sleeve|sleeves|waistband|arreglo|arreglos|dobladillo|cierre)\b/i.test(raw)) {
+      const list = alterationLines().map((l) => `• ${l}`).join('\n');
+      return {
+        content: isSpanish
+          ? `Hacemos arreglos en 3 a 5 días hábiles, y su pedido completo regresa junto:\n\n${list}\n\nPara cada prenda indique una medida, una prenda para igualar (marcada MATCH en la misma bolsa) o alfileres. Los precios "from" se confirman con las fotos de recepción; hasta 25% más se cobra automáticamente y más requiere su aprobación. No disponible con Express de 24 horas.`
+          : `We do alterations in 3-5 business days, and your whole order comes back together:\n\n${list}\n\nFor each piece, tell us a measurement, a garment to match (tag it MATCH in the same bag), or pin it. "From" prices are confirmed after our intake photos: up to 25% above the listed price is charged automatically, anything higher needs your OK, and if you decline it comes back unaltered at no charge. Alterations aren't available with 24-Hour Express. ${ALTERATIONS_NOT_OFFERED}`,
+        intent: 'pricing_inquiry',
+        detectedLanguage: isSpanish ? 'es' : 'en',
+        action: { type: 'show_prices', label: isSpanish ? '🧵 Ver Precios' : '🧵 View Alteration Prices', url: '/pricing' },
       };
     }
 

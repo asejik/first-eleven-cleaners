@@ -29,6 +29,7 @@ describe('llms.txt matches the real catalog (P08 SEO-02)', () => {
       expect(text).toContain(`${item.label}: ${item.fromPrice ? 'from ' : ''}${money(item.price)}`);
     }
     expect(text).toContain('### Household (per item)');
+    expect(text).toContain('### Alterations (per item)');
   });
 
   it('states the wash & fold price and minimum', () => {
