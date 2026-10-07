@@ -58,13 +58,16 @@ export const CoverageSettingsSchema = z
   .object({
     expressEnabled: z.boolean(),
     zones: z.object({ zone_1: zoneSchema, zone_2: zoneSchema, zone_3: zoneSchema, zone_4: zoneSchema }),
+    // ZIP code -> Zone 1-4 (the editable ZIP table)
+    zipZones: z.record(z.string().regex(/^\d{5}$/, 'ZIP codes are 5 digits.'), z.enum(['zone_1', 'zone_2', 'zone_3', 'zone_4'])),
     extendedReach: z.object({
       minimumOrder: money,
       routineDiscountPercent: z.number().min(0).max(100),
       waitlistBeyondMiles: miles,
       cadenceWeeks: z.number().int().min(1).max(8),
       routeDay: day,
-      firstRunDate: z.iso.date(),
+      // Blank until launch day is picked: Zone 5 addresses join the waitlist until then
+      firstRunDate: z.iso.date().nullable(),
       bookingNoticeDays: z.number().int().min(3).max(14),
       bands: z
         .array(
@@ -91,10 +94,19 @@ export const CoverageSettingsSchema = z
     if (b.maxMiles > s.extendedReach.waitlistBeyondMiles) {
       ctx.addIssue({ code: 'custom', path: ['extendedReach', 'waitlistBeyondMiles'], message: 'The waitlist must start at or beyond the end of Band B.' });
     }
-    const dow = new Date(`${s.extendedReach.firstRunDate}T12:00:00Z`).getUTCDay();
-    const routeDow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(s.extendedReach.routeDay);
-    if (dow !== routeDow) {
-      ctx.addIssue({ code: 'custom', path: ['extendedReach', 'firstRunDate'], message: `The first run date must be a ${s.extendedReach.routeDay}.` });
+    if (s.extendedReach.firstRunDate) {
+      const dow = new Date(`${s.extendedReach.firstRunDate}T12:00:00Z`).getUTCDay();
+      const routeDow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(s.extendedReach.routeDay);
+      if (dow !== routeDow) {
+        ctx.addIssue({ code: 'custom', path: ['extendedReach', 'firstRunDate'], message: `The first run date must be a ${s.extendedReach.routeDay}.` });
+      }
+    }
+    // Zone 1-4 bands go up without overlapping (0-15, 15-25, 25-35, 35-45)
+    const zoneBands = [s.zones.zone_1, s.zones.zone_2, s.zones.zone_3, s.zones.zone_4];
+    for (let i = 1; i < zoneBands.length; i++) {
+      if (zoneBands[i].minMiles < zoneBands[i - 1].maxMiles) {
+        ctx.addIssue({ code: 'custom', path: ['zones'], message: `Zone ${i + 1} must start at or after the miles where Zone ${i} ends.` });
+      }
     }
   });
 

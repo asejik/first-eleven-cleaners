@@ -1,6 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import { Card, ButtonLink } from '@/components/ui';
-import { ROUTES, EXPRESS_BADGE } from '@/lib/constants';
+import { ROUTES, EXPRESS_BADGE, EXTENDED_REACH_BAND_CITIES, extendedReachTurnaroundLine } from '@/lib/constants';
+import { extendedReachStartLine } from '@/lib/coverage';
 import { getCoverage } from '@/lib/coverage-settings';
 import styles from './page.module.css';
 
@@ -91,10 +92,10 @@ export default async function ServiceAreasPage() {
               </Card>
             ))}
 
-            {/* Zone 5: beyond the Metroplex (client 2026-10-07, 8F) */}
+            {/* Zone 5: beyond the Metroplex, weekly runs (client 2026-10-07, revised) */}
             <Card variant="bordered" padding="lg" className={styles.regionCard} id="extended-reach">
               <div className={styles.regionHeader}>
-                <h3 className={styles.regionTitle}>{reachZone.name}</h3>
+                <h3 className={styles.regionTitle}>Zone 5 — {reachZone.routeScheduleLabel}</h3>
                 <span className={styles.regionBadge}>Beyond the Metroplex</span>
               </div>
 
@@ -106,15 +107,16 @@ export default async function ServiceAreasPage() {
                   🚐 Delivery fee shown at booking (${bandA.fee} / ${bandB.fee} by distance; {reach.routineDiscountPercent}% off for Routine members)
                 </span>
                 <span className={styles.zonePill}>
-                  📅 Bi-weekly routes, dispatched when neighbors book
+                  📅 {extendedReachTurnaroundLine(reach)}
                 </span>
                 <span className={`${styles.zonePill} ${styles.zonePillMuted}`}>
-                  ⏱ Standard turnaround
+                  ⏱ No Express
                 </span>
               </div>
 
               <p className={styles.regionDesc}>
-                {bandA.minMiles}–{bandA.maxMiles} miles from our plant: ${bandA.fee} delivery fee, the route runs at {bandA.dispatchThreshold} bookings. {bandB.minMiles}–{bandB.maxMiles} miles: ${bandB.fee}, at {bandB.dispatchThreshold} bookings. Beyond {reach.waitlistBeyondMiles} miles, join the waitlist.
+                {bandA.minMiles}–{bandA.maxMiles} miles from our plant: ${bandA.fee} delivery fee ({EXTENDED_REACH_BAND_CITIES.A.join(', ')}). {bandB.minMiles}–{bandB.maxMiles} miles: ${bandB.fee} ({EXTENDED_REACH_BAND_CITIES.B.join(', ')}). New pickups open on a run once {bandA.dispatchThreshold} (or {bandB.dispatchThreshold} farther out) neighbors book, or when we&apos;re already delivering there. Beyond {reach.waitlistBeyondMiles} miles, join the waitlist.
+                {!reach.firstRunDate && <> {extendedReachStartLine(reach)}</>}
               </p>
 
               <div className={styles.cityList}>

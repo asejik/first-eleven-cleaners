@@ -76,7 +76,7 @@ function booking(services: Row, schedule: Row = {}) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: { full_name: 'Alter Tester', email: 'alter.tester@example.com', phone: '2145550100' },
-        address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
+        address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75205' },
         services: { type: 'dry_clean', dry_clean_items: [], estimated_weight_lbs: 0, ...services },
         schedule: { pickup_date: PICKUP, pickup_window: 'morning', express_tier: 'standard', frequency: 'one_time', ...schedule },
         consents: { sms_order_updates: false, sms_promotions: false, payment_terms: true },

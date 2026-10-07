@@ -14,12 +14,13 @@ import {
   PICKUP_WINDOWS,
   PROCESSING_HOURS,
   EXTENDED_REACH_LABEL,
+  extendedReachTurnaroundLine,
   SUPPORT_PHONE,
   SUPPORT_EMAIL,
 } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
-import { DEFAULT_COVERAGE, feeLabel, type Coverage } from '@/lib/coverage';
+import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const catalogLine = (item: CatalogItem) =>
@@ -92,8 +93,8 @@ export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
       (z) =>
         `- ${z.name}: ${money(z.minimumOrder)} minimum, ${z.routeScheduleLabel}, ${z.expressEligible ? 'Express eligible' : 'No Express'}. Areas: ${z.cities.join(', ')}.`,
     ),
-    `- ${reachZone.name}: ${money(reach.minimumOrder)} minimum plus the ${EXTENDED_REACH_LABEL} fee, bi-weekly routes (${reach.routeDay}s) that run once ${reach.bands.map((b) => `${b.dispatchThreshold} (Band ${b.id})`).join(' or ')} neighbors book, standard turnaround, No Express. Areas: ${reachZone.cities.join(', ')}.`,
-    `- Zones 1-4 follow their area lists; other addresses are placed by driving distance from our plant. Zones 3 and 4 deliver on their next route day (a Zone 4 Friday pickup is delivered Tuesday). Beyond ${reach.waitlistBeyondMiles} miles: not served yet, join the waitlist at ${SITE_URL}/book.`,
+    `- ${reachZone.name}: ${money(reach.minimumOrder)} minimum plus the ${EXTENDED_REACH_LABEL} fee, weekly ${reach.routeDay} runs: ${extendedReachTurnaroundLine(reach)} New pickups open on a run once ${reach.bands.map((b) => `${b.dispatchThreshold} (Band ${b.id})`).join(' or ')} neighbors book or a delivery is already due there. No Express. Areas: ${reachZone.cities.join(', ')}.${reach.firstRunDate ? '' : ` ${extendedReachStartLine(reach)}`}`,
+    `- Zones 1-4 follow their area lists; an address not on a list is placed by driving distance from our plant (0-15 miles Zone 1, 15-25 Zone 2, 25-35 Zone 3, 35-45 Zone 4, 45-80 Zone 5). Zones 3 and 4 deliver on their next route day (a Zone 4 Friday pickup is delivered Tuesday). Beyond ${reach.waitlistBeyondMiles} miles: not served yet, join the waitlist at ${SITE_URL}/book.`,
     '',
     '## Make It Right Guarantee',
     `If you are not satisfied with the cleaning or pressing of a garment, tell us within 7 days of delivery and we re-clean it free. Terms: ${SITE_URL}/terms`,

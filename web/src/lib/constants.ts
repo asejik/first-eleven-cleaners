@@ -28,8 +28,9 @@ export const EXPRESS_ENABLED = false;
 // --- Smart Coverage Zones (client 2026-10-07, request 8) ---
 // Zones 1-4 (the Metroplex) have free delivery and an order minimum. Zone 5 (Extended
 // Reach) is beyond the Metroplex: a delivery fee by driving distance from the hub, a $125
-// minimum, and bi-weekly routes that run once enough neighbors book. The values here are the
-// starting values; Mission Control can change minimums, route days, bands, fees and thresholds.
+// minimum, and weekly Wednesday runs (back the next Wednesday). The values here are the
+// starting values; Mission Control changes minimums, route days, bands, fees, thresholds,
+// the first Zone 5 run and the ZIP-to-zone table.
 export type RouteDayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 export type MetroZoneId = 'zone_1' | 'zone_2' | 'zone_3' | 'zone_4';
 export type ZoneId = MetroZoneId | 'zone_5';
@@ -97,137 +98,146 @@ const metroZone = (
   };
 };
 
+// Zone lists rebuilt from the distance bands (client 2026-10-07, revised): a zone is a route
+// corridor measured from the hub, and its minimum is the cost-per-stop proxy. These ZIP lists
+// are the starting values; Mission Control edits the ZIP-to-zone table.
 export const ZONE_CONFIG: Record<MetroZoneId, ZoneConfig> = {
   zone_1: metroZone({
     id: 'zone_1',
-    name: 'Zone 1 — Core',
-    badge: 'Core Metro',
-    tagline: 'Dallas Central & Core, Las Colinas and the North Dallas suburbs',
+    name: 'Zone 1 — North Core',
+    badge: 'North Core',
+    tagline: 'North Dallas, Plano, Frisco, Richardson, Lewisville & the Park Cities',
     minimumOrder: 45.00,
     routeDays: ALL_ROUTE_DAYS,
     minMiles: 0,
     maxMiles: 15,
     cities: [
-      'Downtown Dallas',
-      'Uptown & Victory Park',
-      'Highland Park',
-      'University Park',
-      'Preston Hollow',
-      'Lakewood & East Dallas',
-      'Oak Lawn & Turtle Creek',
-      'Design District',
-      'Kessler Park & Bishop Arts',
-      'Irving & Las Colinas',
-      'Coppell',
-      'Farmers Branch',
       'Addison',
       'Carrollton',
+      'Farmers Branch',
+      'Plano',
+      'Frisco',
       'Richardson',
+      'The Colony',
+      'Lewisville',
+      'Flower Mound',
+      'Coppell',
+      'Preston Hollow',
+      'North Dallas',
+      'Highland Park',
+      'University Park',
     ],
     zipCodes: [
-      // Dallas
-      '75201', '75202', '75204', '75205', '75206', '75207', '75208', '75209', '75214', '75219',
-      '75220', '75225', '75226', '75230', '75234', '75235', '75240', '75244', '75248', '75251',
-      // Far North Dallas around the hub
-      '75252', '75254', '75287',
-      // Irving & Las Colinas, Coppell, Farmers Branch
-      '75038', '75039', '75060', '75061', '75062', '75063', '75019',
-      // Addison, Carrollton, Richardson (moved from Zone 2)
-      '75001', '75006', '75007', '75010', '75080', '75081', '75082',
+      // Addison, Carrollton, Farmers Branch
+      '75001', '75006', '75007', '75010', '75234', '75244',
+      // Plano, Frisco
+      '75023', '75024', '75025', '75074', '75075', '75093', '75094', '75033', '75034', '75035', '75036',
+      // Richardson
+      '75080', '75081', '75082',
+      // The Colony, Lewisville, Flower Mound, Coppell
+      '75056', '75057', '75067', '75077', '75022', '75028', '75019',
+      // Preston Hollow, North Dallas (the hub's own area)
+      '75220', '75225', '75229', '75230', '75240', '75243', '75248', '75251', '75252', '75254', '75287',
+      // Highland Park, University Park
+      '75205', '75209',
     ],
   }),
   zone_2: metroZone({
     id: 'zone_2',
-    name: 'Zone 2 — North Dallas Corridor',
-    badge: 'North Corridor',
-    tagline: 'Plano, Frisco, Allen, McKinney, Prosper, Lewisville & Flower Mound',
+    name: 'Zone 2 — Dallas Central & Mid-Cities',
+    badge: 'Central & Mid-Cities',
+    tagline: 'Uptown, Downtown, East Dallas, Las Colinas, Allen, McKinney and the Grapevine corridor',
     minimumOrder: 60.00,
     routeDays: ALL_ROUTE_DAYS,
     routeScheduleLabel: 'Daily & Alternating Routes (Mon–Sat)',
     minMiles: 15,
     maxMiles: 25,
     cities: [
-      'Plano',
-      'Frisco',
+      'Uptown & Victory Park',
+      'Downtown Dallas',
+      'Oak Lawn & Turtle Creek',
+      'Design District',
+      'Lakewood & East Dallas',
+      'Kessler Park & Bishop Arts',
+      'Irving & Las Colinas',
       'Allen',
       'McKinney & Craig Ranch',
       'Prosper',
-      'Lewisville & Flower Mound',
+      'Grapevine',
+      'Southlake',
+      'Colleyville',
+      'Euless',
     ],
     zipCodes: [
-      // Plano, Frisco, Allen, McKinney, Prosper
-      '75002', '75013', '75023', '75024', '75025', '75093', '75094', '75033', '75034', '75035',
-      '75036', '75070', '75071', '75072', '75078',
-      // Lewisville, Flower Mound, Highland Village, The Colony (moved from Zone 4)
-      '75022', '75028', '75056', '75057', '75067', '75077',
+      // Uptown, Victory Park, Downtown, Deep Ellum, Oak Lawn, Turtle Creek, Design District
+      '75201', '75202', '75204', '75219', '75226', '75207', '75235',
+      // Lakewood & East Dallas, Kessler Park & Bishop Arts
+      '75206', '75214', '75218', '75208',
+      // Irving & Las Colinas
+      '75038', '75039', '75060', '75061', '75062', '75063',
+      // Allen, McKinney & Craig Ranch, Prosper
+      '75002', '75013', '75069', '75070', '75071', '75072', '75078',
+      // Grapevine, Southlake, Colleyville, Euless
+      '76051', '76092', '76034', '76039', '76040',
     ],
   }),
   zone_3: metroZone({
     id: 'zone_3',
-    name: 'Zone 3 — Tarrant & West Metro',
-    badge: 'Tarrant & West',
-    tagline: 'Fort Worth, Arlington, Southlake, Grapevine and the Mid-Cities',
+    name: 'Zone 3 — Outer Ring',
+    badge: 'Outer Ring',
+    tagline: 'Arlington, Grand Prairie, the Mid-Cities, Denton, Rockwall & Forney',
     minimumOrder: 80.00,
     routeDays: ['Monday', 'Thursday'],
-    minMiles: 20,
+    minMiles: 25,
     maxMiles: 35,
     cities: [
-      'Downtown Fort Worth',
-      'Fort Worth Cultural District',
-      'Arlington & Entertainment District',
-      'Southlake',
-      'Colleyville',
-      'Grapevine',
-      'Keller',
-      'Westlake',
       'Bedford',
       'Hurst',
-      'Euless',
+      'Keller',
+      'Westlake',
       'Grand Prairie',
+      'Arlington & Entertainment District',
+      'Denton',
+      'Rockwall & Heath',
+      'Forney',
     ],
     zipCodes: [
-      '76102', '76104', '76107', '76109', '76116', '76132', '76137', '76179', '76006', '76010',
-      '76011', '76012', '76013', '76017', '76018', '76092', '76034', '76051', '76248', '76262',
-      // Bedford, Hurst, Euless, Grand Prairie (moved from Zone 1)
-      '76021', '76022', '76053', '76054', '76039', '76040', '75050', '75051', '75052',
+      // Bedford, Hurst, Keller, Westlake
+      '76021', '76022', '76053', '76054', '76244', '76248', '76262',
+      // Grand Prairie, Arlington
+      '75050', '75051', '75052', '76006', '76010', '76011', '76012', '76013', '76015', '76016', '76017', '76018',
+      // Denton
+      '76201', '76202', '76203', '76204', '76205', '76207', '76208', '76209', '76210',
+      // Rockwall & Heath, Forney
+      '75032', '75087', '75126',
     ],
   }),
   zone_4: metroZone({
     id: 'zone_4',
-    name: 'Zone 4 — Extended North Texas',
-    badge: 'Extended Coverage',
-    tagline: 'Denton, Rockwall, Forney, Waxahachie, Burleson & Mansfield',
+    name: 'Zone 4 — Far Metroplex',
+    badge: 'Far Metroplex',
+    tagline: 'Fort Worth & Mansfield',
     minimumOrder: 100.00,
     routeDays: ['Tuesday', 'Friday'],
-    minMiles: 30,
+    minMiles: 35,
     maxMiles: 45,
     cities: [
-      'Denton',
-      'Rockwall & Heath',
-      'Forney',
-      'Waxahachie',
-      'Burleson & Mansfield',
+      'Downtown Fort Worth',
+      'Fort Worth Cultural District',
+      'Mansfield',
     ],
     zipCodes: [
-      // Denton, Corinth, Argyle, North Lakes
-      '76201', '76202', '76203', '76204', '76205', '76207', '76208', '76209', '76210', '76226', '76227', '76249', '76258', '76259',
-      // Rockwall, Heath, Royse City
-      '75032', '75087', '75189',
-      // Forney, Kaufman, Terrell
-      '75126', '75142', '75160',
-      // Waxahachie, Midlothian, Red Oak, Ennis
-      '75165', '75167', '76065', '75154', '75119',
-      // Burleson, Mansfield, Crowley, Joshua, Cleburne
-      '76028', '76063', '76084', '76036', '76058', '76031',
-      // Perimeter North Texas / DFW Communities
-      '75048', '75088', '75089', '75098', '75104', '75115', '75116', '75134', '75146', '75149', '75150', '75180', '75181',
+      // Downtown Fort Worth, the Cultural District and central Fort Worth
+      '76102', '76104', '76107', '76109', '76110', '76116',
+      // Mansfield
+      '76063',
     ],
   }),
 };
 
 export const ZONES_LIST = Object.values(ZONE_CONFIG);
 
-// --- Zone 5: Extended Reach (client 2026-10-07, 8C-8D) ---
+// --- Zone 5: Extended Reach (client 2026-10-07, revised) ---
 export interface ExtendedReachBand {
   id: 'A' | 'B';
   /** Driving miles from the hub: above minMiles, up to and including maxMiles */
@@ -235,7 +245,7 @@ export interface ExtendedReachBand {
   maxMiles: number;
   /** Extended Reach delivery fee, in dollars (taxed like any line) */
   fee: number;
-  /** The route runs once this many orders are booked in the cycle */
+  /** New pickups for a run are accepted once this many are booked (or a delivery is due that day) */
   dispatchThreshold: number;
 }
 
@@ -246,12 +256,15 @@ export interface ExtendedReachConfig {
   routineDiscountPercent: number;
   /** Beyond this many miles: no booking, the waitlist instead */
   waitlistBeyondMiles: number;
-  /** Bi-weekly: one fixed route day every N weeks, counted from firstRunDate */
+  /** Runs every N weeks on routeDay (weekly: clothes come back on the next run, 7 days) */
   cadenceWeeks: number;
   routeDay: RouteDayName;
-  /** The first route day (YYYY-MM-DD); later runs follow every cadenceWeeks weeks */
-  firstRunDate: string;
-  /** Booking closes this many days before a run (the threshold is decided 2 days before) */
+  /**
+   * The first run (YYYY-MM-DD), set in Mission Control once launch day is picked. Until it is
+   * set, Zone 5 addresses join the waitlist ("Extended Reach is coming soon").
+   */
+  firstRunDate: string | null;
+  /** Booking closes this many days before a run (the run is decided 2 days before) */
   bookingNoticeDays: number;
   bands: ExtendedReachBand[];
 }
@@ -260,9 +273,9 @@ export const EXTENDED_REACH_DEFAULTS: ExtendedReachConfig = {
   minimumOrder: 125,
   routineDiscountPercent: 50,
   waitlistBeyondMiles: 80,
-  cadenceWeeks: 2,
+  cadenceWeeks: 1,
   routeDay: 'Wednesday',
-  firstRunDate: '2026-10-21',
+  firstRunDate: null,
   bookingNoticeDays: 3,
   bands: [
     { id: 'A', minMiles: 45, maxMiles: 60, fee: 35, dispatchThreshold: 3 },
@@ -272,38 +285,46 @@ export const EXTENDED_REACH_DEFAULTS: ExtendedReachConfig = {
 
 export const EXTENDED_REACH_LABEL = 'Extended Reach delivery';
 
+/** Display lists per band (the client's reading of the distance table) */
+export const EXTENDED_REACH_BAND_CITIES: Record<ExtendedReachBand['id'], string[]> = {
+  A: ['Burleson', 'Waxahachie', 'Greenville', 'Sherman'],
+  B: ['Denison', 'Weatherford', 'Corsicana', 'Gainesville'],
+};
+
 /**
  * Approximate driving miles from the hub for the Zone 5 display towns. Used ONLY when the
  * routing service can't be reached (or isn't set up locally), so these towns still resolve.
  */
 export const EXTENDED_REACH_FALLBACK_MILES: Record<string, number> = {
-  // Weatherford, Aledo
-  '76085': 58, '76086': 58, '76087': 58, '76088': 58, '76008': 50,
-  // Sherman, Denison
-  '75090': 64, '75092': 64, '75020': 71, '75021': 71,
-  // Greenville
-  '75401': 57, '75402': 57,
-  // Corsicana
-  '75109': 73, '75110': 73,
-  // Gainesville
-  '76240': 60,
+  // Band A: Burleson, Waxahachie, Greenville, Sherman
+  '76028': 50, '75165': 48, '75167': 48, '75401': 55, '75402': 55, '75090': 55, '75092': 55,
+  // Band B: Denison, Weatherford, Corsicana, Gainesville
+  '75020': 65, '75021': 65, '76085': 62, '76086': 62, '76087': 62, '76088': 62, '75109': 70, '75110': 70, '76240': 63,
 };
+
+/** "Extended Reach: picked up Wednesday, back the next Wednesday." (client, revised 8C) */
+export function extendedReachTurnaroundLine(config: Pick<ExtendedReachConfig, 'routeDay' | 'cadenceWeeks'> = EXTENDED_REACH_DEFAULTS): string {
+  return config.cadenceWeeks === 1
+    ? `Extended Reach: picked up ${config.routeDay}, back the next ${config.routeDay}.`
+    : `Extended Reach: picked up ${config.routeDay}, back on the next run ${config.cadenceWeeks} weeks later.`;
+}
 
 export function extendedReachZone(config: ExtendedReachConfig = EXTENDED_REACH_DEFAULTS): ZoneConfig {
   const fees = config.bands.map((b) => `$${b.fee}`).join(' / ');
+  const cadence = config.cadenceWeeks === 1 ? `weekly ${config.routeDay}s` : `every ${config.cadenceWeeks} weeks on ${config.routeDay}s`;
   return {
     id: 'zone_5',
-    name: 'Zone 5 — Extended Reach',
+    name: `Zone 5 — Extended Reach`,
     badge: 'Extended Reach',
     tagline: `Beyond the Metroplex · delivery fee shown at booking (${fees} by distance)`,
     minimumOrder: config.minimumOrder,
     routeDays: [config.routeDay],
-    routeScheduleLabel: `Bi-weekly routes (alternate ${config.routeDay}s), dispatched when neighbors book`,
+    routeScheduleLabel: `Extended Reach — ${cadence}`,
     expressEligible: false,
     expressLabel: STANDARD_BADGE,
     minMiles: config.bands[0]?.minMiles ?? 45,
     maxMiles: config.waitlistBeyondMiles,
-    cities: ['Sherman & Denison', 'Weatherford', 'Greenville', 'Corsicana', 'Gainesville'],
+    cities: [...EXTENDED_REACH_BAND_CITIES.A, ...EXTENDED_REACH_BAND_CITIES.B],
     zipCodes: Object.keys(EXTENDED_REACH_FALLBACK_MILES),
   };
 }
@@ -348,7 +369,7 @@ export function resolveZoneByZip(zip: string): ZoneConfig | null {
   const fallbackMiles = EXTENDED_REACH_FALLBACK_MILES[zip5];
   if (fallbackMiles !== undefined) return extendedReachBand(fallbackMiles) ? EXTENDED_REACH_ZONE : null;
 
-  // Other North Texas / DFW perimeter ZIP prefixes (750-754, 760-762)
+  // Other North Texas / DFW perimeter ZIP prefixes (750-754, 760-762), distance unknown
   const isNorthTexasPrefix = /^(75[0-4]|76[0-2])\d{2}$/.test(zip5);
   if (isNorthTexasPrefix) {
     return ZONE_CONFIG.zone_4;

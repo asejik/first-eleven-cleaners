@@ -748,6 +748,8 @@ CREATE TABLE IF NOT EXISTS waitlist (
   zip VARCHAR(10) NOT NULL,
   miles NUMERIC(6, 1),
   source VARCHAR(30) NOT NULL DEFAULT 'booking',
+  -- 'beyond' the last band / outside North Texas, or Zone 5 before its first run (20261007_zones_v2)
+  reason VARCHAR(30) NOT NULL DEFAULT 'beyond' CONSTRAINT waitlist_reason_check CHECK (reason IN ('beyond', 'zone5_not_started')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT waitlist_contact_check CHECK (email IS NOT NULL OR phone IS NOT NULL)
 );
@@ -769,6 +771,20 @@ CREATE TABLE IF NOT EXISTS route_cycles (
 ALTER TABLE route_cycles ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON route_cycles FROM anon, authenticated;
 GRANT ALL ON route_cycles TO service_role;
+
+-- ZIP codes off the ZIP-to-zone table, placed by driving distance, for review (20261007_zones_v2)
+CREATE TABLE IF NOT EXISTS zone_resolution_log (
+  zip VARCHAR(5) PRIMARY KEY,
+  miles NUMERIC(6, 1),
+  zone_id VARCHAR(10) NOT NULL, -- zone_1..zone_5, or 'waitlist'
+  band VARCHAR(1),
+  first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_zone_resolution_log_seen ON zone_resolution_log(last_seen_at DESC);
+ALTER TABLE zone_resolution_log ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON zone_resolution_log FROM anon, authenticated;
+GRANT ALL ON zone_resolution_log TO service_role;
 
 CREATE INDEX IF NOT EXISTS idx_orders_extended_reach_run
   ON orders(pickup_date, extended_reach_band) WHERE extended_reach_band IS NOT NULL;

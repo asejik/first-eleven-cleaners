@@ -68,7 +68,7 @@ const fullOrder = {
   updated_at: '2026-10-04T19:00:00Z',
   items: [{ garment_type: 'dress', quantity: 4 }],
   events: [{ status: 'picked_up', triggered_by: 'Driver (Marcus T.)' }],
-  address: { street: '100 Test St', city: 'Dallas', zip: '75201' },
+  address: { street: '100 Test St', city: 'Dallas', zip: '75205' },
   photos: [
     {
       id: 'p1',

@@ -110,7 +110,7 @@ describe('Booking API name check and per-contact limits (SEC-09)', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: { full_name: name, email, phone },
-        address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75201' },
+        address: { street: '100 Test St', city: 'Dallas', state: 'TX', zip: '75205' },
         services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: 15 },
         consents: { payment_terms: true },
         schedule: { pickup_date: d.toISOString().split('T')[0], pickup_window: 'morning', express_tier: 'standard' },

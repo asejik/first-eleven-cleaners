@@ -55,7 +55,7 @@ const order = (status: string, prefs: unknown): Row => ({
   status,
   pickup_window: 'morning',
   customer: { id: 'c1', full_name: 'Pat Doe', phone: '+12145550100', preferences: prefs },
-  address: { street: '1 Main St', city: 'Dallas', state: 'TX', zip: '75201', delivery_notes: null },
+  address: { street: '1 Main St', city: 'Dallas', state: 'TX', zip: '75205', delivery_notes: null },
   photos: [],
   events: [],
 });

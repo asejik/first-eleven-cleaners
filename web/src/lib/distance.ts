@@ -94,13 +94,35 @@ export async function drivingMilesFromHub(address: AddressInput): Promise<number
 }
 
 /**
- * Where an address is served. A ZIP on a Zone 1-4 list needs no lookup; anything else is
- * placed by its driving distance (Zone 5 bands, or the waitlist beyond them).
+ * Where an address is served. A ZIP on the ZIP table needs no lookup; anything else is placed
+ * by its driving distance (Zones 1-4 bands, Zone 5 bands, or the waitlist beyond them) and
+ * logged so Mission Control can add the ZIP to a zone (client 2026-10-07, revised).
  */
 export async function resolveAddressCoverage(address: AddressInput, coverage: Coverage): Promise<CoverageResolution> {
   if (isListedMetroZip(address.zip, coverage)) return resolveCoverage({ zip: address.zip }, coverage);
-  const resolution = resolveCoverage({ zip: address.zip }, coverage);
-  if (resolution.status === 'incomplete') return resolution;
+  const guess = resolveCoverage({ zip: address.zip }, coverage);
+  if (guess.status === 'incomplete') return guess;
   const miles = await drivingMilesFromHub(address);
-  return resolveCoverage({ zip: address.zip, miles }, coverage);
+  const resolution = resolveCoverage({ zip: address.zip, miles }, coverage);
+  await logDistanceResolution(address.zip, resolution);
+  return resolution;
+}
+
+/** One row per unlisted ZIP: its latest miles and where it was placed (for review). */
+async function logDistanceResolution(zip: string, resolution: CoverageResolution): Promise<void> {
+  if (!isSupabaseConfigured() || resolution.status === 'incomplete') return;
+  const zip5 = zip.replace(/[^\d]/g, '').slice(0, 5);
+  try {
+    await createAdminClient()
+      .from('zone_resolution_log')
+      .upsert({
+        zip: zip5,
+        miles: resolution.miles,
+        zone_id: resolution.status === 'served' ? resolution.zone.id : 'waitlist',
+        band: resolution.band?.id ?? null,
+        last_seen_at: new Date().toISOString(),
+      });
+  } catch {
+    // the log is for review only; never blocks a booking
+  }
 }

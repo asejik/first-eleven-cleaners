@@ -19,7 +19,16 @@ interface WaitlistEntry {
   city: string | null;
   zip: string;
   miles: number | null;
+  reason?: string;
   created_at: string;
+}
+
+export interface ResolutionLogRow {
+  zip: string;
+  miles: number | null;
+  zone_id: string;
+  band: string | null;
+  last_seen_at: string;
 }
 
 const cell = { padding: '8px 10px', borderBottom: '1px solid #1e293b', fontSize: '13px', color: '#e2e8f0', textAlign: 'left' } as const;
@@ -31,7 +40,7 @@ export function ExtendedReachPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ['zone5'],
-    queryFn: async (): Promise<{ runs: RunSummary[]; waitlist: WaitlistEntry[] }> => {
+    queryFn: async (): Promise<{ runs: RunSummary[]; waitlist: WaitlistEntry[]; resolutionLog: ResolutionLogRow[] }> => {
       const res = await fetch('/api/mission-control/zone5');
       if (!res.ok) throw new Error('Could not load Zone 5');
       return res.json();
@@ -65,7 +74,7 @@ export function ExtendedReachPanel() {
       <Card variant="bordered" padding="lg" style={{ background: '#0d1527', borderColor: '#1e293b' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px' }}>🚐 Zone 5 runs</h3>
         <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
-          A run goes out once its band reaches the threshold. Two days before, a run still short moves to the next run and its customers are told.
+          Runs always go out when deliveries are due. New pickups are accepted once a band reaches its threshold or a delivery is due that day; two days before, pickups on a run that has neither move to the next run and their customers are told.
         </p>
         {isLoading ? (
           <p style={{ color: '#cbd5e1' }}>Loading…</p>
@@ -78,7 +87,8 @@ export function ExtendedReachPanel() {
                 <tr>
                   <th style={head}>Run</th>
                   <th style={head}>Band</th>
-                  <th style={head}>Booked</th>
+                  <th style={head}>Pickups</th>
+                  <th style={head}>Deliveries due</th>
                   <th style={head}>Status</th>
                 </tr>
               </thead>
@@ -90,6 +100,7 @@ export function ExtendedReachPanel() {
                       <td style={cell}>{formatLongDate(run.runDate)}</td>
                       <td style={cell}>{run.band}</td>
                       <td style={cell}>{run.booked} of {run.threshold}</td>
+                      <td style={cell}>{run.deliveriesDue}</td>
                       <td style={cell}>
                         {run.dispatched ? (
                           <span style={{ color: '#34d399', fontWeight: 700 }}>Dispatched{run.notified ? ' · customers told' : ''}</span>
@@ -131,7 +142,10 @@ export function ExtendedReachPanel() {
                   <tr key={w.id}>
                     <td style={cell}>{w.full_name || '—'}</td>
                     <td style={cell}>{[w.email, w.phone].filter(Boolean).join(' · ')}</td>
-                    <td style={cell}>{[w.city, w.zip].filter(Boolean).join(' ')}</td>
+                    <td style={cell}>
+                      {[w.city, w.zip].filter(Boolean).join(' ')}
+                      {w.reason === 'zone5_not_started' && <span style={{ color: '#fde68a' }}> · Zone 5, waiting for first run</span>}
+                    </td>
                     <td style={cell}>{w.miles != null ? Number(w.miles).toFixed(0) : '?'}</td>
                   </tr>
                 ))}

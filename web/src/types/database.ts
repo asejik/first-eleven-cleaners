@@ -612,6 +612,7 @@ export type Database = {
           zip: string;
           miles: number | null;
           source: string;
+          reason: string;
           created_at: string;
         };
         Insert: {
@@ -624,6 +625,7 @@ export type Database = {
           zip: string;
           miles?: number | null;
           source?: string;
+          reason?: string;
           created_at?: string;
         };
         Update: {
@@ -636,7 +638,35 @@ export type Database = {
           zip?: string;
           miles?: number | null;
           source?: string;
+          reason?: string;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      zone_resolution_log: {
+        Row: {
+          zip: string;
+          miles: number | null;
+          zone_id: string;
+          band: string | null;
+          first_seen_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          zip: string;
+          miles?: number | null;
+          zone_id: string;
+          band?: string | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          zip?: string;
+          miles?: number | null;
+          zone_id?: string;
+          band?: string | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
         };
         Relationships: [];
       };

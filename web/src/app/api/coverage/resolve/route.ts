@@ -5,6 +5,7 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { getCoverage } from '@/lib/coverage-settings';
 import { resolveAddressCoverage } from '@/lib/distance';
 import { extendedReachFeeLine } from '@/lib/coverage';
+import { extendedReachTurnaroundLine } from '@/lib/constants';
 import { bookableRuns } from '@/lib/extended-reach';
 import { apiError } from '@/lib/api-errors';
 
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
         routineDiscountPercent: coverage.extendedReach.routineDiscountPercent,
         minimumOrder: coverage.extendedReach.minimumOrder,
         threshold: resolution.band.dispatchThreshold,
+        turnaround: extendedReachTurnaroundLine(coverage.extendedReach),
         runs,
       },
     });

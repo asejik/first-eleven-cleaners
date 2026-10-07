@@ -18,6 +18,7 @@ import {
   formatLocalDate,
   getMinPickupDate,
 } from '@/hooks/useBookingState';
+import { extendedReachStartLine } from '@/lib/coverage';
 import styles from './page.module.css';
 
 export default function BookingPage() {
@@ -109,6 +110,7 @@ export default function BookingPage() {
             extendedReach={b.extendedReach}
             isRoutine={b.isRoutine}
             onJoinRoutine={b.joinRoutine}
+            extendedReachStart={extendedReachStartLine(b.coverage.extendedReach)}
             isValid={b.isStep1Valid}
             onContinue={() => b.setStep(2)}
           />

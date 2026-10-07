@@ -22,7 +22,7 @@ test.describe('Guest booking', () => {
     await page.getByLabel('Email').fill('smoke.guest@example.com');
     await page.getByLabel('Mobile Phone').fill('(214) 555-0100');
     await page.getByLabel('Street Address').fill('100 Main St');
-    await page.getByLabel('ZIP Code').fill('75201');
+    await page.getByLabel('ZIP Code').fill('75205');
     await page.getByRole('button', { name: /Continue to Garments/ }).click();
 
     await page.getByRole('button', { name: /Dry Cleaning Only/ }).click();
@@ -46,14 +46,13 @@ test.describe('Guest booking', () => {
 
   // Client 2026-10-07, 8C: Zone 5 shows its fee line the moment the address resolves;
   // beyond the routes, the waitlist
-  test('Extended Reach shows its fee and the Routine price; far addresses get the waitlist', async ({ page }) => {
+  // Zone 5 waits for its first run date (set in Mission Control); until then, the waitlist
+  test('Extended Reach is "coming soon" until its first run is set; far addresses get the waitlist', async ({ page }) => {
     await page.goto('/book');
     await page.getByLabel('Street Address').fill('100 Fort Worth Hwy');
     await page.getByLabel('ZIP Code').fill('76086'); // Weatherford
-    await expect(page.getByText('Zone 5 — Extended Reach').first()).toBeVisible();
-    await expect(page.getByText(/Extended Reach delivery: \$35 → \$17\.50 for Routine members/)).toBeVisible();
-    await page.getByRole('button', { name: 'Join the Routine' }).click();
-    await expect(page.getByText(/\$17\.50 \(Routine member\)/)).toBeVisible();
+    await expect(page.getByText(/Extended Reach is coming soon/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Join the waitlist' })).toBeVisible();
 
     await page.getByLabel('ZIP Code').fill('90210');
     await expect(page.getByText('Not in your area yet')).toBeVisible();
