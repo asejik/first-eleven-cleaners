@@ -201,6 +201,10 @@ export default function BookingPage() {
             cardCvc={b.cardCvc}
             setCardCvc={b.setCardCvc}
             total={b.total}
+            holdAmount={b.holdAmount}
+            holdNow={b.holdNow}
+            paymentTermsAccepted={b.paymentTermsAccepted}
+            setPaymentTermsAccepted={b.setPaymentTermsAccepted}
             isLoading={b.submitBookingMutation.isPending}
             onBack={() => b.setStep(4)}
             onCompleteBooking={b.handleCompleteBooking}

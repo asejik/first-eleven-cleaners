@@ -31,7 +31,7 @@ graph TD
 * **Guest-Friendly Booking:** Zone coverage check across DFW, Wash & Fold weight estimate, dry-cleaning and household item selector (napkins have a dozen price; "from" items such as wedding dresses and drapes are quoted at intake), and morning/evening pickup windows. First-time customers book without creating an account.
 * **Server-Checked Schedule (Dallas time):** Standard pickups need 2 days' notice, never on Sunday, up to 60 days ahead. The plant runs Monday to Friday, so delivery is 2 plant days after pickup (Thursday pickups come back Monday; Friday and Saturday pickups Tuesday, and Saturday bookings say so). **24-Hour Express** is Mon-Thu, morning window only, delivered the next plant day, with 7 AM (same-day) and 9 PM (next-day) cutoffs, a +50% surcharge, and specialty garments and household items excluded. Window and Express capacity are enforced.
 * **Safe Checkout:** Prices are recomputed on the server in whole cents. Each booking (order, items, promo use) is saved in one database transaction, and a double-click or retry returns the first order instead of booking twice.
-* **Card on File, Charged After Weighing:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and charged the final, itemized, taxed total after intake inspection.
+* **See It as You Pay It:** The card is saved securely with Square at checkout (Square's own card form; card numbers never touch our servers) and a hold is placed for the estimate x 1.20 (at least $45 or the zone minimum): at booking when pickup is within 2 days, otherwise by the daily job 2 days before pickup. Checkout requires accepting the payment terms. Intake captures the actual itemized, taxed total automatically (lowering the hold, or capturing it and charging the rest), and the receipt carries the ticket, photos and two taps: *Looks good* or *Something's off* (opens a Make It Right claim). A declined card makes the order **Payment Needed**: cleaning continues, delivery waits until it's paid. Cancelling a pickup releases the hold.
 * **Live Order Tracker:** Visual progress from *Booked ➔ Picked Up ➔ Weighed & Itemized ➔ In Cleaning ➔ Out for Delivery ➔ Delivered*, with readable dates and a Dallas-time "delayed" check. Cancelled pickups show a clear cancelled panel, and a failed load offers *Try Again* instead of "not found". Tracking links are private to the customer.
 * **Garment Passport™ Photo Timeline:** Intake inspection photos (with pre-existing flaw notes) alongside pickup and delivery proof photos.
 * **Billing & Receipts (`/dashboard/billing`):** Saved Square cards, itemized receipts, and a pay link for any order whose card was declined.
@@ -43,7 +43,8 @@ graph TD
 * **Active WIP Pipeline:** Kanban of work-in-progress stages with enforced stage order (intake, the charge step, can't be skipped) and customer notifications on each advance.
 * **Delivered & Completed Archive:** Searchable ledger with date filters, revenue and volume metrics, proof-of-delivery photos, and printable receipts.
 * **Central Intake Station:** Weight recording, dry-cleaning itemization, camera capture and photo upload (resized on device), flaw notes, the customer's care preferences (starch, fold or hang, detergent), and automatic charge of the card on file.
-* **Payments & Financials:** Per-order tax and fee records, collected-revenue ledger, held-payment recovery (retry, pay link, mark paid), and Square refunds for claims and late Express deliveries.
+* **Payments & Financials:** Payment states (Authorized / Captured / Payment Needed / Card needed before pickup) on every order, daily watch lists (call today, Payment Needed with its reminder step, cards needed before pickup, holds expiring within 48 hours), per-order tax and fee records, every Square payment in `order_payments`, collected-revenue ledger, Payment Needed recovery (retry, pay link, mark paid), and Square refunds for claims and late Express deliveries.
+* **Daily Job (`/api/cron/daily`, Vercel Cron 14:00 UTC):** places the 2-days-before holds, marks holds Square let expire, and runs the Payment Needed ladder (customer reminder at 24 h, staff call at 48 h, owner decision at 7 days).
 * **Make It Right Claims Center:** Resolution presets for *🔄 Free Re-Clean*, *💰 Refund (through Square)*, or *💬 Care Explanation*.
 * **Message Log:** Feed of the latest 200 SMS/WhatsApp messages (one database row per message) with **`🚨 AI Escalations`**. Status messages go out automatically when an order moves stage; only an admin can re-send the current status.
 * **Staff Roster & Roles:** Driver and intake specialist accounts; roles are managed here and enforced server-side.
@@ -90,7 +91,7 @@ The portal still runs on sample data, so `/portal` and `/api/portal*` return 404
 | **AI Concierge** | Heuristic engine + [Claude](https://www.anthropic.com/) | Conversational support with memory |
 | **Rate Limiting** | [Upstash Redis](https://upstash.com/) (in-memory fallback) | Shared limits across serverless instances |
 | **Error Tracking** | Built-in (`error_logs` table + admin email alerts) | Server failures recorded and alerted |
-| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 593 unit tests across 91 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
+| **Testing** | [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | 667 unit tests across 96 files; 6 end-to-end smoke journeys (desktop + phone), including booking with a screen reader |
 
 ---
 
@@ -229,7 +230,7 @@ Open [http://localhost:3000](http://localhost:3000). Don't run `npm run build` w
 
 ### 8. Testing & Verification
 ```bash
-npm test                                   # 593 Vitest tests
+npm test                                   # 667 Vitest tests
 npx vitest run tests/pricing.test.ts       # a single test file
 npx vitest run -t "test name"              # a single test by name
 npx tsc --noEmit                           # type check
@@ -264,6 +265,7 @@ CI runs lint, unit tests and the build, plus the Playwright smoke tests in mock 
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` / `TWILIO_MESSAGING_SERVICE_SID`, `TWILIO_WHATSAPP_NUMBER` | The inbound SMS webhook rejects requests in production without the auth token | If SMS is used |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Sender on a verified Resend domain | **Yes** |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate limits across Vercel instances | Strongly recommended |
+| `CRON_SECRET` | Random text, 32+ characters, type Secret. Vercel sends it to the daily job (`/api/cron/daily`); without it the job refuses to run, so no holds are placed 2 days before pickup and no payment reminders go out | **Yes** |
 | `ADMIN_ALERT_EMAIL` | Receives server-error and card-dispute alerts; if unset they go to `support@firstelevencleaners.com`. (Privacy requests always go to `privacy@firstelevencleaners.com`.) | Recommended |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Claude for Eleven (heuristic engine if unset) | Optional |
 | `NEXT_PUBLIC_APP_NAME` | `First Eleven Cleaners` | **Yes** |
@@ -294,7 +296,7 @@ The platform went through four independent audits in October 2026: security, pro
 * **Verified sessions:** every server request verifies the login token with Supabase; roles come only from the server-controlled `customers.role` column, never from email addresses or user-editable metadata.
 * **Email-verified accounts:** a guest's order history joins an account only after the email is confirmed.
 * **Row-Level Security + column grants:** customers can read only their own data, and can edit only their name, phone and SMS consent. Logged-out visitors can't write to any table.
-* **Payments:** card details are entered only into Square's secure form; the app stores Square card references and charges the final total server-side. Square and Twilio webhooks verify signatures and fail closed in production.
+* **Payments:** card details are entered only into Square's secure form; the app stores Square card references, holds the estimate, and captures the final total server-side. Square and Twilio webhooks verify signatures and fail closed in production.
 * **Private photos:** storage buckets are private; screens and messages get expiring signed links.
 * **Input & output safety:** server-side validation, HTML-escaped email templates, name validation, and generic error messages (details only in server logs).
 * **Abuse protection:** shared rate limits (Upstash), per-email/phone booking caps, AI concierge size and daily limits.

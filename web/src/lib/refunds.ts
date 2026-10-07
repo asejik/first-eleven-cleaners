@@ -122,7 +122,7 @@ export async function syncOrderRefundStateFromSquare(supabase: AdminClient, paym
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, payment_status, refunded_amount')
+    .select('id, payment_status, refunded_amount, amount_due')
     .eq('payment_id', paymentId)
     .maybeSingle();
   if (!order) return true; // not one of our orders
@@ -131,6 +131,10 @@ export async function syncOrderRefundStateFromSquare(supabase: AdminClient, paym
     // FAILED/CANCELED payments are handled by the webhook's status logic
     return true;
   }
+
+  // A captured card hold whose remainder was declined: the order still owes money, so this
+  // payment completing must not mark it paid (client 2026-10-06, Part A)
+  if (Number(order.amount_due) > 0) return true;
 
   const refundedAmount = round2(payment.refundedCents / 100);
   const nextStatus = payment.amountCents > 0 && payment.refundedCents >= payment.amountCents ? 'refunded' : 'charged';

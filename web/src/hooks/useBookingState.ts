@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
 import { earliestPickupDate, estimatedDeliveryDate, isExpressPickupDay } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
+import { holdAmountFor, shouldPlaceHoldNow } from '@/lib/payment-hold';
 
 // Helper to format local date to YYYY-MM-DD (avoiding UTC timezone shift)
 export function formatLocalDate(d: Date): string {
@@ -63,6 +64,8 @@ export function useBookingState() {
   const [phone, setPhone] = useState(user?.phone || '');
   const [smsConsent, setSmsConsent] = useState<boolean>(Boolean(user?.sms_consent) || false);
   const [smsPromotionsConsent, setSmsPromotionsConsent] = useState<boolean>(Boolean(user?.sms_promotions_consent) || false);
+  // Required checkout acceptance of the hold-and-charge terms (Part A)
+  const [paymentTermsAccepted, setPaymentTermsAccepted] = useState(false);
   const [street, setStreet] = useState('');
   const [unit, setUnit] = useState('');
   const [city, setCity] = useState('Dallas');
@@ -279,6 +282,9 @@ export function useBookingState() {
   const discountAmount = financials.discountAmount;
   const total = financials.finalTotal;
   const zoneMinimumGap = getZoneMinimumGap(subtotal, detectedZone);
+  // Card hold shown at checkout; the server computes the real one from its own prices (Part A)
+  const holdAmount = holdAmountFor(total, detectedZone?.minimumOrder || 0);
+  const holdNow = Boolean(pickupDate) && shouldPlaceHoldNow(pickupDate);
 
   // Step Validations: Step 1 requires full address (including city) AND a valid recognized service zone
   const isStep1Valid = Boolean(fullName && email && phone && street && city && zip && detectedZone !== null);
@@ -364,6 +370,7 @@ export function useBookingState() {
         consents: {
           sms_order_updates: smsConsent,
           sms_promotions: smsPromotionsConsent,
+          payment_terms: paymentTermsAccepted,
         },
       };
 
@@ -458,6 +465,10 @@ export function useBookingState() {
     discountAmount,
     total,
     zoneMinimumGap,
+    holdAmount,
+    holdNow,
+    paymentTermsAccepted,
+    setPaymentTermsAccepted,
     isStep1Valid,
     isStep2Valid,
     isStep3Valid,

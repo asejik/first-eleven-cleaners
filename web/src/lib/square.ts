@@ -1,8 +1,9 @@
 /**
  * Server-side Square API helpers (card on file).
  *
- * Booking saves the customer's card to a Square customer (SEC-06); intake charges that
- * saved card for the final weighed total. Never import this from client components:
+ * Booking saves the customer's card to a Square customer (SEC-06) and places a hold for the
+ * estimate (a payment with autocomplete=false); intake captures the final weighed total
+ * from that hold, or charges the saved card. Never import this from client components:
  * it reads SQUARE_ACCESS_TOKEN.
  */
 
@@ -44,7 +45,7 @@ async function squareRequest<T>(
   config: SquareConfig,
   path: string,
   body?: Record<string, unknown>,
-  method: 'GET' | 'POST' = 'POST'
+  method: 'GET' | 'POST' | 'PUT' = 'POST'
 ): Promise<{ ok: true; data: T } | { ok: false; error: string; code?: string }> {
   try {
     const res = await fetch(`${config.baseUrl}${path}`, {
@@ -205,6 +206,108 @@ export async function refundPayment(
     return { ok: false, error: `Square refund status ${status}` };
   }
   return { ok: true, refundId: id, status };
+}
+
+/** How long Square keeps a hold before cancelling it: the maximum for online card payments. */
+export const HOLD_DURATION_HOURS = 168;
+
+/**
+ * Places a hold on a saved card (autocomplete=false): the amount shows as pending on the
+ * customer's card and is captured, or lowered and captured, at intake. Square cancels it
+ * automatically after 7 days if it isn't captured.
+ */
+export async function createHold(
+  config: SquareConfig,
+  {
+    squareCustomerId,
+    cardId,
+    amount,
+    orderNumber,
+    idempotencyKey,
+  }: {
+    squareCustomerId: string;
+    cardId: string;
+    amount: number;
+    orderNumber: string;
+    /** Stable per order (max 45 characters), so a retried booking can't place two holds */
+    idempotencyKey: string;
+  }
+): Promise<{ ok: true; paymentId: string; status: string; expiresAt: string | null } | { ok: false; error: string }> {
+  const result = await squareRequest<{ payment: { id: string; status: string; delayed_until?: string } }>(config, '/payments', {
+    idempotency_key: idempotencyKey,
+    source_id: cardId,
+    customer_id: squareCustomerId,
+    location_id: config.locationId,
+    amount_money: { amount: Math.round(amount * 100), currency: 'USD' },
+    autocomplete: false,
+    delay_duration: `PT${HOLD_DURATION_HOURS}H`,
+    delay_action: 'CANCEL',
+    reference_id: orderNumber,
+    note: `First Eleven Cleaners - Order #${orderNumber} (hold for estimate)`,
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  const { id, status, delayed_until } = result.data.payment;
+  if (status !== 'APPROVED') return { ok: false, error: `Square hold status ${status}` };
+  return { ok: true, paymentId: id, status, expiresAt: delayed_until || null };
+}
+
+/**
+ * Changes the amount of a hold before it is captured (Square allows lowering it; raising it
+ * is limited, so intake never raises a hold and charges any difference separately).
+ */
+export async function updateHoldAmount(
+  config: SquareConfig,
+  { paymentId, amount, idempotencyKey }: { paymentId: string; amount: number; idempotencyKey: string }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const current = await squareRequest<{ payment: { version_token?: string } }>(
+    config,
+    `/payments/${encodeURIComponent(paymentId)}`,
+    undefined,
+    'GET'
+  );
+  if (!current.ok) return { ok: false, error: current.error };
+  const result = await squareRequest<{ payment: { id: string } }>(
+    config,
+    `/payments/${encodeURIComponent(paymentId)}`,
+    {
+      idempotency_key: idempotencyKey,
+      payment: {
+        amount_money: { amount: Math.round(amount * 100), currency: 'USD' },
+        ...(current.data.payment.version_token ? { version_token: current.data.payment.version_token } : {}),
+      },
+    },
+    'PUT'
+  );
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
+}
+
+/** Captures a hold: the held amount (as last updated) moves to the merchant. */
+export async function completeHold(
+  config: SquareConfig,
+  paymentId: string
+): Promise<{ ok: true; status: string } | { ok: false; error: string }> {
+  const result = await squareRequest<{ payment: { status: string } }>(
+    config,
+    `/payments/${encodeURIComponent(paymentId)}/complete`,
+    {}
+  );
+  if (!result.ok) return { ok: false, error: result.error };
+  return result.data.payment.status === 'COMPLETED'
+    ? { ok: true, status: 'COMPLETED' }
+    : { ok: false, error: `Square payment status ${result.data.payment.status}` };
+}
+
+/** Releases a hold that won't be captured (e.g. the pickup was cancelled). */
+export async function cancelHold(
+  config: SquareConfig,
+  paymentId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const result = await squareRequest<{ payment: { status: string } }>(
+    config,
+    `/payments/${encodeURIComponent(paymentId)}/cancel`,
+    {}
+  );
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 /** Looks up a payment, e.g. to verify one taken outside the app before marking an order paid. */

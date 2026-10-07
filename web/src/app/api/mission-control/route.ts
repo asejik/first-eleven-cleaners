@@ -8,6 +8,7 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
 import { chargeHeldOrder, markHeldOrderPaid } from '@/lib/payment-recovery';
+import { releaseOrderHold } from '@/lib/payment-capture';
 import { refundOrder } from '@/lib/refunds';
 import { checkMissionControlTransition, requiresCapturedPayment, ORDER_STATUS_KEYS } from '@/lib/order-lifecycle';
 import { texasDate } from '@/lib/texas-time';
@@ -37,6 +38,12 @@ const ORDER_COLUMNS = `
         total,
         payment_id,
         payment_status,
+        amount_due,
+        hold_status,
+        hold_amount,
+        hold_expires_at,
+        payment_needed_since,
+        payment_reminder_stage,
         notes,
         created_at,
         updated_at,
@@ -204,7 +211,8 @@ export async function POST(request: Request) {
       // Keep "Mission Control" in the label: the driver manifest uses it to tell board moves from driver van loads
       const adminLabel = auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator';
 
-      // Payment Guard: an order enters cleaning or delivery only once its card is charged
+      // Payment Guard: an order goes out for delivery only once its card is charged (cleaning
+      // may start while payment is still needed: client 2026-10-06, Part A)
       const needsOverride = requiresCapturedPayment(new_stage) && order.payment_status !== 'charged';
       if (needsOverride && !manager_override) {
         return NextResponse.json(
@@ -251,6 +259,11 @@ export async function POST(request: Request) {
         note: `Stage advanced to ${new_stage} via Mission Control Ops Board.`,
         triggered_by: adminLabel,
       });
+
+      // A cancelled pickup is never charged: release its card hold (Part A)
+      if (new_stage === 'cancelled') {
+        await releaseOrderHold(supabase, order, 'pickup cancelled from Mission Control');
+      }
 
       await recordAdminAction(supabase, {
         actor: auth.customer,
@@ -400,7 +413,7 @@ export async function POST(request: Request) {
       }
       const { data: heldOrder } = await supabase
         .from('orders')
-        .select('id, order_number, total, payment_status, square_customer_id, square_card_id')
+        .select('id, order_number, total, amount_due, payment_id, payment_status, square_customer_id, square_card_id')
         .eq('id', order_id)
         .maybeSingle();
       if (!heldOrder) {

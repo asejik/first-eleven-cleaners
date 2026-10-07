@@ -71,7 +71,7 @@ function booking(consent: boolean) {
       address: { street: '1 Attacker Way', city: 'Dallas', state: 'TX', zip: '75201' },
       services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: 15 },
       schedule: { pickup_date: d.toISOString().split('T')[0], pickup_window: 'morning', express_tier: 'standard' },
-      consents: { sms_order_updates: consent, sms_promotions: consent },
+      consents: { sms_order_updates: consent, sms_promotions: consent, payment_terms: true },
     }),
   });
 }

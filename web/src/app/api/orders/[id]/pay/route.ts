@@ -7,10 +7,11 @@ import { chargeHeldOrder } from '@/lib/payment-recovery';
 import { apiError } from '@/lib/api-errors';
 
 /**
- * Pay an order on Payment Hold with a new card (P03 PR-04).
+ * Pay an order marked Payment Needed with a new card (P03 PR-04).
  *
  * Reached from the tracking link, which carries the unguessable order UUID (the same
- * access the public tracking page has). The amount is always the order's stored total;
+ * access the public tracking page has). The amount is what the order still owes (its total,
+ * or the rest after intake captured the card hold);
  * nothing about the amount comes from the browser. Rate-limited per network and per order
  * so the endpoint can't be used to test stolen cards.
  */
@@ -49,7 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const supabase = createAdminClient();
     const { data: order } = await supabase
       .from('orders')
-      .select('id, order_number, total, payment_status, customer_id, square_customer_id, square_card_id')
+      .select('id, order_number, total, amount_due, payment_id, payment_status, customer_id, square_customer_id, square_card_id')
       .eq('id', id)
       .maybeSingle();
     if (!order) {

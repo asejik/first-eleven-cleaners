@@ -17,16 +17,24 @@ describe('Intake quotes for "from" items', () => {
     expect(priceIntakeLine('napkin', 12)).toEqual({ ok: true, unitPrice: 5.99, subtotal: 64.99 });
   });
 
-  it('accepts a higher quote for a "from" item', () => {
-    expect(priceIntakeLine('wedding_dress', 1, 225)).toEqual({
+  it('accepts a higher quote for a "from" item, up to 25% above it', () => {
+    expect(priceIntakeLine('wedding_dress', 1, 180)).toEqual({
       ok: true,
-      unitPrice: 225,
-      subtotal: 225,
-      quote: { listed: 149.99, quoted: 225 },
+      unitPrice: 180,
+      subtotal: 180,
+      quote: { listed: 149.99, quoted: 180 },
     });
-    // Two lined long drapes at $79.50 each
-    const drapes = priceIntakeLine('drapes_long', 2, 79.5);
-    expect(drapes.ok && drapes.subtotal).toBe(159);
+    // Two lined long drapes at $59.50 each ($49.99 x 1.25 = $62.48 at most)
+    const drapes = priceIntakeLine('drapes_long', 2, 59.5);
+    expect(drapes.ok && drapes.subtotal).toBe(119);
+    expect(priceIntakeLine('drapes_long', 1, 62.48).ok).toBe(true);
+    expect(priceIntakeLine('drapes_long', 1, 62.49).ok).toBe(false);
+  });
+
+  it('refuses a quote more than 25% above the from-price (the customer agreed only to that at checkout)', () => {
+    const line = priceIntakeLine('wedding_dress', 1, 225);
+    expect(line.ok).toBe(false);
+    if (!line.ok) expect(line.error).toContain('at most $187.48');
   });
 
   it('treats a quote equal to the starting price as no quote', () => {
@@ -38,7 +46,7 @@ describe('Intake quotes for "from" items', () => {
     ['jacket', 30, /fixed price and can't be quoted/],
     ['not_an_item', 30, /fixed price and can't be quoted/],
     ['evening_gown', 50.555, /dollars and cents/],
-    ['evening_gown', MAX_QUOTED_UNIT_PRICE + 1, /looks too high/],
+    ['evening_gown', MAX_QUOTED_UNIT_PRICE + 1, /more than 25% above/],
   ])('refuses %s quoted at %d', (key, quoted, message) => {
     const line = priceIntakeLine(key, 1, quoted);
     expect(line.ok).toBe(false);
@@ -56,7 +64,7 @@ describe('Intake API and screen use the quote rule', () => {
   it('validates quotes before the card is charged and records them', () => {
     expect(api).toContain('quoted_unit_price: z.number(');
     expect(api).toContain('priceIntakeLine(item.garment_type, qty, item.quoted_unit_price)');
-    expect(api.indexOf('priceIntakeLine(')).toBeLessThan(api.indexOf('chargeCardOnFile('));
+    expect(api.indexOf('priceIntakeLine(')).toBeLessThan(api.indexOf('captureOrderPayment(supabase'));
     expect(api).toContain("action: 'order.intake_price_quote'");
     expect(api).toContain('Quoted at intake: $');
   });

@@ -115,6 +115,19 @@ CREATE TABLE IF NOT EXISTS orders (
   environmental_fee NUMERIC(10, 2), -- charged on this order (PR-15)
   sales_tax NUMERIC(10, 2),
   idempotency_key UUID, -- one per checkout; a resubmit returns the first order (PR-11)
+  -- Card hold for the estimate, captured at intake (20261007_payment_holds.sql)
+  hold_payment_id VARCHAR(255),
+  hold_amount NUMERIC(10, 2),
+  hold_expires_at TIMESTAMPTZ,
+  hold_status VARCHAR(20) NOT NULL DEFAULT 'none' CONSTRAINT orders_hold_status_check
+    CHECK (hold_status IN ('none', 'scheduled', 'held', 'captured', 'released', 'declined', 'expired')),
+  amount_due NUMERIC(10, 2) NOT NULL DEFAULT 0.00, -- still owed after intake (Payment Needed)
+  payment_terms_accepted_at TIMESTAMPTZ, -- checkout payment-terms checkbox
+  payment_terms_version VARCHAR(40),
+  payment_needed_since TIMESTAMPTZ,
+  -- 0 none, 1 reminder sent (24 h), 2 staff call due (48 h), 3 owner decision (7 days)
+  payment_reminder_stage SMALLINT NOT NULL DEFAULT 0 CONSTRAINT orders_payment_reminder_stage_check
+    CHECK (payment_reminder_stage BETWEEN 0 AND 3),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -130,6 +143,21 @@ CREATE TABLE IF NOT EXISTS order_items (
   subtotal NUMERIC(10, 2) NOT NULL,
   notes TEXT
 );
+
+-- 6b. ORDER PAYMENTS: one row per Square payment (hold, top-up, charge, quote).
+-- Server only: RLS on, no policies, no grants (20261007_payment_holds.sql)
+CREATE TABLE IF NOT EXISTS order_payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  square_payment_id VARCHAR(255) UNIQUE,
+  kind VARCHAR(20) NOT NULL CHECK (kind IN ('hold', 'top_up', 'charge', 'quote')),
+  amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+  status VARCHAR(20) NOT NULL CHECK (status IN ('approved', 'completed', 'canceled', 'failed')),
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_order_payments_order ON order_payments(order_id);
 
 -- 7. ORDER EVENTS (Timeline & Notification Audit Trail)
 CREATE TABLE IF NOT EXISTS order_events (
@@ -365,6 +393,7 @@ ALTER TABLE customer_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE garment_photos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
@@ -652,9 +681,16 @@ GRANT EXECUTE ON FUNCTION public.mission_control_summary(DATE) TO service_role;
 GRANT EXECUTE ON FUNCTION public.order_financial_summary(DATE, DATE) TO service_role;
 
 -- Bookings are created in one transaction; a repeated checkout returns the first order
--- (20261005_atomic_booking.sql, PR-10 / PR-11)
+-- (20261005_atomic_booking.sql, PR-10 / PR-11; saves the card hold since 20261007_payment_holds.sql)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key ON orders(idempotency_key)
   WHERE idempotency_key IS NOT NULL;
+
+-- Card holds and Payment Needed lists for the daily job and Mission Control (20261007_payment_holds.sql)
+CREATE INDEX IF NOT EXISTS idx_orders_hold_expires ON orders(hold_expires_at) WHERE hold_status = 'held';
+CREATE INDEX IF NOT EXISTS idx_orders_hold_scheduled ON orders(pickup_date) WHERE hold_status = 'scheduled';
+CREATE INDEX IF NOT EXISTS idx_orders_payment_needed ON orders(payment_needed_since) WHERE payment_status = 'failed';
+REVOKE ALL ON order_payments FROM anon, authenticated;
+GRANT ALL ON order_payments TO service_role;
 
 CREATE OR REPLACE FUNCTION public.create_booking(p JSONB)
 RETURNS JSONB
@@ -710,14 +746,18 @@ BEGIN
     order_number, customer_id, address_id, status, order_type, pickup_date, pickup_window,
     delivery_date, delivery_window, weight_lbs, subtotal, express_tier, promo_code, discount_amount,
     express_surcharge, environmental_fee, sales_tax, total, payment_id, payment_status,
-    square_customer_id, square_card_id, notes, idempotency_key
+    square_customer_id, square_card_id, notes, idempotency_key,
+    hold_payment_id, hold_amount, hold_expires_at, hold_status,
+    payment_terms_accepted_at, payment_terms_version
   )
   SELECT
     r.order_number, r.customer_id, r.address_id, 'booked', r.order_type, r.pickup_date, r.pickup_window,
     r.delivery_date, r.delivery_window, r.weight_lbs, r.subtotal, r.express_tier, r.promo_code,
     coalesce(r.discount_amount, 0), coalesce(r.express_surcharge, 0), r.environmental_fee, r.sales_tax,
     r.total, r.payment_id, coalesce(r.payment_status, 'pending'), r.square_customer_id, r.square_card_id,
-    r.notes, v_key
+    r.notes, v_key,
+    r.hold_payment_id, r.hold_amount, r.hold_expires_at, coalesce(r.hold_status, 'none'),
+    r.payment_terms_accepted_at, r.payment_terms_version
   FROM jsonb_populate_record(NULL::orders, p->'order') r
   RETURNING * INTO v_order;
 

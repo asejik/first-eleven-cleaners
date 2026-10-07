@@ -24,6 +24,7 @@ import {
   ZoneGovernance,
 } from '@/components/mission-control';
 import styles from './page.module.css';
+import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlists';
 
 const STAGES: OrderStatusKey[] = [
   'booked',
@@ -307,6 +308,7 @@ export default function MissionControlPage() {
 
               {activeTab === 'pipeline' && (
                 <div>
+                  <PaymentWatchlists orders={orders} />
                   {/* Pipeline View Mode Selector */}
                   <div
                     style={{

@@ -299,11 +299,11 @@ export function FinancialsLedger() {
                     </td>
                     <td>
                       {tx.payment_status === 'charged' ? (
-                        <Badge variant="delivered">Paid / Settled</Badge>
+                        <Badge variant="delivered">Captured</Badge>
                       ) : tx.payment_status === 'failed' ? (
-                        <Badge variant="error">Failed / Declined</Badge>
+                        <Badge variant="error">Payment Needed</Badge>
                       ) : tx.payment_status === 'authorized' ? (
-                        <Badge variant="warning">In Vault (Auth)</Badge>
+                        <Badge variant="warning">Authorized (hold)</Badge>
                       ) : (
                         <Badge variant="cleaning">{tx.payment_status}</Badge>
                       )}

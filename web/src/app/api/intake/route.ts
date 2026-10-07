@@ -12,7 +12,7 @@ import {
   calculateOrderFinancials,
   getAppBaseUrl,
 } from '@/lib/constants';
-import { getSquareConfig, chargeCardOnFile } from '@/lib/square';
+import { captureOrderPayment } from '@/lib/payment-capture';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import { withStaffPreferences } from '@/lib/care-preferences';
 import type { MessagePayload } from '@/lib/messaging/templates';
@@ -136,6 +136,10 @@ export async function POST(request: Request) {
         payment_id,
         square_customer_id,
         square_card_id,
+        hold_payment_id,
+        hold_amount,
+        hold_status,
+        hold_expires_at,
         notes,
         customer:customers!customer_id(id, full_name, phone, email)
       `)
@@ -148,7 +152,9 @@ export async function POST(request: Request) {
 
     // Business rule: intake runs on a picked-up bag, or re-weighs a weighed order that
     // hasn't been charged yet. Never on paid, cancelled or delivered orders (PR-02).
-    const intakeCheck = checkIntakeAllowed(order.status, order.payment_status);
+    const intakeCheck = checkIntakeAllowed(order.status, order.payment_status, {
+      alreadyCaptured: Boolean(order.payment_id) || order.hold_status === 'captured',
+    });
     if (!intakeCheck.ok) {
       return NextResponse.json({ error: intakeCheck.error }, { status: order.status === 'booked' ? 400 : 409 });
     }
@@ -283,77 +289,31 @@ export async function POST(request: Request) {
       }
     }
 
-    // 5. Automatic Payment Capture on Card on File
-    let paymentStatus = order.payment_status || 'authorized';
+    // 5. Automatic capture of the actual total: from the card hold, or the card on file
+    // (client 2026-10-06, Part A). A decline makes the order Payment Needed.
+    let paymentStatus = order.payment_status || 'pending';
     let paymentId = order.payment_id;
+    let capture: Awaited<ReturnType<typeof captureOrderPayment>> | null = null;
 
-    if (finalTotal > 0 && (paymentStatus === 'authorized' || paymentStatus === 'pending')) {
-      const squareConfig = getSquareConfig();
-      let failureReason = '';
-
-      if (squareConfig.isLive) {
-        // Charge the card saved at booking (SEC-06). Never fall back to a test token.
-        if (order.square_customer_id && order.square_card_id) {
-          const charge = await chargeCardOnFile(squareConfig, {
-            squareCustomerId: order.square_customer_id,
-            cardId: order.square_card_id,
-            amount: finalTotal,
-            orderId: order.id,
-            orderNumber: order.order_number || order.id.slice(0, 8),
-          });
-          if (charge.ok && charge.status === 'COMPLETED') {
-            paymentStatus = 'charged';
-            paymentId = charge.paymentId;
-          } else {
-            failureReason = charge.ok ? `Square payment status ${charge.status}` : charge.error;
-            console.error('Square card-on-file charge declined in intake:', failureReason);
-            reportError('intake/payment-hold', failureReason, { alert: true, details: `Order ${order.order_number || order.id} is on Payment Hold` });
-            paymentStatus = 'failed';
-          }
-        } else {
-          failureReason = 'No card on file for this order';
-          paymentStatus = 'failed';
-        }
-      }
-
-      // In live production or when Square is configured, never simulate a charge
-      if (squareConfig.isLive) {
-        if (paymentStatus === 'charged') {
-          // Log payment charge audit event
-          await supabase.from('order_events').insert({
-            order_id: order.id,
-            status: 'charged',
-            note: `Payment of $${finalTotal.toFixed(2)} captured on card on file via Square. (Transaction ID: ${paymentId})`,
-            triggered_by: 'Square Web Payments (Intake Auto-Charge)',
-          });
-        } else {
-          paymentStatus = 'failed';
-          await supabase.from('order_events').insert({
-            order_id: order.id,
-            status: 'payment_failed',
-            note: `Automatic payment of $${finalTotal.toFixed(2)} failed on card on file (${failureReason}). Order placed on Payment Hold.`,
-            triggered_by: 'Square Web Payments (Intake Auto-Charge)',
-          });
-        }
-      } else if (process.env.NODE_ENV !== 'production') {
-        // Fallback for local development environments only
-        paymentStatus = 'charged';
-        paymentId = paymentId && paymentId.startsWith('sq_txn_') ? paymentId : `sq_txn_${crypto.randomUUID().slice(0, 10)}`;
-        await supabase.from('order_events').insert({
-          order_id: order.id,
-          status: 'charged',
-          note: `[DEV SIMULATION] Payment of $${finalTotal.toFixed(2)} simulated. (Transaction ID: ${paymentId})`,
-          triggered_by: 'Square Web Payments (Intake Dev Simulator)',
-        });
-      }
+    if (finalTotal > 0 && (paymentStatus === 'authorized' || paymentStatus === 'pending' || paymentStatus === 'failed')) {
+      capture = await captureOrderPayment(supabase, order, finalTotal);
+      paymentStatus = capture.paymentStatus;
+      paymentId = capture.paymentId ?? paymentId;
+      await supabase.from('order_events').insert({
+        order_id: order.id,
+        status: capture.paymentStatus === 'charged' ? 'charged' : 'payment_failed',
+        note: capture.note,
+        triggered_by: 'Square Web Payments (Intake Auto-Charge)',
+      });
     }
 
     const isPaymentFailed = paymentStatus === 'failed';
 
     // 6. Update Order Record with weighed & itemized data + payment status
     const intakeAuthor = auth.customer?.full_name ? `Central Intake (${auth.customer.full_name})` : 'Central Intake Station';
+    const amountDue = capture?.amountDue ?? 0;
     const effectiveNotes = isPaymentFailed
-      ? `[PAYMENT HOLD: Card authorization declined for $${finalTotal.toFixed(2)}] ${intake_notes || order.notes || ''}`.trim()
+      ? `[PAYMENT NEEDED: $${amountDue.toFixed(2)} declined] ${intake_notes || order.notes || ''}`.trim()
       : (intake_notes || order.notes);
 
     const { data: updatedRows, error: updateErr } = await supabase
@@ -369,6 +329,12 @@ export async function POST(request: Request) {
         status: 'weighed_itemized',
         payment_status: paymentStatus,
         payment_id: paymentId,
+        amount_due: amountDue,
+        ...(capture?.holdStatus ? { hold_status: capture.holdStatus } : {}),
+        // Payment Needed starts the reminder ladder (24 h reminder, 48 h staff call, 7 days owner)
+        ...(isPaymentFailed
+          ? { payment_needed_since: new Date().toISOString(), payment_reminder_stage: 0 }
+          : { payment_needed_since: null, payment_reminder_stage: 0 }),
         notes: effectiveNotes,
         updated_at: new Date().toISOString(),
       })
@@ -403,7 +369,7 @@ export async function POST(request: Request) {
       order_id: order.id,
       status: 'weighed_itemized',
       note: isPaymentFailed
-        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized ($${subtotal.toFixed(2)}). ORDER ON PAYMENT HOLD: Card declined.`
+        ? `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized ($${subtotal.toFixed(2)}). PAYMENT NEEDED: $${amountDue.toFixed(2)} declined. Cleaning continues; delivery waits until paid.`
         : `Intake Complete: ${weight_lbs} lbs, ${orderItemsToInsert.filter((i) => i.service_type === 'dry_clean').length} dry clean lines itemized. Subtotal: $${subtotal.toFixed(2)}. Ready for master eco-cleaning.`,
       triggered_by: intakeAuthor,
     });
@@ -417,8 +383,9 @@ export async function POST(request: Request) {
       const origin = getAppBaseUrl();
       const primaryPhotoUrl = savedPhotoUrls[0];
 
+      // Payment Needed (Part A): Eleven asks for a new card; cleaning goes on, delivery waits
       const customAlertText = isPaymentFailed
-        ? `⚠️ First Eleven: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but your card was declined. Please pay securely here so we can start cleaning: ${origin}/track/${order.id}`
+        ? `⚠️ Eleven at First Eleven Cleaners: Order #${order.order_number || order.id.slice(0, 8)} is weighed & itemized ($${finalTotal.toFixed(2)}), but your card was declined for $${amountDue.toFixed(2)}. We're cleaning your order now; we'll deliver it as soon as it's paid. Add a new card securely here: ${origin}/track/${order.id}`
         : undefined;
 
       const payload: MessagePayload = {
@@ -440,6 +407,7 @@ export async function POST(request: Request) {
         photoUrl: primaryPhotoUrl,
         trackingUrl: `${origin}/track/${order.id}`,
         customMessage: customAlertText,
+        ...(isPaymentFailed ? { customTitle: '💳 Payment Needed' } : {}),
       };
 
       runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'intake notification');
@@ -455,7 +423,7 @@ export async function POST(request: Request) {
       subtotal,
       total: finalTotal,
       warning: [
-        isPaymentFailed ? `Automatic card authorization failed ($${finalTotal.toFixed(2)}). Order is on Payment Hold.` : null,
+        isPaymentFailed ? `The card was declined for $${amountDue.toFixed(2)}. The order is marked Payment Needed: cleaning can go ahead, delivery waits until it's paid.` : null,
         unsavedPhotoCount > 0 ? `${unsavedPhotoCount} photo(s) could not be saved. Please retake and re-upload them.` : null,
       ].filter(Boolean).join(' ') || undefined,
     });

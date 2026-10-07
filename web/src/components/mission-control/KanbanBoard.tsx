@@ -6,6 +6,7 @@ import { ORDER_STATUS_MAP, type OrderStatusKey } from '@/lib/constants';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/page.module.css';
 import { texasDate } from '@/lib/texas-time';
+import { PaymentStateBadge } from './PaymentWatchlists';
 
 interface KanbanBoardProps {
   stages: OrderStatusKey[];
@@ -213,25 +214,7 @@ export function KanbanBoard({
                           </span>
                         </div>
 
-                        {o.payment_status === 'failed' && (
-                          <div
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: 'rgba(239, 68, 68, 0.15)',
-                              color: '#f87171',
-                              border: '1px solid rgba(239, 68, 68, 0.35)',
-                              borderRadius: '4px',
-                              padding: '3px 7px',
-                              margin: '6px 0',
-                            }}
-                          >
-                            ⚠️ PAYMENT FAILED (HOLD)
-                          </div>
-                        )}
+                        <PaymentStateBadge order={o} />
 
                         {o.payment_status === 'failed' && (onRetryCharge || onMarkPaid) && (
                           <div style={{ display: 'flex', gap: '6px', margin: '0 0 6px' }}>
@@ -241,7 +224,7 @@ export function KanbanBoard({
                                 className={styles.advanceBtn}
                                 onClick={() => onRetryCharge(o.id)}
                                 disabled={isRecoveringPayment}
-                                title="Charge the card on file again for the order total"
+                                title="Charge the card on file again for the amount still owed"
                               >
                                 Retry charge
                               </button>

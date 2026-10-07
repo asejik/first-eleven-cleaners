@@ -230,7 +230,7 @@ export function buildWelcomeEmailHtml({
       <!-- What to Expect -->
       <h3 style="color: #0B1F3A; font-size: 16px; margin: 24px 0 12px;">What sets First Eleven apart:</h3>
       <ul style="color: #475569; font-size: 14px; line-height: 1.8; padding-left: 20px; margin: 0 0 24px;">
-        <li><strong>See It, Then Pay It:</strong> Transparent pricing with itemized photos before your card is charged.</li>
+        <li><strong>See It as You Pay It:</strong> Your card is held when you book and charged only when your order is weighed and itemized; the ticket and photos arrive the moment we charge.</li>
         <li><strong>Garment Passport:</strong> Studio intake photos &amp; condition tracking for every piece.</li>
         <li><strong>48-Hour Turnaround:</strong> Door-to-door morning and evening pickup windows across DFW.</li>
         <li><strong>100% Make It Right Guarantee:</strong> One-tap claims on every receipt — we make it right.</li>

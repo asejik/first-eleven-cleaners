@@ -145,6 +145,13 @@ describe('Square webhook keeps refund state in step with Square (PR-05)', () => 
     await webhook({ type: 'payment.updated', data: { object: { payment: { id: 'PAY_1', status: 'COMPLETED' } } } });
     expect(fixtures.orders?.payment_status).toBe('refunded');
   });
+
+  it('a completed card hold does not mark an order paid while part of it is still owed (client 2026-10-06, Part A)', async () => {
+    fixtures.orders = chargedOrder({ payment_status: 'failed', amount_due: 34.25 });
+    stubSquare({ '/payments/PAY_1': squarePayment(0) });
+    await webhook({ type: 'payment.updated', data: { object: { payment: { id: 'PAY_1', status: 'COMPLETED' } } } });
+    expect(fixtures.orders?.payment_status).toBe('failed');
+  });
 });
 
 describe('Claim refunds go through Square (PR-05)', () => {
