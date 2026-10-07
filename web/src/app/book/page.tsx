@@ -120,6 +120,11 @@ export default function BookingPage() {
             setWashFoldWeight={b.setWashFoldWeight}
             dryCleanQuantities={b.dryCleanQuantities}
             updateDryCleanQty={b.updateDryCleanQty}
+            alterationLines={b.alterationLines}
+            onAddAlteration={b.addAlteration}
+            onUpdateAlteration={b.updateAlteration}
+            onRemoveAlteration={b.removeAlteration}
+            buttonsOnlyMessage={b.buttonsOnlyMessage}
             isValid={b.isStep2Valid}
             onBack={() => b.setStep(1)}
             onContinue={() => b.setStep(3)}
@@ -143,6 +148,7 @@ export default function BookingPage() {
             getEstimatedDeliveryDate={getEstimatedDeliveryDate}
             onToast={b.addToast}
             hasExcludedGarments={b.hasExcludedGarments}
+            hasAlterations={b.hasAlterations}
             isExpressCapacityFull={b.isExpressCapacityFull}
             detectedZone={b.detectedZone}
             isValid={b.isStep3Valid}
@@ -167,6 +173,7 @@ export default function BookingPage() {
             washFoldWeight={b.washFoldWeight}
             calculatedWashFold={b.calculatedWashFold}
             dryCleanQuantities={b.dryCleanQuantities}
+            alterationLines={b.alterationLines}
             expressSurcharge={b.expressSurcharge}
             promoCodeInput={b.promoCodeInput}
             setPromoCodeInput={b.setPromoCodeInput}

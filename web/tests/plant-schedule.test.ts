@@ -57,7 +57,7 @@ describe('Delivery dates count plant days (Mon-Fri)', () => {
 
   it('the booking API and the booking screens use the shared rule', () => {
     expect(read('app/api/bookings/route.ts')).toContain('estimatedDeliveryDate(validated.schedule.pickup_date');
-    expect(read('hooks/useBookingState.ts')).toContain('estimatedDeliveryDate(pickupDateStr, tier)');
+    expect(read('hooks/useBookingState.ts')).toContain('estimatedDeliveryDate(pickupDateStr, tier, { alterations: hasAlterations })');
   });
 });
 

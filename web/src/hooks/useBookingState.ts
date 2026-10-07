@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   catalogSubtotal,
+  catalogLineTotal,
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_PRICE,
   PROMO_CODE_LAUNCH,
@@ -18,6 +19,13 @@ import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hoo
 import { earliestPickupDate, estimatedDeliveryDate, isExpressPickupDay } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
 import { holdAmountFor, shouldPlaceHoldNow } from '@/lib/payment-hold';
+import {
+  newAlterationDraft,
+  draftToLine,
+  checkAlterationLine,
+  buttonsOnlyError,
+  type AlterationDraft,
+} from '@/lib/alterations';
 
 // Helper to format local date to YYYY-MM-DD (avoiding UTC timezone shift)
 export function formatLocalDate(d: Date): string {
@@ -46,9 +54,14 @@ export function getMinPickupDate(tier: 'standard' | 'express_24hr' = 'standard')
 }
 
 // Estimated delivery date: the same plant-day rule the server stores (Mon-Fri plant)
-export function getEstimatedDeliveryDate(pickupDateStr: string, tier: 'standard' | 'express_24hr' = 'standard') {
+export function getEstimatedDeliveryDate(
+  pickupDateStr: string,
+  tier: 'standard' | 'express_24hr' = 'standard',
+  hasAlterations = false
+) {
   if (!pickupDateStr) return '';
-  return formatDisplayDate(estimatedDeliveryDate(pickupDateStr, tier));
+  // An order with alterations returns together on the alteration date (Parts B-D)
+  return formatDisplayDate(estimatedDeliveryDate(pickupDateStr, tier, { alterations: hasAlterations }));
 }
 
 export function useBookingState() {
@@ -90,6 +103,12 @@ export function useBookingState() {
   const [serviceType, setServiceType] = useState<'dry_clean' | 'wash_fold' | 'mixed'>('mixed');
   const [washFoldWeight, setWashFoldWeight] = useState<number>(15);
   const [dryCleanQuantities, setDryCleanQuantities] = useState<Record<string, number>>({});
+  // Alterations: one line per piece with its fit instruction (Parts B-D)
+  const [alterationLines, setAlterationLines] = useState<AlterationDraft[]>([]);
+  const addAlteration = (garmentType: string) => setAlterationLines((prev) => [...prev, newAlterationDraft(garmentType)]);
+  const updateAlteration = (uid: string, patch: Partial<AlterationDraft>) =>
+    setAlterationLines((prev) => prev.map((l) => (l.uid === uid ? { ...l, ...patch } : l)));
+  const removeAlteration = (uid: string) => setAlterationLines((prev) => prev.filter((l) => l.uid !== uid));
 
   // Step 3: Schedule
   const [expressTier, setExpressTier] = useState<'standard' | 'express_24hr'>('standard');
@@ -157,6 +176,7 @@ export function useBookingState() {
           if (d.serviceType) setServiceType(d.serviceType);
           if (d.washFoldWeight) setWashFoldWeight(d.washFoldWeight);
           if (d.dryCleanQuantities) setDryCleanQuantities(d.dryCleanQuantities);
+          if (Array.isArray(d.alterationLines)) setAlterationLines(d.alterationLines);
           if (d.expressTier) setExpressTier(d.expressTier);
           if (d.pickupDate) setPickupDate(d.pickupDate);
           if (d.pickupWindow) setPickupWindow(d.pickupWindow);
@@ -190,6 +210,8 @@ export function useBookingState() {
           serviceType,
           washFoldWeight,
           dryCleanQuantities,
+          // Photos are too large for session storage; the rest of each line is kept
+          alterationLines: alterationLines.map((line) => ({ ...line, photo: undefined })),
           expressTier,
           pickupDate,
           pickupWindow,
@@ -214,6 +236,7 @@ export function useBookingState() {
     serviceType,
     washFoldWeight,
     dryCleanQuantities,
+    alterationLines,
     expressTier,
     pickupDate,
     pickupWindow,
@@ -248,12 +271,25 @@ export function useBookingState() {
       ? catalogSubtotal(dryCleanQuantities)
       : 0;
 
-  const subtotal = calculatedWashFold + calculatedDryClean;
+  const activeAlterations = serviceType !== 'wash_fold' ? alterationLines : [];
+  const hasAlterations = activeAlterations.length > 0;
+  const calculatedAlterations = activeAlterations.reduce((acc, l) => acc + catalogLineTotal(l.garment_type, l.quantity), 0);
+  const subtotal = calculatedWashFold + calculatedDryClean + calculatedAlterations;
+  // Every alteration needs a valid fit instruction; buttons alone can't be booked
+  const alterationsReady = activeAlterations.every((l) => checkAlterationLine(draftToLine(l)).ok);
+  const buttonsOnlyMessage = buttonsOnlyError({
+    itemKeys: [
+      ...(serviceType !== 'wash_fold' ? Object.keys(dryCleanQuantities).filter((k) => (dryCleanQuantities[k] || 0) > 0) : []),
+      ...activeAlterations.map((l) => l.garment_type),
+    ],
+    hasLaundry: serviceType !== 'dry_clean' && washFoldWeight > 0,
+  });
 
   // Excluded Garments & Capacity for 24-Hour Express
   const hasExcludedGarments =
-    serviceType !== 'wash_fold' &&
-    Object.keys(dryCleanQuantities).some((key) => isExpressExcluded(key) && (dryCleanQuantities[key] || 0) > 0);
+    hasAlterations ||
+    (serviceType !== 'wash_fold' &&
+      Object.keys(dryCleanQuantities).some((key) => isExpressExcluded(key) && (dryCleanQuantities[key] || 0) > 0));
 
   // Express pickups run Monday to Thursday (client 2026-10-06)
   const isExpressDay = Boolean(pickupDate) && isExpressPickupDay(pickupDate);
@@ -289,8 +325,11 @@ export function useBookingState() {
   // Step Validations: Step 1 requires full address (including city) AND a valid recognized service zone
   const isStep1Valid = Boolean(fullName && email && phone && street && city && zip && detectedZone !== null);
   const isStep2Valid =
-    (serviceType !== 'dry_clean' && washFoldWeight > 0) ||
-    (serviceType !== 'wash_fold' && Object.values(dryCleanQuantities).some((q) => q > 0));
+    ((serviceType !== 'dry_clean' && washFoldWeight > 0) ||
+      (serviceType !== 'wash_fold' && Object.values(dryCleanQuantities).some((q) => q > 0)) ||
+      hasAlterations) &&
+    alterationsReady &&
+    !buttonsOnlyMessage;
   const isStep3Valid = Boolean(pickupDate && pickupWindow);
 
   // Handle Promo Validation
@@ -349,6 +388,7 @@ export function useBookingState() {
             quantity,
           })),
           estimated_weight_lbs: serviceType !== 'dry_clean' ? washFoldWeight : 0,
+          alteration_items: activeAlterations.map(draftToLine),
         },
         schedule: {
           pickup_date: pickupDate,
@@ -430,6 +470,12 @@ export function useBookingState() {
     setWashFoldWeight,
     dryCleanQuantities,
     updateDryCleanQty,
+    alterationLines: activeAlterations,
+    addAlteration,
+    updateAlteration,
+    removeAlteration,
+    hasAlterations,
+    buttonsOnlyMessage,
     expressTier: effectiveExpressTier,
     handleSelectTier,
     pickupDate,

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, Input, Button } from '@/components/ui';
 import { DRY_CLEAN_PRICES, ROUTES, catalogLineTotal, type ZoneConfig } from '@/lib/constants';
 import { isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
+import { draftToLine, instructionText, type AlterationDraft } from '@/lib/alterations';
 import styles from '@/app/book/page.module.css';
 import type { AppliedPromo } from '@/lib/promo';
 
@@ -25,6 +26,8 @@ interface StepReviewProps {
   washFoldWeight: number;
   calculatedWashFold: number;
   dryCleanQuantities: Record<string, number>;
+  /** Alteration lines with their fit instructions (Parts B-D) */
+  alterationLines?: AlterationDraft[];
   expressMultiplier?: number;
   expressSurcharge: number;
   promoCodeInput: string;
@@ -43,7 +46,7 @@ interface StepReviewProps {
   salesTax?: number;
   finalTotal?: number;
   formatDisplayDate: (dateStr: string) => string;
-  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr') => string;
+  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr', hasAlterations?: boolean) => string;
   detectedZone?: ZoneConfig | null;
   zoneMinimumGap?: number;
   onBack: () => void;
@@ -65,6 +68,7 @@ export function StepReview({
   washFoldWeight,
   calculatedWashFold,
   dryCleanQuantities,
+  alterationLines = [],
   expressSurcharge,
   promoCodeInput,
   setPromoCodeInput,
@@ -104,9 +108,12 @@ export function StepReview({
             <strong>Pickup Date:</strong> {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM'})
           </p>
           <p>
-            <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier)} ({isExpress24 ? 'Morning 7:30 - 10:00 AM' : (pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM')})
+            <strong>Guaranteed Delivery:</strong> {getEstimatedDeliveryDate(pickupDate, expressTier, alterationLines.length > 0)} ({isExpress24 ? 'Morning 7:30 - 10:00 AM' : (pickupWindow === 'morning' ? '7:30 - 10:00 AM' : '5:00 - 8:00 PM')})
           </p>
           {isSaturdayPickup(pickupDate) && <p>{SATURDAY_PICKUP_NOTICE}</p>}
+          {alterationLines.length > 0 && (
+            <p>Alterations take 3–5 business days. Your whole order returns together on {getEstimatedDeliveryDate(pickupDate, expressTier, true)}.</p>
+          )}
           {isExpress24 && (
             <p style={{ color: 'var(--color-gold-text)', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
               ⚡ 24-Hour Guarantee: Delivered by 10:00 AM or your Express surcharge is refunded automatically.
@@ -138,6 +145,19 @@ export function StepReview({
               </span>
               <span>
                 {DRY_CLEAN_PRICES[k]?.fromPrice ? 'from ' : ''}${catalogLineTotal(k, q).toFixed(2)}
+              </span>
+            </div>
+          ))}
+          {alterationLines.map((line) => (
+            <div key={line.uid} className={styles.summaryLine}>
+              <span>
+                {line.quantity}x {DRY_CLEAN_PRICES[line.garment_type]?.label}
+                <span style={{ display: 'block', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
+                  {instructionText(draftToLine(line).instruction)}
+                </span>
+              </span>
+              <span>
+                {DRY_CLEAN_PRICES[line.garment_type]?.fromPrice ? 'from ' : ''}${catalogLineTotal(line.garment_type, line.quantity).toFixed(2)}
               </span>
             </div>
           ))}

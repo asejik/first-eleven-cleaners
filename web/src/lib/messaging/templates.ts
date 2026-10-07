@@ -21,6 +21,8 @@ export interface MessagePayload {
   customMessage?: string;
   /** Title (email subject) for a custom message; defaults to the Express guarantee title */
   customTitle?: string;
+  /** Booked with alterations: the date the whole order returns together (Parts B-D) */
+  returnsTogetherOn?: string;
   smsConsent?: boolean;
   /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
   signupUrl?: string;
@@ -62,11 +64,13 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
     case 'booked': {
       // Client 2026-10-06: the plant runs Mon-Fri, so Saturday pickups say when they come back
       const saturday = data.pickupDate && isSaturdayPickup(data.pickupDate) ? ` ${SATURDAY_PICKUP_NOTICE}` : '';
+      // Orders with alterations come back together on the alteration date (Parts B-D)
+      const together = data.returnsTogetherOn ? ` Your whole order returns together on ${data.returnsTogetherOn}.` : '';
       return {
         stage: 'booked',
         title: '📋 Order Confirmation',
-        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${saturday} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
-        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${saturday ? `\n🚚${saturday}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
+        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${saturday}${together} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
+        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${saturday ? `\n🚚${saturday}` : ''}${together ? `\n🧵${together}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
         mediaUrl: data.photoUrl,
       };
     }

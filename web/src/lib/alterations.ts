@@ -117,3 +117,52 @@ export function buttonsOnlyError({
     ? 'Button replacement needs at least one cleaning item or another alteration in the same order.'
     : null;
 }
+
+/** An alteration line as the booking screen holds it while the customer fills it in. */
+export interface AlterationDraft {
+  uid: string;
+  garment_type: string;
+  quantity: number;
+  type: InstructionType;
+  /** Measurement value as typed */
+  value: string;
+  unit: 'in' | 'cm';
+  /** Amount or description text */
+  text: string;
+  notes: string;
+  /** General repair photo, resized on the phone (data URL) */
+  photo?: string;
+}
+
+export function newAlterationDraft(garmentType: string): AlterationDraft {
+  const item = DRY_CLEAN_PRICES[garmentType];
+  return {
+    uid: `${garmentType}_${Math.random().toString(36).slice(2, 10)}`,
+    garment_type: garmentType,
+    quantity: 1,
+    type: item?.instructions?.[0] || 'description',
+    value: '',
+    unit: 'in',
+    text: '',
+    notes: '',
+  };
+}
+
+/** The line the booking API receives (and checkAlterationLine checks). */
+export function draftToLine(draft: AlterationDraft): AlterationLine & { photo?: string } {
+  const instruction: FitInstruction =
+    draft.type === 'measurement'
+      ? { type: 'measurement', value: Number(draft.value), unit: draft.unit }
+      : draft.type === 'match'
+        ? { type: 'match' }
+        : draft.type === 'pinned'
+          ? { type: 'pinned' }
+          : { type: draft.type, text: draft.text.trim() };
+  return {
+    garment_type: draft.garment_type,
+    quantity: draft.quantity,
+    instruction,
+    ...(draft.notes.trim() ? { notes: draft.notes.trim() } : {}),
+    ...(draft.photo ? { photo: draft.photo } : {}),
+  };
+}

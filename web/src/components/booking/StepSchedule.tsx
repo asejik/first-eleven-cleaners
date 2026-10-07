@@ -30,7 +30,9 @@ interface StepScheduleProps {
   getMinPickupDate: (tier?: 'standard' | 'express_24hr') => string;
   formatDisplayDate: (dateStr: string) => string;
   formatLocalDate: (d: Date) => string;
-  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr') => string;
+  getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr', hasAlterations?: boolean) => string;
+  /** Alterations in the order: 3-5 business days, returns together, no Express (Parts B-D) */
+  hasAlterations?: boolean;
   onToast: (toast: { type: 'warning' | 'info' | 'error' | 'success'; title: string; message: string }) => void;
   hasExcludedGarments?: boolean;
   isExpressCapacityFull?: boolean;
@@ -57,6 +59,7 @@ export function StepSchedule({
   getEstimatedDeliveryDate,
   onToast,
   hasExcludedGarments = false,
+  hasAlterations = false,
   isExpressCapacityFull = false,
   nextAvailableExpressDate = 'the next business day',
   detectedZone,
@@ -136,8 +139,13 @@ export function StepSchedule({
                 {expressTier === 'express_24hr' ? '⚡ 24-Hour Express Guarantee Timeline' : '✨ Match-Ready Guarantee Timeline'}
               </span>
               <strong style={{ fontSize: '14px', color: 'var(--color-navy)', display: 'block', marginTop: '2px' }}>
-                Pickup: {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? 'Morning 7:30–10 AM' : 'Evening 5–8 PM'}) → Delivery: {getEstimatedDeliveryDate(pickupDate, expressTier)} ({expressTier === 'express_24hr' ? 'Morning 7:30–10 AM' : (pickupWindow === 'morning' ? 'Morning' : 'Evening')})
+                Pickup: {formatDisplayDate(pickupDate)} ({pickupWindow === 'morning' ? 'Morning 7:30–10 AM' : 'Evening 5–8 PM'}) → Delivery: {getEstimatedDeliveryDate(pickupDate, expressTier, hasAlterations)} ({expressTier === 'express_24hr' ? 'Morning 7:30–10 AM' : (pickupWindow === 'morning' ? 'Morning' : 'Evening')})
               </strong>
+              {hasAlterations && (
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', display: 'block', marginTop: '2px' }}>
+                  Alterations take 3–5 business days. Your whole order returns together on {getEstimatedDeliveryDate(pickupDate, expressTier, true)}.
+                </span>
+              )}
               {isSaturdayPickup(pickupDate) && (
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', display: 'block', marginTop: '2px' }}>
                   {SATURDAY_PICKUP_NOTICE} Our plant runs Monday to Friday.
@@ -284,7 +292,9 @@ export function StepSchedule({
 
             {hasExcludedGarments && (
               <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: '#92400E', background: '#FEF3C7', borderLeft: '3px solid #D97706', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                Specialty items need our full care timeline — Express isn&apos;t available for this order.
+                {hasAlterations
+                  ? "24-Hour Express and alterations can't share an order. Book the alterations as a separate order to use Express."
+                  : "Specialty items need our full care timeline. Express isn't available for this order."}
               </div>
             )}
 

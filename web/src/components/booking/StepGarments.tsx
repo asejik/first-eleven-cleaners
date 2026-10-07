@@ -8,6 +8,8 @@ import {
   type CatalogCategory,
 } from '@/lib/constants';
 import { SUIT_PRICE } from '@/lib/ai/price-list';
+import type { AlterationDraft } from '@/lib/alterations';
+import { AlterationsSection } from './AlterationsSection';
 import styles from '@/app/book/page.module.css';
 
 interface StepGarmentsProps {
@@ -17,6 +19,12 @@ interface StepGarmentsProps {
   setWashFoldWeight: (val: number) => void;
   dryCleanQuantities: Record<string, number>;
   updateDryCleanQty: (key: string, delta: number) => void;
+  alterationLines: AlterationDraft[];
+  onAddAlteration: (garmentType: string) => void;
+  onUpdateAlteration: (uid: string, patch: Partial<AlterationDraft>) => void;
+  onRemoveAlteration: (uid: string) => void;
+  /** Buttons alone can't be booked */
+  buttonsOnlyMessage?: string | null;
   isValid: boolean;
   onBack: () => void;
   onContinue: () => void;
@@ -29,6 +37,11 @@ export function StepGarments({
   setWashFoldWeight,
   dryCleanQuantities,
   updateDryCleanQty,
+  alterationLines,
+  onAddAlteration,
+  onUpdateAlteration,
+  onRemoveAlteration,
+  buttonsOnlyMessage,
   isValid,
   onBack,
   onContinue,
@@ -199,6 +212,17 @@ export function StepGarments({
             <span className={styles.subtext}>Comforters, linens &amp; drapes</span>
           </div>
           {renderGrid('household')}
+          <AlterationsSection
+            lines={alterationLines}
+            onAdd={onAddAlteration}
+            onUpdate={onUpdateAlteration}
+            onRemove={onRemoveAlteration}
+          />
+          {buttonsOnlyMessage && (
+            <p role="alert" className={styles.minimumAlert} style={{ marginTop: 'var(--space-4)' }}>
+              {buttonsOnlyMessage}
+            </p>
+          )}
         </div>
       )}
 

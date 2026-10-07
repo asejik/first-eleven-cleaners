@@ -31,10 +31,20 @@ const isPlantDay = (date: string) => {
   return dow >= 1 && dow <= 5;
 };
 
-/** The date (YYYY-MM-DD) a pickup on this date is delivered: 2 plant days later, Express 1. */
-export function estimatedDeliveryDate(pickupDate: string, tier: ScheduleTier = 'standard'): string {
+/** Alterations take 3-5 business days; an order with any returns together on the 5th plant day. */
+export const ALTERATION_PLANT_DAYS = 5;
+
+/**
+ * The date (YYYY-MM-DD) a pickup on this date is delivered: 2 plant days later, Express 1,
+ * or 5 when the order has alterations (the whole order returns together).
+ */
+export function estimatedDeliveryDate(
+  pickupDate: string,
+  tier: ScheduleTier = 'standard',
+  { alterations = false }: { alterations?: boolean } = {}
+): string {
   let date = pickupDate;
-  let plantDays = tier === 'express_24hr' ? 1 : 2;
+  let plantDays = alterations ? ALTERATION_PLANT_DAYS : tier === 'express_24hr' ? 1 : 2;
   while (plantDays > 0) {
     date = addDaysToDate(date, 1);
     if (isPlantDay(date)) plantDays -= 1;

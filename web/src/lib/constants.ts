@@ -528,11 +528,15 @@ export interface RecomputedBookingPricing {
   washFoldSubtotal: number;
   itemizedList: Array<{
     garment_type: string;
-    service_type: 'dry_clean' | 'wash_fold';
+    service_type: 'dry_clean' | 'wash_fold' | 'alteration';
     quantity: number;
     unit_price: number;
     subtotal: number;
     notes?: string;
+    /** Alterations: the fit instruction (stored in order_items.details) */
+    details?: Record<string, unknown>;
+    /** "from" items start 'pending': the price is confirmed at intake */
+    quote_status?: 'none' | 'pending';
   }>;
   financials: OrderFinancials;
 }
@@ -543,6 +547,7 @@ export interface RecomputedBookingPricing {
  */
 export function computeBookingFinancials({
   dryCleanItems = [],
+  alterationItems = [],
   weightLbs = 0,
   isExpress = false,
   promoDiscountPercent = 0,
@@ -550,6 +555,8 @@ export function computeBookingFinancials({
   frequency = 'one_time',
 }: {
   dryCleanItems?: BookingItemInput[];
+  /** One line per alteration piece (buttons: one line with a quantity), already validated */
+  alterationItems?: Array<BookingItemInput & { details?: Record<string, unknown>; notes?: string }>;
   weightLbs?: number;
   isExpress?: boolean;
   promoDiscountPercent?: number;
@@ -590,6 +597,23 @@ export function computeBookingFinancials({
         subtotal: lineTotal,
       });
     }
+  }
+
+  for (const line of alterationItems) {
+    const priceMeta = DRY_CLEAN_PRICES[line.garment_type];
+    if (priceMeta?.category !== 'alteration' || line.quantity <= 0) continue;
+    const lineCents = catalogLineCents(priceMeta, line.quantity);
+    dryCleanCents += lineCents;
+    itemizedList.push({
+      garment_type: line.garment_type,
+      service_type: 'alteration',
+      quantity: line.quantity,
+      unit_price: priceMeta.price,
+      subtotal: toDollars(lineCents),
+      notes: line.notes,
+      details: line.details,
+      quote_status: priceMeta.fromPrice ? 'pending' : 'none',
+    });
   }
 
   const dryCleanSubtotal = toDollars(dryCleanCents);
