@@ -582,6 +582,7 @@ export type Database = {
           dispatched_at: string | null;
           dispatched_by: string | null;
           notified_at: string | null;
+          decided_at: string | null;
         };
         Insert: {
           run_date: string;
@@ -590,6 +591,7 @@ export type Database = {
           dispatched_at?: string | null;
           dispatched_by?: string | null;
           notified_at?: string | null;
+          decided_at?: string | null;
         };
         Update: {
           run_date?: string;
@@ -598,6 +600,7 @@ export type Database = {
           dispatched_at?: string | null;
           dispatched_by?: string | null;
           notified_at?: string | null;
+          decided_at?: string | null;
         };
         Relationships: [];
       };
@@ -613,6 +616,8 @@ export type Database = {
           miles: number | null;
           source: string;
           reason: string;
+          sms_consent: boolean;
+          notified_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -626,6 +631,8 @@ export type Database = {
           miles?: number | null;
           source?: string;
           reason?: string;
+          sms_consent?: boolean;
+          notified_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -639,6 +646,8 @@ export type Database = {
           miles?: number | null;
           source?: string;
           reason?: string;
+          sms_consent?: boolean;
+          notified_at?: string | null;
           created_at?: string;
         };
         Relationships: [];

@@ -3,12 +3,13 @@ import { addDaysToDate, texasDate } from '@/lib/texas-time';
 import { HOLD_LEAD_DAYS } from '@/lib/payment-hold';
 import { notifyOrderCustomer } from '@/lib/daily-jobs';
 import { reportError } from '@/lib/error-reporting';
-import { getAppBaseUrl, SUPPORT_PHONE, extendedReachTurnaroundLine, type ExtendedReachConfig } from '@/lib/constants';
+import { getAppBaseUrl, extendedReachTurnaroundLine, type ExtendedReachConfig } from '@/lib/constants';
+import { getZone5Messages } from '@/lib/zone5-message-settings';
+import { fillZone5Template, shortRunDate, windowLabel, templateCity, templateFirstName, type Zone5MessageKey } from '@/lib/zone5-messages';
 import {
   extendedReachRunDates,
   earliestExtendedReachRun,
   nextExtendedReachRun,
-  formatLongDate,
   zoneDeliveryDate,
   dispatchThresholdMessage,
   DEFAULT_COVERAGE,
@@ -20,13 +21,56 @@ import {
  * up on a run come back on the next run, so a run always goes out when deliveries are due.
  * The threshold (Band A 3, Band B 4) gates NEW pickups only: a run accepts pickups once that
  * many are booked OR a delivery is already due that day.
- * - The moment a run goes out (threshold reached), everyone picked up on it is told the date.
- * - Two days before the run (the daily job, before card holds are placed), pickups on a run
- *   with no delivery due and below its threshold move to the next run, and are told.
- * - Mission Control can "dispatch anyway".
+ * Customers get the client's texts (2026-10-08, lib/zone5-messages.ts, edited in Mission Control):
+ * - Booking on a run that isn't confirmed: "on the list".
+ * - The moment a run is filled early (or Mission Control dispatches it anyway): "threshold reached".
+ * - Monday evening, two days before the run (/api/cron/route-check): runs going out get
+ *   "route confirmed"; pickups on a run with no delivery due and below its threshold move to
+ *   the next run and get "route not reached". Card holds wait for that decision.
  */
 type AdminClient = ReturnType<typeof createAdminClient>;
 export type Band = 'A' | 'B';
+
+/** The fields a Zone 5 text needs: the customer, the pickup window and the city. */
+const RUN_ORDER_FIELDS =
+  'id, order_number, pickup_date, pickup_window, extended_reach_band, customer:customers!customer_id(full_name, phone, email), address:addresses(city)';
+
+type One<T> = T | T[] | null | undefined;
+const firstOf = <T,>(value: One<T>): T | null => (Array.isArray(value) ? value[0] : value) ?? null;
+
+export interface RunOrder {
+  id: string;
+  order_number?: string | null;
+  pickup_window?: string | null;
+  customer?: One<{ full_name?: string | null; phone?: string | null; email?: string | null }>;
+  address?: One<{ city?: string | null }>;
+}
+
+const MESSAGE_TITLES: Record<Exclude<Zone5MessageKey, 'waitlistJoined' | 'zone5Open'>, string> = {
+  onTheList: "📋 You're on the list for Extended Reach",
+  routeConfirmed: '🚐 Your Extended Reach pickup is confirmed',
+  routeNotReached: '🗓️ Your Extended Reach pickup moved a week',
+  thresholdReached: '🚐 Your Extended Reach route is confirmed',
+};
+
+/** Sends one of the client's Zone 5 texts (Mission Control's wording) about an order's run. */
+export async function sendRunMessage(
+  order: RunOrder,
+  key: keyof typeof MESSAGE_TITLES,
+  { runDate, nextRun, threshold }: { runDate: string; nextRun: string; threshold: number }
+): Promise<void> {
+  const messages = await getZone5Messages();
+  const text = fillZone5Template(messages[key], {
+    'First name': templateFirstName(firstOf(order.customer)?.full_name),
+    City: templateCity(firstOf(order.address)?.city),
+    date: shortRunDate(runDate),
+    'date+7': shortRunDate(nextRun),
+    window: windowLabel(order.pickup_window),
+    threshold: String(threshold),
+    link: `${getAppBaseUrl()}/book`,
+  });
+  await notifyOrderCustomer(order, MESSAGE_TITLES[key], text, 'booked');
+}
 
 export function bandThreshold(reach: ExtendedReachConfig, band: Band): number {
   return reach.bands.find((b) => b.id === band)?.dispatchThreshold ?? 1;
@@ -63,11 +107,20 @@ export async function isRunDispatched(supabase: AdminClient, runDate: string, ba
 /**
  * Marks a run dispatched when it accepts pickups: its threshold is reached, a delivery is
  * already due that day, or `force` (Mission Control's "dispatch anyway"). Tells the customers
- * picked up on it the date, once. Returns whether it is dispatched.
+ * picked up on it, once, with the client's "threshold reached" text when the threshold is
+ * reached (`announce: false` skips it: the Monday decision sends "route confirmed" instead).
+ * Returns whether it is dispatched.
  */
 export async function dispatchRunIfReady(
   supabase: AdminClient,
-  { runDate, band, reach, force = false, actor = 'Booking threshold' }: { runDate: string; band: Band; reach: ExtendedReachConfig; force?: boolean; actor?: string }
+  {
+    runDate,
+    band,
+    reach,
+    force = false,
+    actor = 'Booking threshold',
+    announce = true,
+  }: { runDate: string; band: Band; reach: ExtendedReachConfig; force?: boolean; actor?: string; announce?: boolean }
 ): Promise<{ dispatched: boolean; booked: number; deliveriesDue: number; threshold: number; notified: number }> {
   const threshold = bandThreshold(reach, band);
   const [booked, deliveriesDue] = await Promise.all([runBookingCount(supabase, runDate, band), runDeliveriesDue(supabase, runDate, band)]);
@@ -86,7 +139,9 @@ export async function dispatchRunIfReady(
       dispatched_by: deliveriesDue > 0 && booked < threshold && !force ? 'Delivery run' : actor,
     });
   }
-  if (cycle?.notified_at) return { dispatched: true, booked, deliveriesDue, threshold, notified: 0 };
+  // "Threshold reached" only when it was: a run going out for a delivery, or dispatched anyway,
+  // is confirmed by the Monday evening "route confirmed" text
+  if (cycle?.notified_at || !announce || booked < threshold) return { dispatched: true, booked, deliveriesDue, threshold, notified: 0 };
 
   // Claim the announcement first, so two bookings landing together don't both send it
   const { data: claimed } = await supabase
@@ -100,7 +155,7 @@ export async function dispatchRunIfReady(
 
   const { data: orders } = await supabase
     .from('orders')
-    .select('id, order_number, customer:customers!customer_id(full_name, phone, email)')
+    .select(RUN_ORDER_FIELDS)
     .eq('pickup_date', runDate)
     .eq('extended_reach_band', band)
     .neq('status', 'cancelled')
@@ -108,12 +163,7 @@ export async function dispatchRunIfReady(
   let notified = 0;
   for (const order of orders || []) {
     try {
-      await notifyOrderCustomer(
-        order,
-        '🚐 Your Extended Reach route is confirmed',
-        `Eleven at First Eleven Cleaners: your Extended Reach route is confirmed. We'll pick up Order #${order.order_number || order.id.slice(0, 8)} on ${formatLongDate(runDate)} and bring it back on ${formatLongDate(nextExtendedReachRun(runDate, reach))}. Track it here: ${getAppBaseUrl()}/track/${order.id}`,
-        'booked'
-      );
+      await sendRunMessage(order, 'thresholdReached', { runDate, nextRun: nextExtendedReachRun(runDate, reach), threshold });
       notified += 1;
     } catch (err) {
       reportError('extended-reach/announce', err, { details: `Run ${runDate} band ${band}: confirmation not sent` });
@@ -128,18 +178,27 @@ export interface RollResult {
 }
 
 /**
- * Daily job: pickups on runs 2 days away (or closer) whose run doesn't accept them yet move to
- * the next run; runs that accept them are announced. Runs before the card holds. Deliveries
- * are never moved: a run with deliveries due always goes out.
+ * The Monday evening decision (client 2026-10-08: "We confirm routes Monday by 6 PM"), for
+ * runs `daysAhead` days away or closer that haven't been decided yet: a run that accepts its
+ * pickups goes out and everyone on it gets "route confirmed"; otherwise its pickups move to
+ * the next run and get "route not reached". Each run is decided once (route_cycles.decided_at).
+ * Deliveries are never moved: a run with deliveries due always goes out.
+ * The evening job (/api/cron/route-check) decides runs 2 days away; the 9 AM job decides runs
+ * 1 day away, only as a safety net if the evening job didn't run.
  */
-export async function rollExtendedReachRuns(supabase: AdminClient, coverage: Coverage = DEFAULT_COVERAGE, now: Date = new Date()): Promise<RollResult> {
+export async function rollExtendedReachRuns(
+  supabase: AdminClient,
+  coverage: Coverage = DEFAULT_COVERAGE,
+  now: Date = new Date(),
+  { daysAhead = HOLD_LEAD_DAYS }: { daysAhead?: number } = {}
+): Promise<RollResult> {
   const result: RollResult = { dispatched: 0, rolled: 0 };
   const reach = coverage.extendedReach;
-  const decisionDate = addDaysToDate(texasDate(now), HOLD_LEAD_DAYS);
+  const decisionDate = addDaysToDate(texasDate(now), daysAhead);
 
   const { data: orders } = await supabase
     .from('orders')
-    .select('id, order_number, pickup_date, pickup_window, extended_reach_band, customer:customers!customer_id(full_name, phone, email)')
+    .select(RUN_ORDER_FIELDS)
     .not('extended_reach_band', 'is', null)
     .eq('status', 'booked')
     .lte('pickup_date', decisionDate)
@@ -155,16 +214,36 @@ export async function rollExtendedReachRuns(supabase: AdminClient, coverage: Cov
   for (const [key, runOrders] of runs) {
     const [runDate, band] = key.split('|') as [string, Band];
     if (band !== 'A' && band !== 'B') continue;
-    const outcome = await dispatchRunIfReady(supabase, { runDate, band, reach, actor: 'Daily route check' });
+
+    // Decide each run once, even if both jobs (or two servers) get to it
+    await supabase.from('route_cycles').upsert({ run_date: runDate, band }, { onConflict: 'run_date,band', ignoreDuplicates: true });
+    const { data: claimed } = await supabase
+      .from('route_cycles')
+      .update({ decided_at: new Date().toISOString() })
+      .eq('run_date', runDate)
+      .eq('band', band)
+      .is('decided_at', null)
+      .select('run_date');
+    if (!claimed || claimed.length === 0) continue;
+
+    // Going out: "route confirmed" (not "threshold reached") to everyone on it
+    const outcome = await dispatchRunIfReady(supabase, { runDate, band, reach, actor: 'Monday route check', announce: false });
+    const threshold = bandThreshold(reach, band);
     if (outcome.dispatched) {
       result.dispatched += 1;
+      const returnRun = nextExtendedReachRun(runDate, reach);
+      for (const order of runOrders) {
+        try {
+          await sendRunMessage(order, 'routeConfirmed', { runDate, nextRun: returnRun, threshold });
+        } catch (err) {
+          reportError('extended-reach/confirm', err, { details: `Run ${runDate} band ${band}: "route confirmed" not sent` });
+        }
+      }
       continue;
     }
 
     const nextRun = extendedReachRunDates(addDaysToDate(runDate, 1), 1, reach)[0] ?? nextExtendedReachRun(runDate, reach);
-    const threshold = bandThreshold(reach, band);
     for (const order of runOrders) {
-      const orderRef = order.order_number || order.id.slice(0, 8);
       const { data: moved } = await supabase
         .from('orders')
         .update({
@@ -182,14 +261,13 @@ export async function rollExtendedReachRuns(supabase: AdminClient, coverage: Cov
         order_id: order.id,
         status: 'booked',
         note: `Extended Reach run on ${runDate} had ${outcome.booked} of ${threshold} pickups and no delivery due: pickup moved to the next run on ${nextRun}.`,
-        triggered_by: 'Daily Route Check',
+        triggered_by: 'Monday Route Check',
       });
-      await notifyOrderCustomer(
-        order,
-        '🗓️ Your pickup moved to the next route',
-        `Eleven at First Eleven Cleaners: your Extended Reach route on ${formatLongDate(runDate)} didn't reach ${threshold} neighbors, so we've moved your pickup (Order #${orderRef}) to the next route on ${formatLongDate(nextRun)}. ${dispatchThresholdMessage(outcome.booked, threshold)} Nothing is charged until we pick up. Questions? Call ${SUPPORT_PHONE}.`,
-        'booked'
-      );
+      try {
+        await sendRunMessage(order, 'routeNotReached', { runDate, nextRun, threshold });
+      } catch (err) {
+        reportError('extended-reach/roll', err, { details: `Run ${runDate} band ${band}: "route not reached" not sent` });
+      }
     }
   }
   return result;
@@ -218,6 +296,19 @@ export async function bookableRuns(
       return { date, booked, threshold, deliveriesDue, dispatched: dispatched || deliveriesDue > 0 || booked >= threshold };
     })
   );
+}
+
+/**
+ * A Zone 5 booking on a run that isn't confirmed yet: the client's "you're on the list" text.
+ * Called after `dispatchRunIfReady` (so a booking that fills the run gets "threshold reached").
+ */
+export async function sendOnTheList(
+  supabase: AdminClient,
+  { orderId, runDate, band, reach }: { orderId: string; runDate: string; band: Band; reach: ExtendedReachConfig }
+): Promise<void> {
+  const { data: order } = await supabase.from('orders').select(RUN_ORDER_FIELDS).eq('id', orderId).maybeSingle();
+  if (!order) return;
+  await sendRunMessage(order, 'onTheList', { runDate, nextRun: nextExtendedReachRun(runDate, reach), threshold: bandThreshold(reach, band) });
 }
 
 /** The confirmation's run line: confirmed, or where the threshold stands (this booking included). */

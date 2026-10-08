@@ -36,6 +36,7 @@ vi.mock('@/lib/supabase/admin', () => ({
         },
         eq: (c: string, v: unknown) => ((filters[c] = v), b),
         neq: () => b,
+        in: () => b,
         lt: () => b,
         lte: () => b,
         not: () => b,
@@ -58,6 +59,7 @@ vi.mock('@/lib/error-reporting', () => ({ reportError: (...a: unknown[]) => repo
 import { createAdminClient } from '@/lib/supabase/admin';
 import { placeScheduledHolds, markExpiredHolds, runPaymentNeededLadder } from '@/lib/daily-jobs';
 import { GET as cronGET } from '@/app/api/cron/daily/route';
+import { GET as routeCheckGET } from '@/app/api/cron/route-check/route';
 import { POST as holdCardPOST } from '@/app/api/orders/[id]/hold-card/route';
 
 const supabase = () => createAdminClient() as unknown as Parameters<typeof placeScheduledHolds>[0];
@@ -124,6 +126,17 @@ describe('Holds placed 2 days before pickup', () => {
       expect.objectContaining({ customTitle: '💳 New card needed before pickup', customMessage: expect.stringContaining(`/track/${ORDER_ID}`) })
     );
     expect(reportError).toHaveBeenCalledWith('daily-job/hold-declined', 'Card declined.', expect.objectContaining({ alert: true }));
+  });
+
+  // Client 2026-10-08: "No charge until we confirm"
+  it('a Zone 5 pickup gets its hold only once its run is confirmed', async () => {
+    const zone5 = { ...scheduled, extended_reach_band: 'A', pickup_date: '2026-10-21' };
+    selectRows.orders = [zone5];
+    stubSquare({ '/payments': { status: 200, body: { payment: { id: 'HOLD_5', status: 'APPROVED', delayed_until: '2026-10-28T14:00:00Z' } } } });
+    expect(await placeScheduledHolds(supabase())).toEqual({ placed: 0, declined: 0 });
+    expect(squareCalls).toEqual([]);
+    selectRows.route_cycles = [{ run_date: '2026-10-21', band: 'A' }];
+    expect(await placeScheduledHolds(supabase())).toEqual({ placed: 1, declined: 0 });
   });
 
   it('does nothing without Square configured', async () => {
@@ -208,7 +221,21 @@ describe('Daily job route', () => {
 
   it('is scheduled daily in vercel.json', () => {
     const vercel = JSON.parse(readFileSync(join(__dirname, '..', 'vercel.json'), 'utf8'));
-    expect(vercel.crons).toEqual([{ path: '/api/cron/daily', schedule: '0 14 * * *' }]);
+    expect(vercel.crons).toEqual([
+      { path: '/api/cron/daily', schedule: '0 14 * * *' },
+      // Client 2026-10-08: Zone 5 routes are confirmed Monday by 6 PM (5 PM Dallas in summer, 4 PM in winter)
+      { path: '/api/cron/route-check', schedule: '0 22 * * *' },
+    ]);
+  });
+
+  it('the evening route check needs the secret too', async () => {
+    process.env.CRON_SECRET = 'a-very-long-random-cron-secret-1234';
+    const check = (auth?: string) => routeCheckGET(new Request('http://localhost/api/cron/route-check', { headers: auth ? { authorization: auth } : {} }));
+    expect((await check('Bearer wrong')).status).toBe(401);
+    stubSquare({});
+    const res = await check('Bearer a-very-long-random-cron-secret-1234');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, routes: { dispatched: 0, rolled: 0 } });
   });
 });
 

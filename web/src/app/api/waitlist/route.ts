@@ -6,11 +6,15 @@ import { personNameSchema } from '@/lib/sanitize';
 import { getCoverage } from '@/lib/coverage-settings';
 import { resolveAddressCoverage } from '@/lib/distance';
 import { apiError } from '@/lib/api-errors';
+import { toE164 } from '@/lib/phone';
+import { runAfterResponse } from '@/lib/after-response';
+import { sendWaitlistJoined } from '@/lib/zone5-waitlist';
 
 /**
  * "Not in your area yet" (client 2026-10-07, 8C): addresses beyond the last Extended Reach
  * band join the waitlist instead of booking. The server re-checks the address, so only
- * addresses we can't serve are added. Mission Control lists them.
+ * addresses we can't serve are added. Mission Control lists them. They get the client's
+ * waitlist text (2026-10-08): by text when they ticked "text me", otherwise by email.
  */
 const WaitlistSchema = z
   .object({
@@ -21,6 +25,7 @@ const WaitlistSchema = z
     city: z.string().max(100).optional(),
     zip: z.string().min(5).max(10),
     source: z.enum(['booking', 'pricing']).default('booking'),
+    sms_consent: z.boolean().optional(),
   })
   .refine((v) => Boolean(v.email || v.phone), { message: 'Please leave an email or phone number so we can tell you when we arrive.' });
 
@@ -40,10 +45,12 @@ export async function POST(request: Request) {
     }
 
     if (isSupabaseConfigured()) {
-      const { error } = await createAdminClient().from('waitlist').insert({
+      const row = {
         full_name: entry.full_name || null,
         email: entry.email ? entry.email.trim().toLowerCase() : null,
-        phone: entry.phone || null,
+        // E.164, so a STOP reply from this number finds the row
+        phone: toE164(entry.phone) || entry.phone || null,
+        sms_consent: Boolean(entry.sms_consent && entry.phone),
         street: entry.street || null,
         city: entry.city || null,
         zip: entry.zip.trim(),
@@ -51,8 +58,13 @@ export async function POST(request: Request) {
         // Zone 5 before its first run: tell these people when Extended Reach starts
         reason: resolution.status === 'waitlist' ? resolution.reason : 'beyond',
         source: entry.source,
-      });
+      };
+      const { error } = await createAdminClient().from('waitlist').insert(row);
       if (error) throw error;
+      runAfterResponse(async () => {
+        const sent = await sendWaitlistJoined(row);
+        if (!sent.ok) console.warn(`[waitlist] Welcome message not sent (${sent.channel}): ${sent.error}`);
+      }, 'waitlist message');
     }
     return NextResponse.json({
       success: true,
