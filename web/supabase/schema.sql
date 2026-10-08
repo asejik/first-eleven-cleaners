@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS customers (
   sms_promotions_consent BOOLEAN NOT NULL DEFAULT false,
   sms_consent_at TIMESTAMPTZ,
   square_customer_id VARCHAR(255), -- Square customer holding saved cards (SEC-06)
+  phone_verified_at TIMESTAMPTZ, -- the owner proved the phone with a texted code (20261008_routine_and_passwordless)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -136,6 +137,7 @@ CREATE TABLE IF NOT EXISTS orders (
   extended_reach_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.00, -- Zone 5 delivery fee, after the Routine discount
   frequency VARCHAR(10) NOT NULL DEFAULT 'one_time' CONSTRAINT orders_frequency_check
     CHECK (frequency IN ('one_time', 'weekly', 'biweekly')), -- recurring plan (Routine)
+  routine_membership_id UUID, -- made by a Routine membership (FK added after routine_memberships)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -403,6 +405,26 @@ CREATE TRIGGER on_auth_user_email_confirmed
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Text-code sign-in only goes to a phone its owner proved: a new phone is unproven
+CREATE OR REPLACE FUNCTION public.clear_phone_verification()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $function$
+BEGIN
+  -- A new phone is unproven, unless this same update is the verification
+  IF NEW.phone IS DISTINCT FROM OLD.phone AND NEW.phone_verified_at IS NOT DISTINCT FROM OLD.phone_verified_at THEN
+    NEW.phone_verified_at := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS customers_clear_phone_verification ON customers;
+CREATE TRIGGER customers_clear_phone_verification
+  BEFORE UPDATE OF phone ON customers
+  FOR EACH ROW EXECUTE FUNCTION public.clear_phone_verification();
 
 REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.link_customer_on_email_confirm() FROM PUBLIC, anon, authenticated;
@@ -763,6 +785,63 @@ ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON waitlist FROM anon, authenticated;
 GRANT ALL ON waitlist TO service_role;
 
+-- Passwordless sign-in codes (hashed, 10 minutes, 5 tries), server only (20261008_routine_and_passwordless)
+CREATE TABLE IF NOT EXISTS sign_in_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  purpose VARCHAR(20) NOT NULL CHECK (purpose IN ('sign_in', 'verify_phone')),
+  code_hash VARCHAR(64) NOT NULL,
+  phone VARCHAR(30) NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_sign_in_codes_customer ON sign_in_codes(customer_id, created_at DESC);
+ALTER TABLE sign_in_codes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON sign_in_codes FROM anon, authenticated;
+GRANT ALL ON sign_in_codes TO service_role;
+
+-- Routine memberships: the standing subscription (client 2026-10-08)
+CREATE TABLE IF NOT EXISTS routine_memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'cancelled')),
+  cadence VARCHAR(10) NOT NULL CHECK (cadence IN ('weekly', 'biweekly')),
+  pickup_day VARCHAR(10) NOT NULL CHECK (pickup_day IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')),
+  pickup_window VARCHAR(20) NOT NULL,
+  address_id UUID REFERENCES addresses(id) ON DELETE SET NULL,
+  next_pickup_date DATE,
+  paused_until DATE,
+  consecutive_skips INT NOT NULL DEFAULT 0,
+  -- What each automatic pickup is estimated at (the services booked when joining)
+  template JSONB NOT NULL DEFAULT '{}'::jsonb,
+  square_customer_id VARCHAR(255),
+  square_card_id VARCHAR(255),
+  terms_version VARCHAR(20) NOT NULL,
+  terms_accepted_at TIMESTAMPTZ NOT NULL,
+  enrolled_order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+  cancelled_at TIMESTAMPTZ,
+  cancel_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_routine_one_open_per_customer
+  ON routine_memberships(customer_id) WHERE status <> 'cancelled';
+CREATE INDEX IF NOT EXISTS idx_routine_next_pickup ON routine_memberships(next_pickup_date) WHERE status = 'active';
+ALTER TABLE routine_memberships ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON routine_memberships FROM anon, authenticated;
+GRANT SELECT ON routine_memberships TO authenticated;
+GRANT ALL ON routine_memberships TO service_role;
+DROP POLICY IF EXISTS routine_memberships_customer_read ON routine_memberships;
+CREATE POLICY routine_memberships_customer_read ON routine_memberships
+  FOR SELECT USING (customer_id IN (SELECT id FROM customers WHERE auth_id = auth.uid()));
+
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_routine_membership_id_fkey;
+ALTER TABLE orders ADD CONSTRAINT orders_routine_membership_id_fkey
+  FOREIGN KEY (routine_membership_id) REFERENCES routine_memberships(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_routine ON orders(routine_membership_id, pickup_date) WHERE routine_membership_id IS NOT NULL;
+
 -- Zone 5 runs per band: dispatched (threshold met or "dispatch anyway") and announced
 CREATE TABLE IF NOT EXISTS route_cycles (
   run_date DATE NOT NULL,
@@ -853,7 +932,8 @@ BEGIN
     square_customer_id, square_card_id, notes, idempotency_key,
     hold_payment_id, hold_amount, hold_expires_at, hold_status,
     payment_terms_accepted_at, payment_terms_version,
-    zone_id, distance_miles, extended_reach_band, extended_reach_fee, frequency
+    zone_id, distance_miles, extended_reach_band, extended_reach_fee, frequency,
+    routine_membership_id
   )
   SELECT
     r.order_number, r.customer_id, r.address_id, 'booked', r.order_type, r.pickup_date, r.pickup_window,
@@ -864,7 +944,8 @@ BEGIN
     r.hold_payment_id, r.hold_amount, r.hold_expires_at, coalesce(r.hold_status, 'none'),
     r.payment_terms_accepted_at, r.payment_terms_version,
     r.zone_id, r.distance_miles, r.extended_reach_band, coalesce(r.extended_reach_fee, 0),
-    coalesce(r.frequency, 'one_time')
+    coalesce(r.frequency, 'one_time'),
+    r.routine_membership_id
   FROM jsonb_populate_record(NULL::orders, p->'order') r
   RETURNING * INTO v_order;
 

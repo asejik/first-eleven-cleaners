@@ -394,3 +394,33 @@ export function buildNoticeEmailHtml({ title, messageBody }: { title: string; me
 </html>
   `;
 }
+
+/**
+ * Passwordless sign-in link (client 2026-10-08). The link is the site's own /auth/confirm.
+ */
+export function buildSignInEmailHtml({ name, link }: { name: string; link: string }): string {
+  const firstName = greetingFirstName(name, 'there');
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Your First Eleven sign-in link</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <div style="background-color: #0B1F3A; padding: 24px 28px; text-align: center; border-bottom: 3px solid #C9A14A;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px;">FIRST ELEVEN CLEANERS</h1>
+    </div>
+    <div style="padding: 32px 28px;">
+      <p style="margin: 0 0 16px; color: #1e293b; font-size: 15px; line-height: 1.6;">Hi ${escapeHtml(firstName)}, tap the button to sign in. No password needed.</p>
+      <p style="margin: 24px 0; text-align: center;">
+        <a href="${escapeHtml(link)}" style="background-color: #0B1F3A; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Sign in to First Eleven</a>
+      </p>
+      <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.6;">The link works once, for 1 hour. If you didn't ask to sign in, you can ignore this email.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
