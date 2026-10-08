@@ -269,6 +269,7 @@ export type Database = {
           sms_promotions_consent: boolean;
           sms_consent_at: string | null;
           square_customer_id: string | null;
+          phone_verified_at: string | null;
         };
         Insert: {
           id?: string;
@@ -283,6 +284,7 @@ export type Database = {
           sms_promotions_consent?: boolean;
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
+          phone_verified_at?: string | null;
         };
         Update: {
           id?: string;
@@ -297,6 +299,7 @@ export type Database = {
           sms_promotions_consent?: boolean;
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
+          phone_verified_at?: string | null;
         };
         Relationships: [];
       };
@@ -604,6 +607,141 @@ export type Database = {
         };
         Relationships: [];
       };
+      routine_memberships: {
+        Row: {
+          id: string;
+          customer_id: string;
+          status: string;
+          cadence: string;
+          pickup_day: string;
+          pickup_window: string;
+          address_id: string | null;
+          next_pickup_date: string | null;
+          paused_until: string | null;
+          consecutive_skips: number;
+          template: Json;
+          square_customer_id: string | null;
+          square_card_id: string | null;
+          terms_version: string;
+          terms_accepted_at: string;
+          enrolled_order_id: string | null;
+          cancelled_at: string | null;
+          cancel_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          status?: string;
+          cadence: string;
+          pickup_day: string;
+          pickup_window: string;
+          address_id?: string | null;
+          next_pickup_date?: string | null;
+          paused_until?: string | null;
+          consecutive_skips?: number;
+          template?: Json;
+          square_customer_id?: string | null;
+          square_card_id?: string | null;
+          terms_version: string;
+          terms_accepted_at: string;
+          enrolled_order_id?: string | null;
+          cancelled_at?: string | null;
+          cancel_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          status?: string;
+          cadence?: string;
+          pickup_day?: string;
+          pickup_window?: string;
+          address_id?: string | null;
+          next_pickup_date?: string | null;
+          paused_until?: string | null;
+          consecutive_skips?: number;
+          template?: Json;
+          square_customer_id?: string | null;
+          square_card_id?: string | null;
+          terms_version?: string;
+          terms_accepted_at?: string;
+          enrolled_order_id?: string | null;
+          cancelled_at?: string | null;
+          cancel_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'routine_memberships_customer_id_fkey';
+            columns: ['customer_id'];
+            isOneToOne: false;
+            referencedRelation: 'customers';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'routine_memberships_address_id_fkey';
+            columns: ['address_id'];
+            isOneToOne: false;
+            referencedRelation: 'addresses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'routine_memberships_enrolled_order_id_fkey';
+            columns: ['enrolled_order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      sign_in_codes: {
+        Row: {
+          id: string;
+          customer_id: string;
+          purpose: string;
+          code_hash: string;
+          phone: string;
+          attempts: number;
+          expires_at: string;
+          used_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          purpose: string;
+          code_hash: string;
+          phone: string;
+          attempts?: number;
+          expires_at: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          purpose?: string;
+          code_hash?: string;
+          phone?: string;
+          attempts?: number;
+          expires_at?: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'sign_in_codes_customer_id_fkey';
+            columns: ['customer_id'];
+            isOneToOne: false;
+            referencedRelation: 'customers';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       waitlist: {
         Row: {
           id: string;
@@ -771,6 +909,7 @@ export type Database = {
           extended_reach_band: string | null;
           extended_reach_fee: number;
           frequency: string;
+          routine_membership_id: string | null;
         };
         Insert: {
           id?: string;
@@ -819,6 +958,7 @@ export type Database = {
           extended_reach_band?: string | null;
           extended_reach_fee?: number;
           frequency?: string;
+          routine_membership_id?: string | null;
         };
         Update: {
           id?: string;
@@ -867,6 +1007,7 @@ export type Database = {
           extended_reach_band?: string | null;
           extended_reach_fee?: number;
           frequency?: string;
+          routine_membership_id?: string | null;
         };
         Relationships: [
           {
@@ -888,6 +1029,13 @@ export type Database = {
             columns: ['customer_id'];
             isOneToOne: false;
             referencedRelation: 'customers';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'orders_routine_membership_id_fkey';
+            columns: ['routine_membership_id'];
+            isOneToOne: false;
+            referencedRelation: 'routine_memberships';
             referencedColumns: ['id'];
           },
         ];
