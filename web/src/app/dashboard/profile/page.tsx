@@ -13,6 +13,7 @@ import { useUIStore } from '@/stores/ui-store';
 import { Button, Card, Badge, Input, Modal, ButtonLink } from '@/components/ui';
 import { ROUTES, SUPPORT_EMAIL } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
+import { TextSignInCard } from './TextSignInCard';
 import styles from './page.module.css';
 
 interface ProfileEditorFormProps {
@@ -514,6 +515,9 @@ export default function ProfilePage() {
               email={user?.email || ''}
               userId={user?.id || ''}
             />
+
+            {/* Text-code sign-in (client 2026-10-08) */}
+            <TextSignInCard />
 
             {/* Saved Addresses Card */}
             <Card variant="bordered" padding="lg" className={styles.card}>

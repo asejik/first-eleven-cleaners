@@ -27,7 +27,8 @@ function twilioConfig() {
   return valid ? { accountSid: accountSid!, authToken: authToken!, from, messagingServiceSid } : null;
 }
 
-async function sendSms(to: string, body: string): Promise<ContactResult> {
+/** One text to an E.164 number through the site's Twilio account (also the sign-in codes). */
+export async function sendSms(to: string, body: string): Promise<ContactResult> {
   const twilio = twilioConfig();
   if (!twilio) return { channel: 'sms', ok: false, error: 'Twilio is not configured' };
   const params = new URLSearchParams({ To: to, Body: body });

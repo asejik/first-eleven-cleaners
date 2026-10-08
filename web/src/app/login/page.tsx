@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
+import { PasswordlessSignIn } from './PasswordlessSignIn';
 import styles from './page.module.css';
 
 // Shown when /auth/confirm sends the user back after an invalid or expired email link (SEC-28)
@@ -118,6 +119,8 @@ export default function LoginPage() {
             Log In
           </Button>
         </form>
+
+        <PasswordlessSignIn />
 
         <div className={styles.footer}>
           <p>
