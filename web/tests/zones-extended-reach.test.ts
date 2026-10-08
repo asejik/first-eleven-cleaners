@@ -382,7 +382,7 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
         gte: () => b,
         order: () => b,
         limit: () => b,
-        maybeSingle: async () => ({ data: table === 'route_cycles' ? cycle : null, error: null }),
+        maybeSingle: async () => ({ data: table === 'route_cycles' ? cycle : table === 'orders' ? (pickupsOnRun[0] ?? null) : null, error: null }),
         then: (resolve: (r: unknown) => unknown) => {
           const r = head
             ? { count: 'delivery_date' in filters ? deliveriesDue : pickups, data: null }
@@ -400,6 +400,7 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
   const order = (id: string) => ({
     id, order_number: `F11-${id}`, pickup_date: '2026-10-28', pickup_window: 'morning', extended_reach_band: 'A',
     customer: { full_name: 'Ada', phone: '+12145550100', email: 'a@example.com' },
+    address: { city: 'Sherman' },
   });
   const decideOn = () => rollExtendedReachRuns(fake as never, LIVE, new Date('2026-10-26T14:00:00Z')); // Monday before the run
 
@@ -416,7 +417,24 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
     deliveriesDue = 1;
     expect(await decideOn()).toEqual({ dispatched: 1, rolled: 0 });
     expect(writes).toContainEqual(expect.objectContaining({ table: 'route_cycles', op: 'upsert', values: expect.objectContaining({ status: 'dispatched', dispatched_by: 'Delivery run' }) }));
-    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ customMessage: expect.stringContaining('bring it back on Wednesday, November 4') }));
+    // The client's "threshold reached" text (2026-10-08)
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customMessage: 'First Eleven Cleaners: Sherman just hit 3 pickups. Your Wed Oct 28 pickup is confirmed, 7:30 to 10:00 AM. Bag at the door and we handle the rest.',
+      })
+    );
+  });
+
+  it('a booking that leaves the run short gets the "on the list" text with its band\'s threshold', async () => {
+    const { sendOnTheList } = await import('@/lib/extended-reach');
+    pickupsOnRun = [{ ...order('9'), extended_reach_band: 'B' }];
+    await sendOnTheList(fake as never, { orderId: '9', runDate: '2026-10-28', band: 'B', reach: LIVE.extendedReach });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customMessage:
+          "First Eleven Cleaners: You're on the list for Wednesday pickup in Sherman. We confirm routes Monday by 6 PM once your area reaches 4 pickups. No charge until we confirm. Reply STOP to opt out.",
+      })
+    );
   });
 
   it('no delivery due and below the threshold: the pickups move to next Wednesday and are told', async () => {

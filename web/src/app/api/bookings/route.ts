@@ -39,7 +39,7 @@ import {
   dispatchThresholdMessage,
   extendedReachStartLine,
 } from '@/lib/coverage';
-import { runBookingCount, runDeliveriesDue, isRunDispatched, dispatchRunIfReady, bandThreshold, runStatusLine } from '@/lib/extended-reach';
+import { runBookingCount, runDeliveriesDue, isRunDispatched, dispatchRunIfReady, sendOnTheList, bandThreshold, runStatusLine } from '@/lib/extended-reach';
 import { extendedReachTurnaroundLine } from '@/lib/constants';
 import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
@@ -749,8 +749,10 @@ export async function POST(request: Request) {
 
             // Zone 5: where this run stands now (this booking included). It's confirmed when the
             // threshold is met or a delivery is already due that day; reaching it tells
-            // everyone picked up on the run the date (client, revised)
+            // everyone picked up on the run (client, revised). Otherwise this customer gets the
+            // client's "you're on the list" text after the confirmation (2026-10-08)
             let routeThreshold: { booked: number; threshold: number; deliveriesDue: number; dispatched: boolean } | undefined;
+            let zone5Followup: () => Promise<void> = async () => {};
             if (band) {
               const [booked, deliveriesDue, dispatched] = await Promise.all([
                 runBookingCount(supabase, validated.schedule.pickup_date, band.id),
@@ -758,18 +760,19 @@ export async function POST(request: Request) {
                 isRunDispatched(supabase, validated.schedule.pickup_date, band.id),
               ]);
               routeThreshold = { booked, threshold: bandThreshold(coverage.extendedReach, band.id), deliveriesDue, dispatched };
-              runAfterResponse(
-                () => dispatchRunIfReady(supabase, { runDate: validated.schedule.pickup_date, band: band.id, reach: coverage.extendedReach }),
-                'Zone 5 route threshold'
-              );
+              const run = { runDate: validated.schedule.pickup_date, band: band.id, reach: coverage.extendedReach };
+              zone5Followup = async () => {
+                const outcome = await dispatchRunIfReady(supabase, run);
+                if (!outcome.dispatched) await sendOnTheList(supabase, { ...run, orderId: insertedOrder.id });
+              };
             }
 
             // 7. Dispatch stage notification for 'booked' (sends SMS/WhatsApp and/or Resend email)
             // Sent after the response, kept alive until it finishes (PR-17)
             const origin = getAppBaseUrl();
-            runAfterResponse(
-              () =>
-                messagingService.dispatchStageNotification({
+            runAfterResponse(async () => {
+              try {
+                await messagingService.dispatchStageNotification({
                   orderId: insertedOrder.id,
                   orderNumber: orderNumber,
                   customerName: validated.customer.full_name,
@@ -788,9 +791,12 @@ export async function POST(request: Request) {
                   signupUrl: isGuest ? `${origin}${ROUTES.signup}?email=${encodeURIComponent(validated.customer.email)}` : undefined,
                   ...(hasAlterations ? { returnsTogetherOn: deliveryDateStr } : { deliveredOn: formatLongDate(deliveryDateStr) }),
                   ...(routeThreshold ? { routeThresholdLine: runStatusLine(routeThreshold, coverage.extendedReach) } : {}),
-              }),
-              'booking confirmation'
-            );
+                });
+              } finally {
+                // Zone 5: the run's texts come after the confirmation
+                await zone5Followup();
+              }
+            }, 'booking confirmation');
 
             return NextResponse.json({
               success: true,
