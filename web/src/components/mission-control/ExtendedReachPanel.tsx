@@ -51,7 +51,7 @@ export function ExtendedReachPanel() {
 
   const dispatchAnyway = async (run: RunSummary) => {
     const key = `${run.runDate}/${run.band}`;
-    if (!window.confirm(`Run the Band ${run.band} route on ${formatLongDate(run.runDate)} with ${run.booked} of ${run.threshold} bookings? Its customers are told it runs.`)) return;
+    if (!window.confirm(`Run the Band ${run.band} route on ${formatLongDate(run.runDate)} with ${run.booked} of ${run.threshold} bookings? Its customers get "route confirmed" with the Monday evening check.`)) return;
     setBusy(key);
     try {
       const res = await fetch('/api/mission-control/zone5', {
@@ -61,7 +61,11 @@ export function ExtendedReachPanel() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Could not dispatch');
-      addToast({ type: 'success', title: 'Route dispatched', message: `${body.notified} customer(s) told the date.` });
+      addToast({
+        type: 'success',
+        title: 'Route dispatched',
+        message: body.notified ? `${body.notified} customer(s) told the date.` : 'Its customers get "route confirmed" with the Monday evening check.',
+      });
       await queryClient.invalidateQueries({ queryKey: ['zone5'] });
     } catch (err) {
       addToast({ type: 'error', title: 'Not dispatched', message: (err as Error).message });
@@ -75,7 +79,7 @@ export function ExtendedReachPanel() {
       <Card variant="bordered" padding="lg" style={{ background: '#0d1527', borderColor: '#1e293b' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px' }}>🚐 Zone 5 runs</h3>
         <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
-          Runs always go out when deliveries are due. New pickups are accepted once a band reaches its threshold or a delivery is due that day; two days before, pickups on a run that has neither move to the next run and their customers are told.
+          Runs always go out when deliveries are due. New pickups are accepted once a band reaches its threshold or a delivery is due that day. Monday evening (two days before), runs going out get &quot;route confirmed&quot; and pickups on a run that has neither move to the next run and get &quot;route not reached&quot;.
         </p>
         {isLoading ? (
           <p style={{ color: '#cbd5e1' }}>Loading…</p>

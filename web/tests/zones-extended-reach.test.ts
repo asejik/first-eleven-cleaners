@@ -359,13 +359,17 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
   let pickups = 0;
   let deliveriesDue = 0;
   let cycle: Row | null = null;
+  let alreadyDecided = false;
+  const lteDates: unknown[] = [];
   const fake = {
     from: (table: string) => {
       let op = 'select';
       let head = false;
+      let values: Row = {};
       const filters: Row = {};
       const record = (o: string, v: Row) => {
         op = o;
+        values = v;
         writes.push({ table, op: o, values: v });
       };
       const b: Record<string, unknown> = {
@@ -378,7 +382,7 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
         not: () => b,
         is: () => b,
         lt: () => b,
-        lte: () => b,
+        lte: (_c: string, v: unknown) => (lteDates.push(v), b),
         gte: () => b,
         order: () => b,
         limit: () => b,
@@ -389,7 +393,7 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
             : op === 'select'
               ? { data: table === 'orders' ? pickupsOnRun : [] }
               : op === 'update'
-                ? { data: [{ id: 'x', run_date: 'x' }] }
+                ? { data: alreadyDecided && 'decided_at' in values ? [] : [{ id: 'x', run_date: 'x' }] }
                 : { data: null };
           return Promise.resolve({ error: null, ...r }).then(resolve);
         },
@@ -407,6 +411,7 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
   beforeEach(() => {
     writes.length = 0;
     cycle = null;
+    alreadyDecided = false;
     deliveriesDue = 0;
     dispatch.mockClear();
   });
@@ -417,12 +422,33 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
     deliveriesDue = 1;
     expect(await decideOn()).toEqual({ dispatched: 1, rolled: 0 });
     expect(writes).toContainEqual(expect.objectContaining({ table: 'route_cycles', op: 'upsert', values: expect.objectContaining({ status: 'dispatched', dispatched_by: 'Delivery run' }) }));
-    // The client's "threshold reached" text (2026-10-08)
+    // Decided Monday evening: the client's "route confirmed" text to each pickup (2026-10-08)
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'route_cycles', op: 'update', values: expect.objectContaining({ decided_at: expect.any(String) }) }));
+    expect(dispatch).toHaveBeenCalledTimes(2);
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
-        customMessage: 'First Eleven Cleaners: Sherman just hit 3 pickups. Your Wed Oct 28 pickup is confirmed, 7:30 to 10:00 AM. Bag at the door and we handle the rest.',
+        customMessage:
+          'First Eleven Cleaners: Good news, Ada. Your Sherman pickup is confirmed for Wed Oct 28, 7:30 to 10:00 AM. Have your bag at the door. Return is Wed Nov 4. Questions? Just reply.',
       })
     );
+  });
+
+  it('the 9 AM job only catches runs tomorrow; Monday is left to the evening check', async () => {
+    pickupsOnRun = [];
+    lteDates.length = 0;
+    await rollExtendedReachRuns(fake as never, LIVE, new Date('2026-10-26T14:00:00Z'), { daysAhead: 1 });
+    expect(lteDates).toEqual(['2026-10-27']);
+    lteDates.length = 0;
+    await decideOn();
+    expect(lteDates).toEqual(['2026-10-28']);
+  });
+
+  it('a run already decided is left alone (no second text)', async () => {
+    pickupsOnRun = [order('1'), order('2')];
+    pickups = 2;
+    alreadyDecided = true;
+    expect(await decideOn()).toEqual({ dispatched: 0, rolled: 0 });
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('a booking that leaves the run short gets the "on the list" text with its band\'s threshold', async () => {
@@ -446,7 +472,12 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
       expect.objectContaining({ pickup_date: '2026-11-04', delivery_date: '2026-11-11' }),
       expect.objectContaining({ pickup_date: '2026-11-04', delivery_date: '2026-11-11' }),
     ]);
-    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ customMessage: expect.stringContaining('Currently 2 of 3.') }));
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customMessage:
+          "First Eleven Cleaners: Hi Ada, Sherman didn't reach 3 pickups this week, so Wed Oct 28 won't run. You stay on the list for Wed Nov 4 at no charge. Reply SKIP to come off the list.",
+      })
+    );
   });
 
   it('at the threshold the run is dispatched; "dispatch anyway" runs a short one', async () => {
@@ -455,8 +486,23 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
     expect(await decideOn()).toEqual({ dispatched: 1, rolled: 0 });
     writes.length = 0;
     pickups = 1;
+    dispatch.mockClear();
     const forced = await dispatchRunIfReady(fake as never, { runDate: '2026-11-04', band: 'A', reach: LIVE.extendedReach, force: true });
     expect(forced.dispatched).toBe(true);
+    // Below the threshold: no "just hit 3 pickups"; Monday evening says "route confirmed"
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('a booking that fills the run sends the client\'s "threshold reached" text to everyone on it', async () => {
+    pickupsOnRun = [order('1'), order('2'), order('3')];
+    pickups = 3;
+    const filled = await dispatchRunIfReady(fake as never, { runDate: '2026-10-28', band: 'A', reach: LIVE.extendedReach });
+    expect(filled).toMatchObject({ dispatched: true, notified: 3 });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customMessage: 'First Eleven Cleaners: Sherman just hit 3 pickups. Your Wed Oct 28 pickup is confirmed, 7:30 to 10:00 AM. Bag at the door and we handle the rest.',
+      })
+    );
   });
 
   it('the run status line confirms a run with a delivery due', async () => {

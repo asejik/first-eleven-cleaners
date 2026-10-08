@@ -56,7 +56,17 @@ export interface HoldRunResult {
   declined: number;
 }
 
-/** 1. Holds for pickups within 2 days that were booked further ahead. */
+/** Zone 5 runs confirmed to go out (dispatched), by "date|band". */
+async function confirmedRuns(supabase: AdminClient, runDates: string[]): Promise<Set<string>> {
+  if (runDates.length === 0) return new Set();
+  const { data } = await supabase.from('route_cycles').select('run_date, band').in('run_date', runDates).eq('status', 'dispatched');
+  return new Set((data || []).map((c) => `${c.run_date}|${c.band}`));
+}
+
+/**
+ * 1. Holds for pickups within 2 days that were booked further ahead. A Zone 5 pickup waits
+ * until its run is confirmed (client 2026-10-08: "No charge until we confirm").
+ */
 export async function placeScheduledHolds(supabase: AdminClient, now: Date = new Date()): Promise<HoldRunResult> {
   const result: HoldRunResult = { placed: 0, declined: 0 };
   const squareConfig = getSquareConfig();
@@ -64,13 +74,17 @@ export async function placeScheduledHolds(supabase: AdminClient, now: Date = new
 
   const { data: orders } = await supabase
     .from('orders')
-    .select('id, order_number, pickup_date, hold_amount, square_customer_id, square_card_id, customer:customers!customer_id(full_name, phone, email)')
+    .select('id, order_number, pickup_date, extended_reach_band, hold_amount, square_customer_id, square_card_id, customer:customers!customer_id(full_name, phone, email)')
     .eq('hold_status', 'scheduled')
     .eq('status', 'booked')
     .lte('pickup_date', addDaysToDate(texasDate(now), HOLD_LEAD_DAYS))
     .limit(200);
 
+  const zone5Dates = [...new Set((orders || []).filter((o) => o.extended_reach_band).map((o) => o.pickup_date))];
+  const confirmed = await confirmedRuns(supabase, zone5Dates);
+
   for (const order of orders || []) {
+    if (order.extended_reach_band && !confirmed.has(`${order.pickup_date}|${order.extended_reach_band}`)) continue;
     const orderRef = order.order_number || order.id.slice(0, 8);
     const amount = Number(order.hold_amount) || 0;
     const placed =

@@ -750,10 +750,15 @@ CREATE TABLE IF NOT EXISTS waitlist (
   source VARCHAR(30) NOT NULL DEFAULT 'booking',
   -- 'beyond' the last band / outside North Texas, or Zone 5 before its first run (20261007_zones_v2)
   reason VARCHAR(30) NOT NULL DEFAULT 'beyond' CONSTRAINT waitlist_reason_check CHECK (reason IN ('beyond', 'zone5_not_started')),
+  -- Ticked "text me" when joining; when they were told Zone 5 opened (20261008_zone5_messages)
+  sms_consent BOOLEAN NOT NULL DEFAULT false,
+  notified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT waitlist_contact_check CHECK (email IS NOT NULL OR phone IS NOT NULL)
 );
 CREATE INDEX IF NOT EXISTS idx_waitlist_created ON waitlist(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_waitlist_zone5_pending
+  ON waitlist(created_at) WHERE reason = 'zone5_not_started' AND notified_at IS NULL;
 ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON waitlist FROM anon, authenticated;
 GRANT ALL ON waitlist TO service_role;
@@ -766,6 +771,8 @@ CREATE TABLE IF NOT EXISTS route_cycles (
   dispatched_at TIMESTAMPTZ,
   dispatched_by VARCHAR(255),
   notified_at TIMESTAMPTZ,
+  -- The Monday evening decision (confirmed or moved a week), once (20261008_zone5_messages)
+  decided_at TIMESTAMPTZ,
   PRIMARY KEY (run_date, band)
 );
 ALTER TABLE route_cycles ENABLE ROW LEVEL SECURITY;
