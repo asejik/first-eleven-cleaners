@@ -49,8 +49,12 @@ function builder(table: string) {
     neq: () => b,
     gte: () => b,
     ilike: () => b,
+    order: () => b,
     limit: () => b,
-    maybeSingle: async () => result(),
+    maybeSingle: async () => {
+      const r = result();
+      return Array.isArray(r.data) ? { ...r, data: r.data[0] ?? null } : r;
+    },
     single: async () => result(),
     then: (resolve: (r: unknown) => unknown) => Promise.resolve(result()).then(resolve),
   };
@@ -244,12 +248,12 @@ describe('Managing the Routine', () => {
     expect(decide(member({ status: 'cancelled' }), { action: 'skip' })).toMatchObject({ ok: false });
   });
 
-  it('skipping cancels an automatic pickup already made for that day and releases its hold', async () => {
-    state.routineOrders = [{ id: 'auto-1', order_number: 'F11-AUTO', hold_payment_id: 'HOLD', hold_status: 'held' }];
+  it('skipping when the pickup is already made cancels it and releases its hold (the schedule carries on)', async () => {
+    state.routineOrders = [{ id: 'auto-1', order_number: 'F11-AUTO', pickup_date: '2026-10-12', hold_payment_id: 'HOLD', hold_status: 'held' }];
     const supabase = (await import('@/lib/supabase/admin')).createAdminClient();
-    const result = await applyRoutineChange(supabase, { ...member(), enrolled_order_id: 'first' }, { action: 'skip' }, LIVE, NOW);
-    expect(result.ok).toBe(true);
-    expect(state.writes).toContainEqual(expect.objectContaining({ table: 'routine_memberships', op: 'update', values: expect.objectContaining({ next_pickup_date: '2026-10-19' }) }));
+    const result = await applyRoutineChange(supabase, { ...member({ next_pickup_date: '2026-10-19' }), enrolled_order_id: 'first' }, { action: 'skip' }, LIVE, NOW);
+    expect(result).toMatchObject({ ok: true, skippedDate: '2026-10-12', patch: { consecutive_skips: 1 } });
+    expect(state.writes).toContainEqual(expect.objectContaining({ table: 'routine_memberships', op: 'update', values: expect.not.objectContaining({ next_pickup_date: expect.anything() }) }));
     expect(state.writes).toContainEqual(expect.objectContaining({ table: 'orders', op: 'update', values: expect.objectContaining({ status: 'cancelled' }), filters: expect.objectContaining({ id: 'auto-1' }) }));
     expect(releaseOrderHold).toHaveBeenCalledWith(supabase, state.routineOrders[0], 'Routine pickup skipped');
   });

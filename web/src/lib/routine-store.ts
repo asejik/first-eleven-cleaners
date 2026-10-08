@@ -1,6 +1,6 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
 import type { Json } from '@/types/database';
-import { texasDate } from '@/lib/texas-time';
+import { addDaysToDate, texasDate } from '@/lib/texas-time';
 import { getAppBaseUrl } from '@/lib/constants';
 import { releaseOrderHold } from '@/lib/payment-capture';
 import { sendContactMessage } from '@/lib/messaging/contact';
@@ -12,12 +12,15 @@ import {
   decideRoutineChange,
   followingPickup,
   weekdayName,
+  ROUTINE_AUTO_PAUSE_SKIPS,
+  ROUTINE_MAX_PAUSE_WEEKS,
   ROUTINE_PATH,
   ROUTINE_TERMS_VERSION,
   type RoutineCadence,
   type RoutineChange,
   type RoutineDecision,
   type RoutineMembership,
+  type RoutinePatch,
   type RoutineTemplate,
 } from '@/lib/routine';
 
@@ -118,6 +121,42 @@ async function sendAutoPauseCheckIn(supabase: AdminClient, customerId: string) {
   if (!sent.ok) reportError('routine/check-in', sent.error, { details: `Customer ${customerId}: auto-pause check-in not sent` });
 }
 
+/** The next automatic pickup already made (2 days ahead) and still only booked, if any. */
+export async function upcomingAutoPickup(supabase: AdminClient, m: { id: string; enrolled_order_id?: string | null }, now: Date = new Date()) {
+  let query = supabase
+    .from('orders')
+    .select('id, order_number, pickup_date, hold_payment_id, hold_status')
+    .eq('routine_membership_id', m.id)
+    .eq('status', 'booked')
+    .gte('pickup_date', texasDate(now));
+  if (m.enrolled_order_id) query = query.neq('id', m.enrolled_order_id);
+  const { data } = await query.order('pickup_date').limit(1).maybeSingle();
+  return data;
+}
+
+/**
+ * Skips a pickup already made (the reminder's "skip this one?"): cancels that order and
+ * releases its hold. The schedule goes on (skip never cancels); 3 in a row pause it.
+ */
+export async function skipAutoPickup(
+  supabase: AdminClient,
+  m: RoutineMembership & { enrolled_order_id?: string | null },
+  pickup: { pickup_date: string },
+  now: Date = new Date()
+): Promise<RoutineDecision> {
+  if (m.status !== 'active') return { ok: false, error: 'This Routine is not active.' };
+  const skips = m.consecutive_skips + 1;
+  const autoPaused = skips >= ROUTINE_AUTO_PAUSE_SKIPS;
+  const patch: RoutinePatch = autoPaused
+    ? { consecutive_skips: skips, status: 'paused', paused_until: addDaysToDate(texasDate(now), ROUTINE_MAX_PAUSE_WEEKS * 7), next_pickup_date: null }
+    : { consecutive_skips: skips };
+  const { error } = await supabase.from('routine_memberships').update({ ...patch, updated_at: now.toISOString() }).eq('id', m.id).eq('status', 'active');
+  if (error) throw error;
+  await cancelBookedPickups(supabase, m, autoPaused ? { fromDate: texasDate(now) } : { onDate: pickup.pickup_date }, autoPaused ? 'paused' : 'skipped');
+  if (autoPaused) await sendAutoPauseCheckIn(supabase, m.customer_id);
+  return { ok: true, patch, autoPaused, skippedDate: pickup.pickup_date };
+}
+
 /** Applies a customer's (or the system's) change and saves it. */
 export async function applyRoutineChange(
   supabase: AdminClient,
@@ -126,6 +165,11 @@ export async function applyRoutineChange(
   coverage: Coverage,
   now: Date = new Date()
 ): Promise<RoutineDecision> {
+  // The next pickup may already be made (2 days ahead): skipping cancels that one
+  if (change.action === 'skip' && m.status === 'active') {
+    const made = await upcomingAutoPickup(supabase, m, now);
+    if (made) return skipAutoPickup(supabase, m, made, now);
+  }
   const decision = decideRoutineChange(m, change, zoneForTemplate(m.template as Partial<RoutineTemplate>, coverage), coverage, now);
   if (!decision.ok) return decision;
   const { error } = await supabase
