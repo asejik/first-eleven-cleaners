@@ -25,6 +25,7 @@ import {
 } from '@/components/mission-control';
 import styles from './page.module.css';
 import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlists';
+import { RoutineMembersPanel } from '@/components/mission-control/RoutineMembersPanel';
 
 const STAGES: OrderStatusKey[] = [
   'booked',
@@ -36,7 +37,7 @@ const STAGES: OrderStatusKey[] = [
 ];
 
 export default function MissionControlPage() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'dispatch' | 'express' | 'zones'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'dispatch' | 'express' | 'zones' | 'routine'>('pipeline');
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
@@ -265,6 +266,7 @@ export default function MissionControlPage() {
                   { id: 'financials', label: '💳 Financials & Transactions' },
                   { id: 'express', label: '⚡ 24-Hr Express Governance', count: orders.filter((o) => o.express_tier === 'express_24hr').length },
                   { id: 'zones', label: '🗺️ Zone Minimums' },
+                  { id: 'routine', label: '🔄 Routine Members' },
                   { id: 'roster', label: '🚐 Fleet & Staff Roster' },
                   { id: 'claims', label: '🛡️ Claims Queue', count: claims.length },
                   { id: 'dispatch', label: '📡 Messaging Dispatch' },
@@ -452,6 +454,10 @@ export default function MissionControlPage() {
 
               {activeTab === 'zones' && (
                 <ZoneGovernance />
+              )}
+
+              {activeTab === 'routine' && (
+                <RoutineMembersPanel />
               )}
             </>
           )}

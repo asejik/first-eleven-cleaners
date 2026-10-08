@@ -272,6 +272,9 @@ export interface BookingSubmissionPayload {
   consents?: {
     sms_order_updates?: boolean;
     sms_promotions?: boolean;
+    payment_terms?: boolean;
+    /** Joining the Routine: the auto-renewal agreement (client 2026-10-08) */
+    routine_terms?: boolean;
   };
 }
 
@@ -282,4 +285,6 @@ export interface BookingSubmissionResult {
   message: string;
   /** Zone 5: the run's bookings (this one included) against its threshold */
   route_threshold?: { booked: number; threshold: number; deliveriesDue: number; dispatched: boolean };
+  /** Joined the Routine with this booking (client 2026-10-08) */
+  routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string };
 }

@@ -47,7 +47,7 @@ type CustomerRow = { id: string; email: string; full_name: string; role: string;
  * The customer's sign-in account: their own if linked, otherwise created (confirmed) now; the
  * signup trigger links it to the customer row with that email. Returns the auth email.
  */
-async function ensureAuthUser(admin: AdminClient, customer: CustomerRow): Promise<string> {
+export async function ensureAuthUser(admin: AdminClient, customer: CustomerRow): Promise<string> {
   if (customer.auth_id) return customer.email;
   const { error } = await admin.auth.admin.createUser({
     email: customer.email,

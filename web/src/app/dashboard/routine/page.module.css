@@ -1,0 +1,94 @@
+.page {
+  background-color: var(--color-gray-50);
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-8) var(--space-4) var(--space-16);
+}
+
+.container {
+  max-width: var(--container-md);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.backLink {
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+  font-weight: var(--font-semibold);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  color: var(--color-navy);
+  margin: 0 0 2px;
+}
+
+.subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.card {
+  background-color: var(--color-white);
+}
+
+.cardTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-navy);
+  margin: 0 0 var(--space-3);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.facts dt {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--color-navy);
+  font-weight: var(--font-semibold);
+}
+
+.field select {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  font-size: var(--text-sm);
+}
+
+.note {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: var(--space-3) 0 0;
+}

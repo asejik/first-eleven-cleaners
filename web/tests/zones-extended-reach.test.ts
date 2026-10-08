@@ -307,7 +307,7 @@ describe('Booking API', () => {
           customer: { full_name: 'Zone Tester', email: 'zone@example.com', phone: '2145550100' },
           address: { street: '100 Test St', city: 'Town', state: 'TX', zip },
           services: { type: 'wash_fold', dry_clean_items: [], estimated_weight_lbs: lbs },
-          consents: { payment_terms: true },
+          consents: { payment_terms: true, routine_terms: true },
           schedule: { pickup_window: 'morning', express_tier: 'standard', ...schedule },
         }),
       })
