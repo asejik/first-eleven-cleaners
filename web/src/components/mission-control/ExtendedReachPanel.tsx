@@ -6,6 +6,7 @@ import { Card, Button } from '@/components/ui';
 import { formatLongDate } from '@/lib/coverage';
 import { useUIStore } from '@/stores/ui-store';
 import type { RunSummary } from '@/lib/extended-reach';
+import { Zone5MessagesEditor } from './Zone5MessagesEditor';
 
 /**
  * Zone 5 panel (client 2026-10-07, 8D): each upcoming run's bookings against its threshold,
@@ -154,6 +155,8 @@ export function ExtendedReachPanel() {
           </div>
         )}
       </Card>
+
+      <Zone5MessagesEditor />
     </div>
   );
 }
