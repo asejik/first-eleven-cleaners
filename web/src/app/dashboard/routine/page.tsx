@@ -26,6 +26,8 @@ interface RoutineView {
     consecutive_skips: number;
   } | null;
   address?: { street: string; unit: string | null; city: string; zip: string } | null;
+  /** The next pickup: one already made (2 days ahead), else the next on the schedule */
+  upcomingPickup?: string | null;
   allowedDays?: string[];
   zoneName?: string;
 }
@@ -66,6 +68,7 @@ export default function RoutinePage() {
   };
 
   const m = data?.membership;
+  const upcoming = data?.upcomingPickup ?? m?.next_pickup_date ?? null;
 
   return (
     <AuthGuard allowedRoles={['admin', 'customer']}>
@@ -108,7 +111,7 @@ export default function RoutinePage() {
                     <dd>
                       {m.status === 'paused'
                         ? m.paused_until ? formatLongDate(m.paused_until) : 'You resume it'
-                        : m.next_pickup_date ? formatLongDate(m.next_pickup_date) : '—'}
+                        : upcoming ? formatLongDate(upcoming) : '—'}
                     </dd>
                   </div>
                   {data?.address && (
@@ -137,10 +140,10 @@ export default function RoutinePage() {
                       variant="outline"
                       size="sm"
                       isLoading={busy === 'skip'}
-                      disabled={!m.next_pickup_date}
+                      disabled={!upcoming}
                       onClick={() => change({ action: 'skip' }, 'Pickup skipped')}
                     >
-                      Skip {m.next_pickup_date ? formatLongDate(m.next_pickup_date) : 'next pickup'}
+                      Skip {upcoming ? formatLongDate(upcoming) : 'next pickup'}
                     </Button>
                     <label className={styles.field}>
                       Pause for

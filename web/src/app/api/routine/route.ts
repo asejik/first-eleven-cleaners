@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
 import { getCoverage } from '@/lib/coverage-settings';
 import { allowedRoutineDays, ROUTINE_MAX_PAUSE_WEEKS, type RoutineMembership, type RoutineTemplate } from '@/lib/routine';
-import { applyRoutineChange, getOpenMembership, zoneForTemplate } from '@/lib/routine-store';
+import { applyRoutineChange, getOpenMembership, upcomingAutoPickup, zoneForTemplate } from '@/lib/routine-store';
 import { apiError } from '@/lib/api-errors';
 
 /**
@@ -48,7 +48,15 @@ export async function GET(request: Request) {
     if (!membership) return NextResponse.json({ membership: null });
     const coverage = await getCoverage();
     const zone = zoneForTemplate(membership.template as Partial<RoutineTemplate>, coverage);
-    return NextResponse.json({ membership, address, allowedDays: allowedRoutineDays(zone, coverage), zoneName: zone.name });
+    // A pickup already made (2 days ahead) comes before the next one on the schedule
+    const made = membership.status === 'active' ? await upcomingAutoPickup(createAdminClient(), membership) : null;
+    return NextResponse.json({
+      membership,
+      address,
+      upcomingPickup: made?.pickup_date ?? membership.next_pickup_date,
+      allowedDays: allowedRoutineDays(zone, coverage),
+      zoneName: zone.name,
+    });
   } catch (err: unknown) {
     return apiError('api/routine', err, 500);
   }
