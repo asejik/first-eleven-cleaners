@@ -95,7 +95,7 @@ export function StepAddress({
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: fullName || undefined, email, phone, street, city, zip, source: 'booking' }),
+        body: JSON.stringify({ full_name: fullName || undefined, email, phone, street, city, zip, source: 'booking', sms_consent: smsConsent }),
       });
       const data = await res.json();
       setWaitlist(res.ok ? { state: 'done', message: data.message } : { state: 'error', message: data.error });

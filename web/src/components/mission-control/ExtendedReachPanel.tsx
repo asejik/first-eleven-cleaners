@@ -21,6 +21,8 @@ interface WaitlistEntry {
   zip: string;
   miles: number | null;
   reason?: string;
+  sms_consent?: boolean;
+  notified_at?: string | null;
   created_at: string;
 }
 
@@ -146,10 +148,18 @@ export function ExtendedReachPanel() {
                 {data.waitlist.map((w) => (
                   <tr key={w.id}>
                     <td style={cell}>{w.full_name || '—'}</td>
-                    <td style={cell}>{[w.email, w.phone].filter(Boolean).join(' · ')}</td>
+                    <td style={cell}>
+                      {[w.email, w.phone].filter(Boolean).join(' · ')}
+                      {w.phone && !w.sms_consent && <span style={{ color: '#94a3b8' }}> · email only</span>}
+                    </td>
                     <td style={cell}>
                       {[w.city, w.zip].filter(Boolean).join(' ')}
-                      {w.reason === 'zone5_not_started' && <span style={{ color: '#fde68a' }}> · Zone 5, waiting for first run</span>}
+                      {w.reason === 'zone5_not_started' &&
+                        (w.notified_at ? (
+                          <span style={{ color: '#34d399' }}> · Zone 5, told it opened {new Date(w.notified_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        ) : (
+                          <span style={{ color: '#fde68a' }}> · Zone 5, waiting for first run</span>
+                        ))}
                     </td>
                     <td style={cell}>{w.miles != null ? Number(w.miles).toFixed(0) : '?'}</td>
                   </tr>

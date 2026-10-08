@@ -368,3 +368,29 @@ export function buildStageNotificationEmailHtml({
 </html>
   `;
 }
+
+/**
+ * A short notice with no order (Zone 5 waitlist texts sent by email, client 2026-10-08).
+ */
+export function buildNoticeEmailHtml({ title, messageBody }: { title: string; messageBody: string }): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <div style="background-color: #0B1F3A; padding: 24px 28px; text-align: center; border-bottom: 3px solid #C9A14A;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 20px; letter-spacing: 1px;">FIRST ELEVEN CLEANERS</h1>
+    </div>
+    <div style="padding: 32px 28px;">
+      <h2 style="color: #0B1F3A; margin: 0 0 16px; font-size: 18px;">${escapeHtml(title)}</h2>
+      <p style="margin: 0; color: #1e293b; font-size: 15px; line-height: 1.6;">${escapeHtml(messageBody)}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}

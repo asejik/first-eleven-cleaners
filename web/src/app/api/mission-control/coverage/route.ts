@@ -8,11 +8,15 @@ import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
 import type { Json } from '@/types/database';
+import { runAfterResponse } from '@/lib/after-response';
+import { announceZone5Open } from '@/lib/zone5-waitlist';
 
 /**
  * Mission Control coverage settings (client 2026-10-07, request 8): zone minimums, route
  * days and distance bands, Zone 5 fees, minimum, Routine discount, thresholds and cadence,
  * and the 24-Hour Express switch. Admin only; every save is in the audit log.
+ * Setting (or changing) the first Zone 5 run date messages everyone waiting for Zone 5, once
+ * each (client 2026-10-08).
  */
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +53,12 @@ export async function PUT(request: Request) {
       details: { before: before as unknown as Json, after: settings as unknown as Json },
       ip: getClientIp(request),
     });
-    return NextResponse.json({ success: true, settings, coverage: buildCoverage(settings) });
+    const coverage = buildCoverage(settings);
+    const firstRun = settings.extendedReach.firstRunDate;
+    if (firstRun && firstRun !== before.extendedReach.firstRunDate) {
+      runAfterResponse(() => announceZone5Open(supabase, coverage), 'Zone 5 now open');
+    }
+    return NextResponse.json({ success: true, settings, coverage });
   } catch (err: unknown) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.issues[0]?.message || 'Please check the settings.' }, { status: 400 });

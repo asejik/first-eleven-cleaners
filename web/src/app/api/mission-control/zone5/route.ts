@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       upcomingRunSummaries(supabase, coverage),
       supabase
         .from('waitlist')
-        .select('id, full_name, email, phone, city, zip, miles, source, reason, created_at')
+        .select('id, full_name, email, phone, city, zip, miles, source, reason, sms_consent, notified_at, created_at')
         .order('created_at', { ascending: false })
         .limit(100),
       supabase.from('zone_resolution_log').select('zip, miles, zone_id, band, first_seen_at, last_seen_at').order('last_seen_at', { ascending: false }).limit(300),
