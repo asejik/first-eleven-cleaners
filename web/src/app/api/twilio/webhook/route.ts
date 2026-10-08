@@ -9,6 +9,7 @@ import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import { toE164 } from '@/lib/phone';
 import { reportError } from '@/lib/error-reporting';
 import { logMessages, recentMessages } from '@/lib/message-log';
+import { skipNextZone5Pickup, SKIP_NOTHING_REPLY } from '@/lib/zone5-skip';
 
 // Helper to wrap message text in valid TwiML XML
 function createTwimlResponse(message: string): Response {
@@ -174,6 +175,9 @@ export async function POST(req: Request) {
             })
             .eq('phone', senderE164);
           if (consentErr) reportError('twilio/consent', consentErr, { alert: true, details: 'Could not record an SMS STOP opt-out' });
+          // And the waitlist (client 2026-10-08: its texts say "Reply STOP to opt out")
+          const { error: waitlistErr } = await adminSupabase.from('waitlist').update({ sms_consent: false }).eq('phone', senderE164);
+          if (waitlistErr) reportError('twilio/consent', waitlistErr, { alert: true, details: 'Could not record an SMS STOP opt-out on the waitlist' });
         } catch (dbErr) {
           console.warn('Error recording STOP opt-out:', dbErr);
         }
@@ -212,6 +216,17 @@ export async function POST(req: Request) {
       return createTwimlResponse(
         'First Eleven Cleaners: For support, call or text (682) 200-0039 or email concierge@firstelevencleaners.com. 48-hr turnaround & free Metroplex delivery. Reply STOP to cancel. Msg & data rates may apply.'
       );
+    }
+
+    // SKIP: off the next Zone 5 run (client 2026-10-08, the "route not reached" text)
+    if (/^SKIP$/i.test(upperMsg)) {
+      if (!adminSupabase || !senderE164) return createTwimlResponse(SKIP_NOTHING_REPLY);
+      try {
+        return createTwimlResponse(await skipNextZone5Pickup(adminSupabase, senderE164));
+      } catch (skipErr) {
+        reportError('twilio/skip', skipErr, { alert: true, details: 'A SKIP reply could not cancel the Zone 5 pickup' });
+        return createTwimlResponse('First Eleven Cleaners: We could not skip your pickup just now. Please call (682) 200-0039 and we will take care of it.');
+      }
     }
 
     // 4. Look up Customer in Supabase to provide Eleven with personalized context
