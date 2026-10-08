@@ -145,6 +145,9 @@ export default function BookingPage() {
             setPickupWindow={b.setPickupWindow}
             frequency={b.frequency}
             setFrequency={b.setFrequency}
+            routineTermsAccepted={b.routineTermsAccepted}
+            setRoutineTermsAccepted={b.setRoutineTermsAccepted}
+            isRoutineMember={b.isRoutineMember}
             slotData={b.slotData}
             getMinPickupDate={getMinPickupDate}
             formatDisplayDate={formatDisplayDate}

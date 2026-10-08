@@ -27,6 +27,8 @@ export interface MessagePayload {
   deliveredOn?: string;
   /** Zone 5: "Your route runs when 3 neighbors book. Currently 2 of 3." (client 8D) */
   routeThresholdLine?: string;
+  /** Joined the Routine with this booking: the next pickup and where to manage it (client 2026-10-08) */
+  routineLine?: string;
   smsConsent?: boolean;
   /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
   signupUrl?: string;
@@ -73,11 +75,12 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
       // The delivery day, stated explicitly (Zone 4 Friday pickups: "delivered Tuesday ...")
       const delivered = !together && data.deliveredOn ? ` Delivered ${data.deliveredOn}.` : '';
       const route = data.routeThresholdLine ? ` ${data.routeThresholdLine}` : '';
+      const routine = data.routineLine ? ` ${data.routineLine}` : '';
       return {
         stage: 'booked',
         title: '📋 Order Confirmation',
-        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${delivered}${saturday}${together}${route} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
-        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${delivered ? `\n🚚${delivered}` : ''}${saturday ? `\n🚚${saturday}` : ''}${together ? `\n🧵${together}` : ''}${route ? `\n🚐${route}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
+        smsBody: `⚽ First Eleven Cleaners: Hi ${firstName}, Order #${orderNum} is confirmed! Pickup is scheduled for ${pDate} during our ${pWindow} window.${delivered}${saturday}${together}${route}${routine} Place your laundry bag on your front porch or with concierge. Track live: ${data.trackingUrl}`,
+        whatsappBody: `⚽ *FIRST ELEVEN CLEANERS*\n\nHi ${firstName}! Your order *#${orderNum}* is booked & confirmed.\n\n📅 *Pickup:* ${pDate}\n⏱️ *Window:* ${pWindow}${delivered ? `\n🚚${delivered}` : ''}${saturday ? `\n🚚${saturday}` : ''}${together ? `\n🧵${together}` : ''}${route ? `\n🚐${route}` : ''}${routine ? `\n🔄${routine}` : ''}\n\n📍 Please place your laundry bag at your designated drop spot.\n\n📲 *Live Tracker:* ${data.trackingUrl}`,
         mediaUrl: data.photoUrl,
       };
     }

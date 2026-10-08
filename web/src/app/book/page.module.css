@@ -952,3 +952,20 @@
   gap: var(--space-2);
   margin-bottom: var(--space-2);
 }
+
+/* Joining the Routine: the auto-renewal agreement (client 2026-10-08) */
+.routineTerms {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.routineTerms input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}

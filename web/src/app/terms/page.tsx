@@ -78,6 +78,9 @@ export default function TermsOfServicePage() {
             <p className={styles.paragraph}>
               <strong>Invisible Checkout Protocol:</strong> When you book a pickup, your card on file is pre-authorized. We do not finalize or settle charges until your garments arrive at our central facility, are weighed on certified scales, itemized, and photographed into your Garment Passport.
             </p>
+            <p className={styles.paragraph}>
+              <strong>Routine Membership (Automatic Renewal):</strong> Choosing Weekly Routine or Bi-Weekly Routine when you book enrolls you in a standing pickup on the same day and window every week or every two weeks, at the address you booked, until you cancel. Each pickup is created automatically; two days before it we place a hold for the estimate on your saved card and text you, and after the order is weighed and counted we charge the actual total. You may skip any pickup or pause for up to 8 weeks from your account or by replying SKIP; three skips in a row pause the membership. You may cancel at any time from your account at no charge. A membership requires an account, which we create for you; you sign in with a link sent to your email or a code texted to your verified phone, with no password needed.
+            </p>
           </section>
 
           {/* Section 5: Pickup and Delivery Services */}

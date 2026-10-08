@@ -2,6 +2,8 @@ import { Card, Input, Badge, Button } from '@/components/ui';
 import type { ZoneConfig } from '@/lib/constants';
 import { isExpressPickupDay, isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
 import { dispatchThresholdMessage, type ExtendedReachQuote } from '@/lib/coverage';
+import Link from 'next/link';
+import { routineAgreementText, weekdayName, ROUTINE_PATH } from '@/lib/routine';
 import styles from '@/app/book/page.module.css';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -27,6 +29,10 @@ interface StepScheduleProps {
   setPickupWindow: (val: 'morning' | 'evening') => void;
   frequency: 'one_time' | 'weekly' | 'biweekly';
   setFrequency: (val: 'one_time' | 'weekly' | 'biweekly') => void;
+  routineTermsAccepted: boolean;
+  setRoutineTermsAccepted: (val: boolean) => void;
+  /** Already in the Routine: this is an extra one-time pickup */
+  isRoutineMember: boolean;
   slotData: { is_available?: boolean; reason?: string } | undefined;
   getMinPickupDate: (tier?: 'standard' | 'express_24hr') => string;
   formatDisplayDate: (dateStr: string) => string;
@@ -59,6 +65,9 @@ export function StepSchedule({
   setPickupWindow,
   frequency,
   setFrequency,
+  routineTermsAccepted,
+  setRoutineTermsAccepted,
+  isRoutineMember,
   slotData,
   getMinPickupDate,
   formatDisplayDate,
@@ -237,13 +246,21 @@ export function StepSchedule({
           </div>
         </div>
 
-        {/* Pickup Frequency / Subscription Selector */}
+        {/* One-time, or join the Routine: a standing pickup (client 2026-10-08) */}
+        {isRoutineMember ? (
+          <div className={styles.expressOptionBox} style={{ marginBottom: 'var(--space-4)' }}>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+              <span aria-hidden="true">🔄</span> You&apos;re in the Routine, so this is an extra one-time pickup.{' '}
+              <Link href={ROUTINE_PATH}>Manage your Routine</Link>
+            </p>
+          </div>
+        ) : (
         <div className={styles.expressOptionBox} style={{ marginBottom: 'var(--space-4)' }}>
           <div className={styles.expressHeader}>
             <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
-              <span aria-hidden="true">🔄</span> Pickup Frequency &amp; Savings:
+              <span aria-hidden="true">🔄</span> One-time or the Routine:
             </label>
-            <Badge variant="success">Cancel or Skip Anytime</Badge>
+            <Badge variant="success">Skip, Pause or Cancel Anytime</Badge>
           </div>
           <div className={styles.expressTierOptions}>
             <button
@@ -262,9 +279,9 @@ export function StepSchedule({
               onClick={() => setFrequency('weekly')}
               aria-pressed={frequency === 'weekly'}
             >
-              <span className={styles.tierTitle}><span aria-hidden="true">⚡</span> Weekly</span>
+              <span className={styles.tierTitle}><span aria-hidden="true">⚡</span> Weekly Routine</span>
               <span className={styles.tierBadge}>Save 10%</span>
-              <span className={styles.tierDesc}>Automatic weekly pickup</span>
+              <span className={styles.tierDesc}>A standing pickup every week</span>
             </button>
             <button
               type="button"
@@ -272,12 +289,26 @@ export function StepSchedule({
               onClick={() => setFrequency('biweekly')}
               aria-pressed={frequency === 'biweekly'}
             >
-              <span className={styles.tierTitle}><span aria-hidden="true">📅</span> Bi-Weekly</span>
+              <span className={styles.tierTitle}><span aria-hidden="true">📅</span> Bi-Weekly Routine</span>
               <span className={styles.tierBadge}>Save 5%</span>
-              <span className={styles.tierDesc}>Every 2 weeks care</span>
+              <span className={styles.tierDesc}>A standing pickup every 2 weeks</span>
             </button>
           </div>
+          {frequency !== 'one_time' && (
+            <label className={styles.routineTerms}>
+              <input
+                type="checkbox"
+                checked={routineTermsAccepted}
+                onChange={(e) => setRoutineTermsAccepted(e.target.checked)}
+              />
+              <span>
+                {routineAgreementText({ cadence: frequency, day: pickupDate ? weekdayName(pickupDate) : 'your pickup day', window: pickupWindow })}{' '}
+                <strong>I agree to join the Routine on these terms.</strong>
+              </span>
+            </label>
+          )}
         </div>
+        )}
 
         {/* Express Tier Turnaround Speed Selector:
             Offered ONLY in Express-eligible zones (Zone 1 & 2), on Monday-Thursday morning windows. */}

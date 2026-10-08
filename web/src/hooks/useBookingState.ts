@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   catalogSubtotal,
   catalogLineTotal,
@@ -144,6 +145,20 @@ export function useBookingState() {
   const [pickupDate, setPickupDate] = useState<string>(getMinPickupDate('standard'));
   const [pickupWindow, setPickupWindow] = useState<'morning' | 'evening'>('morning');
   const [frequency, setFrequency] = useState<'one_time' | 'weekly' | 'biweekly'>('one_time');
+  // Weekly or Bi-Weekly joins the Routine: the auto-renewal agreement (client 2026-10-08)
+  const [routineTermsAccepted, setRoutineTermsAccepted] = useState(false);
+  // Already a member (signed in): this booking is an extra one-time pickup
+  const { data: routineStatus } = useQuery({
+    queryKey: ['routine-membership'],
+    queryFn: async (): Promise<{ membership: { cadence: 'weekly' | 'biweekly' } | null }> => {
+      const res = await fetch('/api/routine');
+      if (!res.ok) return { membership: null };
+      return res.json();
+    },
+    enabled: Boolean(user && (!user.role || user.role === 'customer')),
+    staleTime: 60 * 1000,
+  });
+  const isRoutineMember = Boolean(routineStatus?.membership);
 
   const handleSelectTier = (tier: 'standard' | 'express_24hr') => {
     setExpressTier(tier);
@@ -177,6 +192,8 @@ export function useBookingState() {
     deliveryDate?: string | null;
     /** Zone 5: where this run stands with this booking included */
     routeThreshold?: { booked: number; threshold: number } | null;
+    /** Joined the Routine with this booking (client 2026-10-08) */
+    routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string } | null;
   } | null>(null);
   // One key per checkout: resubmitting (double click, retry after a timeout) returns the
   // order already created instead of booking twice (PR-11)
@@ -379,7 +396,9 @@ export function useBookingState() {
       hasAlterations) &&
     alterationsReady &&
     !buttonsOnlyMessage;
-  const isStep3Valid = Boolean(pickupDate && pickupWindow && (!routeDates || routeDates.includes(pickupDate)));
+  const isStep3Valid = Boolean(
+    pickupDate && pickupWindow && (!routeDates || routeDates.includes(pickupDate)) && (frequency === 'one_time' || routineTermsAccepted)
+  );
 
   // Handle Promo Validation
   const handleApplyPromo = async () => {
@@ -443,7 +462,8 @@ export function useBookingState() {
           pickup_date: pickupDate,
           pickup_window: pickupWindow,
           express_tier: effectiveExpressTier,
-          frequency,
+          // A member's extra pickup is one-time; joining needs the agreement
+          frequency: isRoutineMember ? 'one_time' : frequency,
         },
         pricing: {
           subtotal,
@@ -460,6 +480,7 @@ export function useBookingState() {
           sms_order_updates: smsConsent,
           sms_promotions: smsPromotionsConsent,
           payment_terms: paymentTermsAccepted,
+          routine_terms: frequency !== 'one_time' && routineTermsAccepted,
         },
       };
 
@@ -469,6 +490,7 @@ export function useBookingState() {
         id: result.order.id,
         deliveryDate: result.order.delivery_date ?? null,
         routeThreshold: result.route_threshold ?? null,
+        routine: result.routine ?? null,
       });
       checkoutKeyRef.current = null; // the next booking is a new checkout
       try {
@@ -580,6 +602,9 @@ export function useBookingState() {
     isStep1Valid,
     isStep2Valid,
     isStep3Valid,
+    routineTermsAccepted,
+    setRoutineTermsAccepted,
+    isRoutineMember,
     handleCompleteBooking,
   };
 }

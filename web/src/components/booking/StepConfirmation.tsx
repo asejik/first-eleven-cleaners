@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, Badge, ButtonLink } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import { formatLongDate, dispatchThresholdMessage } from '@/lib/coverage';
+import { CADENCE_LABEL, ROUTINE_PATH } from '@/lib/routine';
 import styles from '@/app/book/page.module.css';
 
 interface StepConfirmationProps {
@@ -12,6 +13,8 @@ interface StepConfirmationProps {
     deliveryDate?: string | null;
     /** Zone 5: the run's bookings (this one included) against its threshold */
     routeThreshold?: { booked: number; threshold: number } | null;
+    /** Joined the Routine with this booking (client 2026-10-08) */
+    routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string } | null;
   };
   pickupDate: string;
   pickupWindow: 'morning' | 'evening';
@@ -56,6 +59,13 @@ export function StepConfirmation({
         {confirmedOrder.routeThreshold && (
           <p className={styles.confSubtitle}>
             🚐 {dispatchThresholdMessage(confirmedOrder.routeThreshold.booked, confirmedOrder.routeThreshold.threshold)} We&apos;ll message you the moment your route is confirmed.
+          </p>
+        )}
+        {confirmedOrder.routine && (
+          <p className={styles.confSubtitle}>
+            🔄 You&apos;re in the {CADENCE_LABEL[confirmedOrder.routine.cadence]} Routine. Next pickup:{' '}
+            <strong>{formatLongDate(confirmedOrder.routine.next_pickup_date)}</strong>. Skip, pause or change it anytime from{' '}
+            <a href={ROUTINE_PATH}>your Routine page</a>. To sign in, use your email or (once verified) a text code. No password needed.
           </p>
         )}
       </div>
