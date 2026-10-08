@@ -7,9 +7,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCustomerOrders } from '@/hooks/useOrders';
 import { useCustomerClaims } from '@/hooks/useClaims';
 import { Button, Card, Badge, Skeleton, RefreshButton, ButtonLink } from '@/components/ui';
-import { CreditCard, MapPin, User as UserIcon, Plus } from 'lucide-react';
+import { CreditCard, MapPin, User as UserIcon, Plus, Repeat } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
+import { ROUTINE_PATH } from '@/lib/routine';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
@@ -91,6 +92,10 @@ export default function DashboardPage() {
               <ButtonLink href={ROUTES.billing} variant="outline" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
                 <CreditCard size={14} strokeWidth={1.8} className={styles.btnIcon} />
                 Billing &amp; Cards
+              </ButtonLink>
+              <ButtonLink href={ROUTINE_PATH} variant="outline" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
+                <Repeat size={14} strokeWidth={1.8} className={styles.btnIcon} />
+                Routine
               </ButtonLink>
               <ButtonLink href={ROUTES.addresses} variant="outline" size="sm" className={`${styles.actionItem} ${styles.actionBtn}`}>
                 <MapPin size={14} strokeWidth={1.8} className={styles.btnIcon} />
