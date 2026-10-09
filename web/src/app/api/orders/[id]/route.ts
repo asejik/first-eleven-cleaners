@@ -7,6 +7,7 @@ import { apiError } from '@/lib/api-errors';
 import { withSignedPhotoUrls } from '@/lib/storage';
 import { amountOwed } from '@/lib/payment-recovery';
 import { releaseOrderHold } from '@/lib/payment-capture';
+import { assessLateCancel, applyLateCancelFee, lateCancelWarning, LATE_CANCEL_ORDER_FIELDS } from '@/lib/late-cancel';
 
 /** Stages with an itemized ticket the tracking link shows (Part A) */
 const TICKET_STAGES = ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'];
@@ -305,6 +306,8 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const { action } = body;
+    // The customer saw the late-cancel fee and confirmed (client 2026-10-08)
+    const confirmLateFee = body.confirm_late_fee === true;
 
     if (action !== 'cancel') {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -327,7 +330,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid order identifier format.' }, { status: 400 });
       }
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      const query = supabase.from('orders').select('id, customer_id, status, order_number, hold_payment_id, hold_status');
+      const query = supabase.from('orders').select(`${LATE_CANCEL_ORDER_FIELDS}, status, hold_payment_id, hold_status`);
       const { data: order, error } = isUUID
         ? await query.eq('id', id).maybeSingle()
         : await query.or(`order_number.eq.${id},id.eq.${id}`).maybeSingle();
@@ -349,11 +352,23 @@ export async function PATCH(
         );
       }
 
+      // Under 2 hours before the window: the customer is shown the fee and confirms first;
+      // staff cancels never pay it (client 2026-10-08)
+      const byStaff = customer.role === 'admin' && order.customer_id !== customer.id;
+      const lateFee = byStaff ? ({ late: false } as const) : await assessLateCancel(supabase, order);
+      if (lateFee.late && !confirmLateFee) {
+        return NextResponse.json(
+          { error: lateCancelWarning(lateFee), code: 'LATE_CANCEL_FEE', fee: lateFee.fee, waived: lateFee.waived },
+          { status: 409 }
+        );
+      }
+
       // Update order status to 'cancelled'
       const { data: updatedOrder, error: updateErr } = await supabase
         .from('orders')
         .update({ status: 'cancelled', updated_at: new Date().toISOString() })
         .eq('id', order.id)
+        .eq('status', 'booked')
         .select()
         .single();
 
@@ -371,8 +386,20 @@ export async function PATCH(
       });
       // Nothing is charged for a cancelled pickup: release the card hold (Part A)
       await releaseOrderHold(supabase, order, 'pickup cancelled by the customer');
+      // A late cancel: the fee (or the waiver) instead
+      const feeOutcome = await applyLateCancelFee(supabase, order, lateFee, customer.full_name || 'Customer');
 
-      return NextResponse.json({ success: true, order: updatedOrder, message: 'Pickup cancelled successfully.' });
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+        lateCancel: feeOutcome,
+        message:
+          feeOutcome.status === 'charged'
+            ? `Pickup cancelled. The $${feeOutcome.fee.toFixed(2)} late-cancel fee was charged to your card.`
+            : feeOutcome.status === 'declined'
+              ? `Pickup cancelled. We couldn't charge the $${feeOutcome.fee.toFixed(2)} late-cancel fee; we'll be in touch.`
+              : 'Pickup cancelled successfully.',
+      });
     }
 
     // Mock mode response

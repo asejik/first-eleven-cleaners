@@ -91,17 +91,21 @@ export function useCancelOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (orderId: string) => {
+    // A late cancel (under 2 hours before the window) answers 409 LATE_CANCEL_FEE first; the
+    // customer confirms with confirmLateFee (client 2026-10-08)
+    mutationFn: async (input: string | { orderId: string; confirmLateFee?: boolean }) => {
+      const { orderId, confirmLateFee = false } = typeof input === 'string' ? { orderId: input } : input;
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel' }),
+        body: JSON.stringify({ action: 'cancel', confirm_late_fee: confirmLateFee }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to cancel order');
+      if (!res.ok) throw Object.assign(new Error(data.error || 'Failed to cancel order'), { code: data.code as string | undefined, fee: data.fee as number | undefined, waived: data.waived as boolean | undefined });
       return data;
     },
-    onSuccess: (_, orderId) => {
+    onSuccess: (_, input) => {
+      const orderId = typeof input === 'string' ? input : input.orderId;
       queryClient.invalidateQueries({ queryKey: ['order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },

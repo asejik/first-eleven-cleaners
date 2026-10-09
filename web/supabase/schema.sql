@@ -138,6 +138,11 @@ CREATE TABLE IF NOT EXISTS orders (
   frequency VARCHAR(10) NOT NULL DEFAULT 'one_time' CONSTRAINT orders_frequency_check
     CHECK (frequency IN ('one_time', 'weekly', 'biweekly')), -- recurring plan (Routine)
   routine_membership_id UUID, -- made by a Routine membership (FK added after routine_memberships)
+  -- Late-cancel fee: under 2 hours before the window (20261009_late_cancel_fee)
+  late_cancel_fee NUMERIC(10, 2),
+  late_cancel_status VARCHAR(20) CONSTRAINT orders_late_cancel_status_check
+    CHECK (late_cancel_status IS NULL OR late_cancel_status IN ('charged', 'waived', 'declined')),
+  late_cancel_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -174,7 +179,7 @@ CREATE TABLE IF NOT EXISTS order_payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   square_payment_id VARCHAR(255) UNIQUE,
-  kind VARCHAR(20) NOT NULL CHECK (kind IN ('hold', 'top_up', 'charge', 'quote')),
+  kind VARCHAR(20) NOT NULL CONSTRAINT order_payments_kind_check CHECK (kind IN ('hold', 'top_up', 'charge', 'quote', 'late_cancel')),
   amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
   status VARCHAR(20) NOT NULL CHECK (status IN ('approved', 'completed', 'canceled', 'failed')),
   note TEXT,
@@ -182,6 +187,7 @@ CREATE TABLE IF NOT EXISTS order_payments (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_order_payments_order ON order_payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_orders_late_cancel ON orders(customer_id, late_cancel_at) WHERE late_cancel_status IS NOT NULL;
 
 -- 7. ORDER EVENTS (Timeline & Notification Audit Trail)
 CREATE TABLE IF NOT EXISTS order_events (

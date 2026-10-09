@@ -910,6 +910,9 @@ export type Database = {
           extended_reach_fee: number;
           frequency: string;
           routine_membership_id: string | null;
+          late_cancel_fee: number | null;
+          late_cancel_status: string | null;
+          late_cancel_at: string | null;
         };
         Insert: {
           id?: string;
@@ -959,6 +962,9 @@ export type Database = {
           extended_reach_fee?: number;
           frequency?: string;
           routine_membership_id?: string | null;
+          late_cancel_fee?: number | null;
+          late_cancel_status?: string | null;
+          late_cancel_at?: string | null;
         };
         Update: {
           id?: string;
@@ -1008,6 +1014,9 @@ export type Database = {
           extended_reach_fee?: number;
           frequency?: string;
           routine_membership_id?: string | null;
+          late_cancel_fee?: number | null;
+          late_cancel_status?: string | null;
+          late_cancel_at?: string | null;
         };
         Relationships: [
           {
