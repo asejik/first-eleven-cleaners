@@ -16,6 +16,8 @@ import {
   ROUTINE_PLAN_DISCOUNT_PERCENT,
   memberWashFoldRate,
   memberZoneMinimum,
+  FAILED_PICKUP_FEE,
+  LATE_CANCEL_CUTOFF_HOURS,
 } from '@/lib/constants';
 import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
@@ -72,10 +74,15 @@ export function plantScheduleLine(lang: 'en' | 'es' = 'en'): string {
     : 'Our plant runs Monday to Friday. Standard orders are delivered 2 plant days after pickup (Thursday pickups on Monday, Friday pickups on Tuesday). Saturday pickups are delivered Tuesday. 24-Hour Express pickups run Monday to Thursday (a Thursday Express pickup is delivered Friday).';
 }
 
+/** Late-cancel fee (client 2026-10-08): the failed-service fee, one rule. */
+export function lateCancelLine(): string {
+  return `Cancelling or rescheduling under ${LATE_CANCEL_CUTOFF_HOURS} hours before the pickup window costs ${money(FAILED_PICKUP_FEE)} (Zone 5: its Extended Reach fee instead); the first one is waived, and Routine members get one waived each calendar month. The customer sees the fee and confirms first.`;
+}
+
 export function feesLine(lang: 'en' | 'es' = 'en'): string {
   return lang === 'es'
     ? `Se agregan un cargo ambiental de ${pct(ENVIRONMENTAL_FEE_RATE)} y el impuesto de Texas de ${pct(TX_SALES_TAX_RATE)}. Recogida y entrega gratis en todo el Metroplex (la Zona 5, Extended Reach, tiene un cargo de entrega).`
-    : `A ${pct(ENVIRONMENTAL_FEE_RATE)} environmental fee and ${pct(TX_SALES_TAX_RATE)} Texas sales tax are added at checkout. Pickup and delivery are free across the DFW Metroplex (Zones 1-4); Zone 5 Extended Reach has a delivery fee.`;
+    : `A ${pct(ENVIRONMENTAL_FEE_RATE)} environmental fee and ${pct(TX_SALES_TAX_RATE)} Texas sales tax are added at checkout. Pickup and delivery are free across the DFW Metroplex (Zones 1-4); Zone 5 Extended Reach has a delivery fee. ${lateCancelLine()}`;
 }
 
 /**
