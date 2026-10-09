@@ -47,11 +47,21 @@ export default function RoutinePage() {
   const [pauseWeeks, setPauseWeeks] = useState(2);
   const [edit, setEdit] = useState<{ cadence: RoutineCadence; pickup_day: string; pickup_window: 'morning' | 'evening' } | null>(null);
 
-  const change = async (body: RoutineChange, done: string) => {
+  const change = async (body: RoutineChange, done: string, confirmLateFee = false): Promise<void> => {
     setBusy(body.action);
     try {
-      const res = await fetch('/api/routine', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await fetch('/api/routine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, confirm_late_fee: confirmLateFee }),
+      });
       const result = await res.json();
+      // Under 2 hours before a pickup: show the fee (or the free one) and ask (client 2026-10-08)
+      if (res.status === 409 && result.code === 'LATE_CANCEL_FEE') {
+        setBusy(null);
+        if (window.confirm(`${result.error} Go ahead?`)) await change(body, done, true);
+        return;
+      }
       if (!res.ok) throw new Error(result.error || 'That did not work. Please try again.');
       addToast({
         type: 'success',

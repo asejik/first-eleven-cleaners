@@ -28,3 +28,13 @@
   color: var(--color-text-secondary);
   margin: 0;
 }
+
+.warning {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--color-navy);
+  font-size: var(--text-sm);
+}

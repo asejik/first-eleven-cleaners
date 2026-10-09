@@ -52,6 +52,7 @@ function table(name: string) {
     lt: (c: string, v: string) => (filters.push((r) => String(r[c]) < v), b),
     lte: (c: string, v: string) => (filters.push((r) => r[c] != null && String(r[c]) <= v), b),
     gte: (c: string, v: string) => (filters.push((r) => String(r[c]) >= v), b),
+    like: (c: string, v: string) => (filters.push((r) => String(r[c] ?? '').startsWith(v.replace(/%$/, ''))), b),
     order: (col: string, o?: { ascending?: boolean }) => ((order = { col, asc: o?.ascending !== false }), b),
     limit: (n: number) => ((limit = n), b),
     maybeSingle: async () => {
@@ -207,7 +208,7 @@ describe('Automatic Routine pickups, 2 days ahead', () => {
 });
 
 describe('Skipping a pickup already made', () => {
-  const auto = { id: '11111111-aaaa-4bbb-8ccc-dddddddddddd', routine_membership_id: 'm-1', pickup_date: '2026-10-10', pickup_window: 'morning', status: 'booked', hold_status: 'scheduled' };
+  const auto = { id: '11111111-aaaa-4bbb-8ccc-dddddddddddd', customer_id: 'c-1', routine_membership_id: 'm-1', pickup_date: '2026-10-10', pickup_window: 'morning', status: 'booked', hold_status: 'scheduled' };
 
   it('cancels that one pickup and releases its hold; the Routine carries on', async () => {
     db.routine_memberships = [membership({ next_pickup_date: '2026-10-17' })];
