@@ -83,6 +83,8 @@ export interface Address {
 // --- Order ---
 export interface Order {
   id: string;
+  /** Driver manifest: a Routine member still without their branded bag (client 2026-10-08) */
+  needs_routine_bag?: boolean;
   order_number?: string;
   customer_id: string;
   address_id: string;

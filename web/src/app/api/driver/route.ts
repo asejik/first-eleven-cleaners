@@ -193,11 +193,23 @@ export async function GET(request: Request) {
     const { isDriverRole, isAdminRole, matchesDriver } = driverCtx;
 
     // 1. Customer Pickups Scheduled
-    const pickups = allActive.filter((o) => {
+    const scheduledPickups = allActive.filter((o) => {
       const matchStatus = o.status === 'booked';
       const matchShift = shift === 'all' || o.pickup_window === shift;
       return matchStatus && matchShift;
     });
+    // Routine members still without their branded bag: the driver brings one (client 2026-10-08)
+    const pickupCustomerIds = [...new Set(scheduledPickups.map((o) => o.customer_id).filter(Boolean))];
+    const { data: needBag } = pickupCustomerIds.length
+      ? await supabase
+          .from('routine_memberships')
+          .select('customer_id')
+          .in('customer_id', pickupCustomerIds)
+          .neq('status', 'cancelled')
+          .is('bag_delivered_at', null)
+      : { data: [] as { customer_id: string }[] };
+    const needsBag = new Set((needBag || []).map((m) => m.customer_id));
+    const pickups = scheduledPickups.map((o) => ({ ...o, needs_routine_bag: needsBag.has(o.customer_id) }));
 
     // 2. Bags in Van (Customer bags picked up by THIS specific driver, en route to plant)
     const pickedUpHistory = allActive.filter((o) => {

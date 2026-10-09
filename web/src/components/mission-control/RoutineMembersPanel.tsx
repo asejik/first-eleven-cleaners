@@ -1,6 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useUIStore } from '@/stores/ui-store';
 import { Card } from '@/components/ui';
 import { formatLongDate } from '@/lib/coverage';
 import { CADENCE_LABEL, windowText, type RoutineCadence } from '@/lib/routine';
@@ -20,6 +22,8 @@ interface MemberRow {
   paused_until: string | null;
   consecutive_skips: number;
   created_at: string;
+  bag_delivered_at: string | null;
+  bag_delivered_by: string | null;
   customer: One<{ full_name: string; email: string; phone: string | null }>;
   address: One<{ city: string; zip: string }>;
 }
@@ -41,12 +45,35 @@ export function RoutineMembersPanel() {
   });
   const members = data?.members || [];
   const open = members.filter((m) => m.status !== 'cancelled');
+  const needBag = open.filter((m) => !m.bag_delivered_at).length;
+  const addToast = useUIStore((s) => s.addToast);
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState<string | null>(null);
+
+  // "Bag delivered" (client 2026-10-08): drivers see who still needs theirs
+  const setBag = async (m: MemberRow, delivered: boolean) => {
+    setSaving(m.id);
+    try {
+      const res = await fetch('/api/mission-control/routine', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: m.id, bag_delivered: delivered }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Could not save');
+      await queryClient.invalidateQueries({ queryKey: ['routine-members'] });
+    } catch (err) {
+      addToast({ type: 'error', title: 'Not saved', message: (err as Error).message });
+    } finally {
+      setSaving(null);
+    }
+  };
 
   return (
     <Card variant="bordered" padding="lg" style={{ background: '#0d1527', borderColor: '#1e293b' }}>
       <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px' }}>🔄 Routine members</h3>
       <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
-        {open.filter((m) => m.status === 'active').length} active, {open.filter((m) => m.status === 'paused').length} paused. Three skips in a row pause a membership.
+        {open.filter((m) => m.status === 'active').length} active, {open.filter((m) => m.status === 'paused').length} paused, {needBag} still need their bag. Three skips in a row pause a membership.
       </p>
       {isLoading ? (
         <p style={{ color: '#cbd5e1' }}>Loading…</p>
@@ -63,6 +90,7 @@ export function RoutineMembersPanel() {
                 <th style={head}>Next</th>
                 <th style={head}>Skips</th>
                 <th style={head}>Status</th>
+                <th style={head}>Bag delivered</th>
               </tr>
             </thead>
             <tbody>
@@ -86,6 +114,20 @@ export function RoutineMembersPanel() {
                     </td>
                     <td style={cell}>{m.consecutive_skips}</td>
                     <td style={{ ...cell, color: STATUS_COLOR[m.status], fontWeight: 700, textTransform: 'capitalize' }}>{m.status}</td>
+                    <td style={cell}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(m.bag_delivered_at)}
+                          disabled={saving === m.id}
+                          onChange={(e) => setBag(m, e.target.checked)}
+                          aria-label={`Bag delivered to ${c?.full_name || 'member'}`}
+                        />
+                        <span style={{ color: m.bag_delivered_at ? '#94a3b8' : '#fde68a', fontSize: '12px' }}>
+                          {m.bag_delivered_at ? new Date(m.bag_delivered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Needs bag'}
+                        </span>
+                      </label>
+                    </td>
                   </tr>
                 );
               })}

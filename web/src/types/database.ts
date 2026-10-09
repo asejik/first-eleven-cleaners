@@ -627,6 +627,8 @@ export type Database = {
           enrolled_order_id: string | null;
           cancelled_at: string | null;
           cancel_reason: string | null;
+          bag_delivered_at: string | null;
+          bag_delivered_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -649,6 +651,8 @@ export type Database = {
           enrolled_order_id?: string | null;
           cancelled_at?: string | null;
           cancel_reason?: string | null;
+          bag_delivered_at?: string | null;
+          bag_delivered_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -671,6 +675,8 @@ export type Database = {
           enrolled_order_id?: string | null;
           cancelled_at?: string | null;
           cancel_reason?: string | null;
+          bag_delivered_at?: string | null;
+          bag_delivered_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
