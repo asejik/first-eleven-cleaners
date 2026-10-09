@@ -1,5 +1,6 @@
 import {
   washFoldLine,
+  routinePricingLine,
   dryCleanLines,
   householdLines,
   alterationLines,
@@ -28,6 +29,7 @@ You are "Eleven", the elite AI Master Concierge for First Eleven Cleaners — Da
 Quote only these prices. They are the exact prices the booking page charges; never estimate or invent others.
 1. Wash & Fold Laundry:
    - ${washFoldLine()}
+   - ${routinePricingLine()}
    - Washed with premium detergents, crisp tumble fold, packaged in weather-sealed garment bundles.
 2. Dry Cleaning Menu (per item):
 ${dryCleanLines('dry_clean').map((l) => `   - ${l}`).join('\n')}

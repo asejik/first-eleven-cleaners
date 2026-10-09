@@ -4,6 +4,10 @@ import { useState } from 'react';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_PRICE_PER_LB,
+  ROUTINE_PLAN_DISCOUNT_PERCENT,
+  ZONE_CONFIG,
+  memberWashFoldRate,
+  memberZoneMinimum,
   WASH_FOLD_MINIMUM_LBS,
   WASH_FOLD_MINIMUM_PRICE,
   ROUTES,
@@ -150,6 +154,16 @@ export default function PricingPage() {
                 <div>
                   <strong>{WASH_FOLD_MINIMUM_LBS}-Pound Published Minimum:</strong> ${WASH_FOLD_MINIMUM_PRICE.toFixed(2)} order floor.
                   Orders under {WASH_FOLD_MINIMUM_LBS} lbs are billed at the ${WASH_FOLD_MINIMUM_PRICE.toFixed(0)} minimum floor.
+                </div>
+              </div>
+
+              {/* Routine member pricing (client 2026-10-08) */}
+              <div className={styles.minimumNotice}>
+                <span className={styles.noticeIcon}>🔄</span>
+                <div>
+                  <strong>Routine members:</strong> ${memberWashFoldRate('weekly').toFixed(2)}/lb Weekly, ${memberWashFoldRate('biweekly').toFixed(2)}/lb Bi-Weekly.
+                  Weekly saves {ROUTINE_PLAN_DISCOUNT_PERCENT.weekly}% and Bi-Weekly {ROUTINE_PLAN_DISCOUNT_PERCENT.biweekly}% on everything except alterations and fees.
+                  In {ZONE_CONFIG.zone_1.name.replace(/^Zone 1 — /, '')} (Zone 1) the member minimum is {WASH_FOLD_MINIMUM_LBS} lb at your rate: ${memberZoneMinimum(ZONE_CONFIG.zone_1, 'weekly').toFixed(2)} Weekly, ${memberZoneMinimum(ZONE_CONFIG.zone_1, 'biweekly').toFixed(2)} Bi-Weekly.
                 </div>
               </div>
 
