@@ -23,6 +23,8 @@ export default function OrderDetailPage() {
   const cancelOrderMutation = useCancelOrder();
   const addToast = useUIStore((s) => s.addToast);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  // A late cancel's fee (or waiver), shown before the customer confirms (client 2026-10-08)
+  const [lateFeeNotice, setLateFeeNotice] = useState<{ message: string; fee: number; waived: boolean } | null>(null);
 
   if (isLoading) {
     return <Loader fullScreen text="Loading live garment status..." />;
@@ -66,14 +68,22 @@ export default function OrderDetailPage() {
 
   const handleConfirmCancel = async () => {
     try {
-      await cancelOrderMutation.mutateAsync(order.id);
+      const result = await cancelOrderMutation.mutateAsync({ orderId: order.id, confirmLateFee: Boolean(lateFeeNotice) });
       setIsCancelModalOpen(false);
+      setLateFeeNotice(null);
       addToast({
         type: 'success',
         title: 'Pickup Cancelled',
-        message: 'Your pickup has been successfully cancelled. Zero charges were applied.',
+        message: result?.lateCancel?.status && result.lateCancel.status !== 'none' && result.lateCancel.status !== 'waived'
+          ? result.message
+          : 'Your pickup has been successfully cancelled. Zero charges were applied.',
       });
     } catch (err: unknown) {
+      // Under 2 hours before the window: show the fee and ask again (client 2026-10-08)
+      if ((err as { code?: string }).code === 'LATE_CANCEL_FEE') {
+        setLateFeeNotice({ message: (err as Error).message, fee: (err as { fee?: number }).fee ?? 0, waived: Boolean((err as { waived?: boolean }).waived) });
+        return;
+      }
       addToast({
         type: 'error',
         title: 'Cancellation Failed',
@@ -371,13 +381,21 @@ export default function OrderDetailPage() {
       {/* Cancellation Confirmation Modal */}
       <Modal
         isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
+        onClose={() => {
+          setIsCancelModalOpen(false);
+          setLateFeeNotice(null);
+        }}
         title="Cancel Upcoming Pickup?"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <p style={{ color: 'var(--color-gray-700)', fontSize: 'var(--text-sm)', lineHeight: '1.6', margin: 0 }}>
             Are you sure you want to cancel pickup for <strong>Order #{order.order_number || order.id.slice(0, 8)}</strong> scheduled for <strong>{order.pickup_date} ({order.pickup_window})</strong>?
           </p>
+          {lateFeeNotice ? (
+            <div role="alert" style={{ background: 'rgba(239, 68, 68, 0.08)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <p style={{ color: 'var(--color-navy)', fontSize: 'var(--text-sm)', margin: 0 }}>{lateFeeNotice.message}</p>
+            </div>
+          ) : (
           <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-gray-200)' }}>
             <p style={{ color: 'var(--color-navy)', fontSize: 'var(--text-xs)', margin: 0, fontWeight: 'bold' }}>
               💡 Zero Risk Checkout Promise:
@@ -386,8 +404,16 @@ export default function OrderDetailPage() {
               Because your payment card is only charged after digital intake &amp; scale weighing at our plant, zero fees have been charged to your card.
             </p>
           </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-            <Button variant="outline" size="sm" onClick={() => setIsCancelModalOpen(false)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsCancelModalOpen(false);
+                setLateFeeNotice(null);
+              }}
+            >
               Keep Pickup
             </Button>
             <Button
@@ -396,7 +422,7 @@ export default function OrderDetailPage() {
               isLoading={cancelOrderMutation.isPending}
               onClick={handleConfirmCancel}
             >
-              Yes, Cancel Pickup
+              {lateFeeNotice && !lateFeeNotice.waived ? `Cancel and Pay $${lateFeeNotice.fee.toFixed(2)}` : 'Yes, Cancel Pickup'}
             </Button>
           </div>
         </div>

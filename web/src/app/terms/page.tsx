@@ -97,6 +97,7 @@ export default function TermsOfServicePage() {
               <li className={styles.listItem}><strong>Customer reschedules &ge;2 hours beforehand:</strong> $0 fee.</li>
               <li className={styles.listItem}><strong>First Eleven courier or plant delay:</strong> $0 fee.</li>
               <li className={styles.listItem}><strong>Repeat unnotified failed attempts:</strong> $15.00 service fee.</li>
+              <li className={styles.listItem}><strong>Customer cancels or reschedules under 2 hours before the window:</strong> $15.00 fee, charged to the card on file (Zone 5 Extended Reach pickups: the Extended Reach fee instead). The first one is waived as a courtesy; Routine members have one waived each calendar month instead. You are shown the fee and asked to confirm before it is charged.</li>
             </ul>
             <p className={styles.paragraph}>
               Delivery times represent estimates backed by our 48-Hour Match-Ready Guarantee, excluding Sundays when our main plant is closed.

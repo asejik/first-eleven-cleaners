@@ -104,7 +104,11 @@ export type RoutinePatch = Partial<Pick<RoutineMembership, 'status' | 'cadence' 
   cancel_reason?: string | null;
 };
 
-export type RoutineDecision = { ok: true; patch: RoutinePatch; autoPaused?: boolean; skippedDate?: string } | { ok: false; error: string };
+export type RoutineDecision =
+  | { ok: true; patch: RoutinePatch; autoPaused?: boolean; skippedDate?: string }
+  | { ok: false; error: string }
+  /** Under 2 hours before a pickup already made: the customer confirms the fee first (2026-10-08) */
+  | { ok: false; error: string; code: 'LATE_CANCEL_FEE'; fee: number; waived: boolean };
 
 /**
  * What a change does to a membership (pure: the store saves the patch). `zone` is the

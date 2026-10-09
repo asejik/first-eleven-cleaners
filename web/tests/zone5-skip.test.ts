@@ -75,7 +75,7 @@ function inbound(body: string) {
 describe('SKIP', () => {
   it('cancels the next booked Zone 5 pickup and releases its hold', async () => {
     const reply = await skipNextZone5Pickup(fake as never, '+12145550100', now);
-    expect(reply).toMatch(/^First Eleven Cleaners: Done\. Your Extended Reach pickup on Wed Nov 4 is cancelled and nothing is charged\. Book again anytime: .+\/book$/);
+    expect(reply).toMatch(/^First Eleven Cleaners: Done\. Your Extended Reach pickup on Wed Nov 4 is cancelled\. Nothing is charged\. Book again anytime: .+\/book$/);
     expect(writes).toContainEqual(
       expect.objectContaining({ table: 'orders', op: 'update', values: expect.objectContaining({ status: 'cancelled' }), filters: expect.objectContaining({ status: 'booked' }) })
     );

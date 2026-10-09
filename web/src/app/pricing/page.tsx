@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_PRICE_PER_LB,
+  LATE_CANCEL_CUTOFF_HOURS,
   ROUTINE_PLAN_DISCOUNT_PERCENT,
   ZONE_CONFIG,
   memberWashFoldRate,
@@ -292,6 +293,19 @@ export default function PricingPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
                   <span>Repeat unnotified failed attempt:</span>
                   <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                </div>
+                {/* Late cancel (client 2026-10-08): the same fee, one rule */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
+                  <span>Cancels or reschedules under {LATE_CANCEL_CUTOFF_HOURS} hours before the window:</span>
+                  <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
+                  <span>Zone 5 (Extended Reach):</span>
+                  <strong>The Extended Reach fee instead</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
+                  <span>Routine members:</span>
+                  <strong style={{ color: 'var(--color-green)' }}>One waived each month</strong>
                 </div>
               </div>
             </Card>

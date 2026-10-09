@@ -69,11 +69,21 @@ export async function POST(request: Request) {
     if (!isSupabaseConfigured() || !auth.customer) {
       return NextResponse.json({ error: 'Your Routine can only be changed with the database connected.' }, { status: 503 });
     }
-    const change = ChangeSchema.parse(await request.json());
+    const body = await request.json();
+    const change = ChangeSchema.parse(body);
+    // The customer saw the late-cancel fee and agreed (client 2026-10-08)
+    const confirmLateFee = body?.confirm_late_fee === true;
     const { supabase, membership } = await load(auth.customer.id);
     if (!membership) return NextResponse.json({ error: "You're not in the Routine." }, { status: 404 });
-    const decision = await applyRoutineChange(supabase, membership as unknown as RoutineMembership, change, await getCoverage());
-    if (!decision.ok) return NextResponse.json({ error: decision.error }, { status: 400 });
+    const decision = await applyRoutineChange(supabase, membership as unknown as RoutineMembership, change, await getCoverage(), new Date(), {
+      confirmLateFee,
+      actor: auth.customer.full_name || 'Customer (Routine)',
+    });
+    if (!decision.ok) {
+      return 'code' in decision
+        ? NextResponse.json({ error: decision.error, code: decision.code, fee: decision.fee, waived: decision.waived }, { status: 409 })
+        : NextResponse.json({ error: decision.error }, { status: 400 });
+    }
     return NextResponse.json({ success: true, autoPaused: Boolean(decision.autoPaused), patch: decision.patch });
   } catch (err: unknown) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.issues[0]?.message || 'Please check the change.' }, { status: 400 });

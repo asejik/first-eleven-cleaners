@@ -3,6 +3,7 @@ import type { Json } from '@/types/database';
 import { addDaysToDate, texasDate } from '@/lib/texas-time';
 import { getAppBaseUrl } from '@/lib/constants';
 import { releaseOrderHold } from '@/lib/payment-capture';
+import { assessLateCancel, applyLateCancelFee, lateCancelWarning, LATE_CANCEL_ORDER_FIELDS, type LateCancelOrder } from '@/lib/late-cancel';
 import { sendContactMessage } from '@/lib/messaging/contact';
 import { reportError } from '@/lib/error-reporting';
 import { greetingFirstName } from '@/lib/sanitize';
@@ -28,6 +29,12 @@ import {
  * Routine memberships in the database (client 2026-10-08). Server only.
  */
 type AdminClient = ReturnType<typeof createAdminClient>;
+
+/** confirmLateFee: the customer saw the late-cancel fee and agreed (client 2026-10-08). */
+export interface ChangeOptions {
+  confirmLateFee?: boolean;
+  actor?: string;
+}
 
 export const MEMBERSHIP_FIELDS =
   'id, customer_id, status, cadence, pickup_day, pickup_window, address_id, next_pickup_date, paused_until, consecutive_skips, template, created_at, enrolled_order_id';
@@ -125,7 +132,7 @@ async function sendAutoPauseCheckIn(supabase: AdminClient, customerId: string) {
 export async function upcomingAutoPickup(supabase: AdminClient, m: { id: string; enrolled_order_id?: string | null }, now: Date = new Date()) {
   let query = supabase
     .from('orders')
-    .select('id, order_number, pickup_date, hold_payment_id, hold_status')
+    .select(`${LATE_CANCEL_ORDER_FIELDS}, hold_payment_id, hold_status`)
     .eq('routine_membership_id', m.id)
     .eq('status', 'booked')
     .gte('pickup_date', texasDate(now));
@@ -141,10 +148,16 @@ export async function upcomingAutoPickup(supabase: AdminClient, m: { id: string;
 export async function skipAutoPickup(
   supabase: AdminClient,
   m: RoutineMembership & { enrolled_order_id?: string | null },
-  pickup: { pickup_date: string },
-  now: Date = new Date()
+  pickup: LateCancelOrder,
+  now: Date = new Date(),
+  { confirmLateFee = false, actor = 'Customer (Routine)' }: ChangeOptions = {}
 ): Promise<RoutineDecision> {
   if (m.status !== 'active') return { ok: false, error: 'This Routine is not active.' };
+  // Under 2 hours before the window: the fee is shown and confirmed first (client 2026-10-08)
+  const lateFee = await assessLateCancel(supabase, pickup, now);
+  if (lateFee.late && !confirmLateFee) {
+    return { ok: false, code: 'LATE_CANCEL_FEE', error: lateCancelWarning(lateFee, 'Skipping'), fee: lateFee.fee, waived: lateFee.waived };
+  }
   const skips = m.consecutive_skips + 1;
   const autoPaused = skips >= ROUTINE_AUTO_PAUSE_SKIPS;
   const patch: RoutinePatch = autoPaused
@@ -153,6 +166,7 @@ export async function skipAutoPickup(
   const { error } = await supabase.from('routine_memberships').update({ ...patch, updated_at: now.toISOString() }).eq('id', m.id).eq('status', 'active');
   if (error) throw error;
   await cancelBookedPickups(supabase, m, autoPaused ? { fromDate: texasDate(now) } : { onDate: pickup.pickup_date }, autoPaused ? 'paused' : 'skipped');
+  await applyLateCancelFee(supabase, pickup, lateFee, actor, now);
   if (autoPaused) await sendAutoPauseCheckIn(supabase, m.customer_id);
   return { ok: true, patch, autoPaused, skippedDate: pickup.pickup_date };
 }
@@ -163,15 +177,29 @@ export async function applyRoutineChange(
   m: RoutineMembership & { enrolled_order_id?: string | null },
   change: RoutineChange,
   coverage: Coverage,
-  now: Date = new Date()
+  now: Date = new Date(),
+  options: ChangeOptions = {}
 ): Promise<RoutineDecision> {
   // The next pickup may already be made (2 days ahead): skipping cancels that one
   if (change.action === 'skip' && m.status === 'active') {
     const made = await upcomingAutoPickup(supabase, m, now);
-    if (made) return skipAutoPickup(supabase, m, made, now);
+    if (made) return skipAutoPickup(supabase, m, made, now, options);
   }
   const decision = decideRoutineChange(m, change, zoneForTemplate(m.template as Partial<RoutineTemplate>, coverage), coverage, now);
   if (!decision.ok) return decision;
+
+  // Pausing, cancelling or moving the day cancels a pickup already made: under 2 hours before
+  // its window, the fee is shown and confirmed first (client 2026-10-08)
+  const cancelsMade =
+    change.action === 'pause' ||
+    change.action === 'cancel' ||
+    (change.action === 'update' && Boolean(decision.patch.next_pickup_date) && decision.patch.next_pickup_date !== m.next_pickup_date);
+  const made = cancelsMade && m.status === 'active' ? await upcomingAutoPickup(supabase, m, now) : null;
+  const lateFee = made ? await assessLateCancel(supabase, made, now) : ({ late: false } as const);
+  if (lateFee.late && !options.confirmLateFee) {
+    const verb = change.action === 'update' ? 'Changing your day' : change.action === 'pause' ? 'Pausing' : 'Cancelling';
+    return { ok: false, code: 'LATE_CANCEL_FEE', error: lateCancelWarning(lateFee, verb), fee: lateFee.fee, waived: lateFee.waived };
+  }
   const { error } = await supabase
     .from('routine_memberships')
     .update({ ...decision.patch, updated_at: now.toISOString() })
@@ -187,6 +215,7 @@ export async function applyRoutineChange(
   } else if (change.action === 'update' && decision.patch.next_pickup_date && decision.patch.next_pickup_date !== m.next_pickup_date) {
     await cancelBookedPickups(supabase, m, { fromDate: texasDate(now) }, 'moved to the new day');
   }
+  if (made) await applyLateCancelFee(supabase, made, lateFee, options.actor ?? 'Customer (Routine)', now);
   if (decision.autoPaused) await sendAutoPauseCheckIn(supabase, m.customer_id);
   return decision;
 }

@@ -20,7 +20,7 @@ import {
 } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
-import { routinePricingLine } from '@/lib/ai/price-list';
+import { routinePricingLine, lateCancelLine } from '@/lib/ai/price-list';
 import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
@@ -84,6 +84,7 @@ export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
     `- ${percent(ENVIRONMENTAL_FEE_RATE)} environmental fee.`,
     `- ${percent(TX_SALES_TAX_RATE, 2)} Texas sales tax.`,
     `- ${money(FAILED_PICKUP_FEE)} failed pickup or delivery fee may apply if the driver can't complete a pickup or delivery in the confirmed window (first occurrence waived).`,
+    `- ${lateCancelLine()}`,
     '',
     '### Commercial',
     `- Laundry and dry cleaning programs for businesses. Request a rate card: ${SITE_URL}/commercial`,
