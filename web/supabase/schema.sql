@@ -829,6 +829,9 @@ CREATE TABLE IF NOT EXISTS routine_memberships (
   enrolled_order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
   cancelled_at TIMESTAMPTZ,
   cancel_reason TEXT,
+  -- The branded bag, given on the first pickup (20261009_routine_bag)
+  bag_delivered_at TIMESTAMPTZ,
+  bag_delivered_by VARCHAR(255),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

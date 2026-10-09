@@ -87,6 +87,11 @@ export function DriverStopCard({
             </div>
           )}
           <CustomerAccessNotes order={order} />
+          {order.needs_routine_bag && (
+            <div className={styles.notesAlert}>
+              <strong>🎒 Bring a Routine bag:</strong> this member hasn&apos;t had theirs yet. Tell the office once it&apos;s handed over.
+            </div>
+          )}
         </div>
 
         <div className={styles.actionsGrid}>
