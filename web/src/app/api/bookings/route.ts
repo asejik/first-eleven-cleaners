@@ -10,7 +10,10 @@ import { messagingService } from '@/lib/messaging';
 import {
   getAppBaseUrl,
   ROUTES,
-  getZoneMinimumGap,
+  orderMinimumGap,
+  memberZoneMinimum,
+  MEMBER_PROMO_NOT_COMBINED,
+  type PlanFrequency,
   extendedReachFee,
   EXTENDED_REACH_LABEL,
   isExpressExcluded,
@@ -223,8 +226,26 @@ export async function POST(request: Request) {
     }
     const zone = resolution.zone;
     const band = resolution.band;
-    // Zone 5: the Extended Reach fee, half off for Routine members (Weekly or Bi-Weekly plan)
-    const isRoutine = isRoutineFrequency(validated.schedule.frequency);
+    // Routine member pricing (client 2026-10-08): joining with this booking, or a signed-in
+    // member (active or paused) booking an extra pickup, which is priced at their plan
+    let memberCadence: RoutineCadence | null = null;
+    if (isSupabaseConfigured) {
+      const {
+        data: { user: signedIn },
+      } = await (await createClient()).auth.getUser();
+      if (signedIn) {
+        const admin = createAdminClient();
+        const { data: me } = await admin.from('customers').select('id').eq('auth_id', signedIn.id).maybeSingle();
+        const open = me ? await getOpenMembership(admin, me.id) : null;
+        memberCadence = open ? (open.cadence as RoutineCadence) : null;
+      }
+    }
+    const planFrequency: PlanFrequency = memberCadence ?? validated.schedule.frequency;
+    if (planFrequency !== 'one_time' && validated.pricing.promo_code?.trim()) {
+      return NextResponse.json({ error: MEMBER_PROMO_NOT_COMBINED, code: 'PROMO_NOT_COMBINED' }, { status: 400 });
+    }
+    // Zone 5: the Extended Reach fee, half off for Routine members
+    const isRoutine = isRoutineFrequency(planFrequency);
     const reachFee = band ? extendedReachFee(band, isRoutine, coverage.extendedReach) : 0;
 
     // 1b. Alterations: every piece needs a valid fit instruction; buttons alone can't be booked
@@ -343,17 +364,21 @@ export async function POST(request: Request) {
       isExpress,
       promoDiscountPercent,
       promoDiscountAmount,
-      frequency: validated.schedule.frequency,
+      frequency: planFrequency,
       extendedReachFee: reachFee,
     });
 
     // 5. Enforce Zone Minimum (F010 Fix). Zone 5: the minimum is on the garments; the delivery
-    // fee is on top.
-    const zoneMinimumGap = getZoneMinimumGap(computed.subtotal, zone);
+    // fee is on top. Members: at member prices, and Zone 1's is 15 lb at their rate (2026-10-08).
+    const minimumOrder = memberZoneMinimum(zone, planFrequency);
+    const zoneMinimumGap = orderMinimumGap(computed.subtotal, zone, planFrequency, computed.alterationSubtotal);
     if (zoneMinimumGap > 0) {
       return NextResponse.json(
         {
-          error: `Order subtotal ($${computed.subtotal.toFixed(2)}) is below the $${zone.minimumOrder.toFixed(2)} minimum for ${zone.name}. Please add $${zoneMinimumGap.toFixed(2)} more to place your order.`,
+          error:
+            planFrequency === 'one_time'
+              ? `Order subtotal ($${computed.subtotal.toFixed(2)}) is below the $${zone.minimumOrder.toFixed(2)} minimum for ${zone.name}. Please add $${zoneMinimumGap.toFixed(2)} more to place your order.`
+              : `This order is below the $${minimumOrder.toFixed(2)} Routine member minimum for ${zone.name}. Please add $${zoneMinimumGap.toFixed(2)} more (at member prices) to place your order.`,
           zone,
           subtotal: computed.subtotal,
           gap: zoneMinimumGap,
@@ -403,7 +428,7 @@ export async function POST(request: Request) {
     let isGuest = true;
 
     // The amount held on the card for this estimate, and the hold once placed (Part A)
-    const holdAmount = holdAmountFor(computed.financials.finalTotal, zone.minimumOrder);
+    const holdAmount = holdAmountFor(computed.financials.finalTotal, minimumOrder);
     let placedHold: { paymentId: string; expiresAt: string | null } | null = null;
     const releaseUnusedHold = async () => {
       if (!placedHold) return;
@@ -695,11 +720,11 @@ export async function POST(request: Request) {
                 distance_miles: resolution.miles,
                 extended_reach_band: band?.id ?? null,
                 extended_reach_fee: reachFee,
-                frequency: validated.schedule.frequency,
+                frequency: planFrequency,
                 notes: [
                   validated.address.delivery_notes,
-                  validated.schedule.frequency && validated.schedule.frequency !== 'one_time'
-                    ? `Recurring Plan: ${validated.schedule.frequency === 'weekly' ? 'Weekly' : 'Bi-Weekly'}`
+                  planFrequency !== 'one_time'
+                    ? `Recurring Plan: ${planFrequency === 'weekly' ? 'Weekly' : 'Bi-Weekly'}`
                     : null,
                   band ? `${EXTENDED_REACH_LABEL} (Band ${band.id}): $${reachFee.toFixed(2)}${isRoutine ? ' (Routine member)' : ''}` : null,
                 ].filter(Boolean).join(' | ') || null,
