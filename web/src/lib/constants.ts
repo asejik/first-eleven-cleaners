@@ -388,6 +388,47 @@ export function getZoneMinimumGap(subtotal: number, zone?: ZoneConfig | null): n
   return Number((zone.minimumOrder - subtotal).toFixed(2));
 }
 
+// --- Routine member pricing (client 2026-10-08, Part 2 item 3) ---
+// One rule: the plan discount applies to everything except alterations and fees. Weekly 10%
+// off, Bi-Weekly 5% off, so wash & fold is $2.70/lb Weekly and $2.85/lb Bi-Weekly; the 15-lb
+// floor stays. Zone 1 members' minimum is 15 lb at their member rate ($40.50 / $42.75), not
+// the $45 zone minimum; Zones 2-5 keep the published minimum. Promo codes don't combine with
+// member pricing.
+export type PlanFrequency = 'one_time' | 'weekly' | 'biweekly';
+export const ROUTINE_PLAN_DISCOUNT_PERCENT: Record<PlanFrequency, number> = { one_time: 0, weekly: 10, biweekly: 5 };
+export const MEMBER_PROMO_NOT_COMBINED = "Promo codes can't be combined with Routine member pricing.";
+
+/** Wash & fold per pound at the member rate ($2.70 Weekly, $2.85 Bi-Weekly; $3.00 one-time). */
+export function memberWashFoldRate(frequency: PlanFrequency): number {
+  const cents = Math.round(WASH_FOLD_PRICE_PER_LB * 100);
+  return Math.round((cents * (100 - ROUTINE_PLAN_DISCOUNT_PERCENT[frequency])) / 100) / 100;
+}
+
+/** The order minimum for this customer: Zone 1 members pay 15 lb at their member rate. */
+export function memberZoneMinimum(zone: Pick<ZoneConfig, 'id' | 'minimumOrder'>, frequency: PlanFrequency): number {
+  if (zone.id !== 'zone_1' || frequency === 'one_time') return zone.minimumOrder;
+  return Math.round(WASH_FOLD_MINIMUM_LBS * memberWashFoldRate(frequency) * 100) / 100;
+}
+
+/**
+ * How far short of the minimum an order is. Zone 1 members are measured at member prices (the
+ * plan discount on everything but alterations) against 15 lb at their rate; everyone else, and
+ * members in Zones 2-5 ("the published zone minimum applies as-is"), as before.
+ */
+export function orderMinimumGap(
+  subtotal: number,
+  zone: ZoneConfig | null | undefined,
+  frequency: PlanFrequency = 'one_time',
+  alterationSubtotal = 0
+): number {
+  if (!zone) return 0;
+  if (frequency === 'one_time' || zone.id !== 'zone_1') return getZoneMinimumGap(subtotal, zone);
+  const discountable = Math.max(0, Math.round(subtotal * 100) - Math.round(alterationSubtotal * 100));
+  const memberCents = Math.round(subtotal * 100) - Math.round((discountable * ROUTINE_PLAN_DISCOUNT_PERCENT[frequency]) / 100);
+  const minimumCents = Math.round(memberZoneMinimum(zone, frequency) * 100);
+  return memberCents >= minimumCents ? 0 : (minimumCents - memberCents) / 100;
+}
+
 // --- Taxes & Environmental Fees ---
 export const TX_SALES_TAX_RATE = 0.0825; // 8.25% Texas State & Local Sales Tax
 export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Sustainability Fee
@@ -656,6 +697,7 @@ export function calculateOrderFinancials({
   discountAmount: directDiscountAmount,
   frequency = 'one_time',
   extendedReachFee = 0,
+  alterationSubtotal = 0,
 }: {
   subtotal: number;
   expressMultiplier?: number;
@@ -666,6 +708,8 @@ export function calculateOrderFinancials({
   frequency?: 'one_time' | 'weekly' | 'biweekly';
   /** Zone 5 delivery fee in dollars: no discount applies to it; fee and tax do (client 8C) */
   extendedReachFee?: number;
+  /** Alterations in the subtotal: the Routine plan discount doesn't apply to them (2026-10-08) */
+  alterationSubtotal?: number;
 }): OrderFinancials {
   const subtotalCents = toCents(subtotal);
 
@@ -679,9 +723,11 @@ export function calculateOrderFinancials({
   }
   const grossCents = subtotalCents + expressCents;
 
-  // Recurring plan frequency discount: 10% for weekly, 5% for biweekly (F005)
-  const frequencyDiscountPercent = frequency === 'weekly' ? 10 : frequency === 'biweekly' ? 5 : 0;
-  const frequencyCents = applyRate(subtotalCents, frequencyDiscountPercent, 100);
+  // Routine plan discount: 10% Weekly, 5% Bi-Weekly, on everything except alterations and
+  // fees (client 2026-10-08)
+  const frequencyDiscountPercent = ROUTINE_PLAN_DISCOUNT_PERCENT[frequency] ?? 0;
+  const discountableCents = Math.max(0, subtotalCents - toCents(alterationSubtotal));
+  const frequencyCents = applyRate(discountableCents, frequencyDiscountPercent, 100);
 
   // Promotional or direct discount
   const promoDiscountPercent = discountPercent;
@@ -724,6 +770,8 @@ export interface RecomputedBookingPricing {
   subtotal: number;
   dryCleanSubtotal: number;
   washFoldSubtotal: number;
+  /** Alterations: not part of the Routine plan discount */
+  alterationSubtotal: number;
   itemizedList: Array<{
     garment_type: string;
     service_type: 'dry_clean' | 'wash_fold' | 'alteration';
@@ -819,6 +867,7 @@ export function computeBookingFinancials({
 
   const dryCleanSubtotal = toDollars(dryCleanCents);
   const subtotal = toDollars(toCents(washFoldSubtotal) + dryCleanCents);
+  const alterationSubtotal = toDollars(itemizedList.filter((i) => i.service_type === 'alteration').reduce((sum, i) => sum + toCents(i.subtotal), 0));
   const financials = calculateOrderFinancials({
     subtotal,
     isExpress,
@@ -826,12 +875,14 @@ export function computeBookingFinancials({
     discountAmount: promoDiscountAmount,
     frequency,
     extendedReachFee,
+    alterationSubtotal,
   });
 
   return {
     subtotal,
     dryCleanSubtotal,
     washFoldSubtotal,
+    alterationSubtotal,
     itemizedList,
     financials,
   };

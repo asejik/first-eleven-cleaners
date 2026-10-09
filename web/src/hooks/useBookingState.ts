@@ -10,7 +10,9 @@ import {
   PROMO_CODE_LAUNCH,
   calculateOrderFinancials,
   isExpressExcluded,
-  getZoneMinimumGap,
+  orderMinimumGap,
+  memberZoneMinimum,
+  MEMBER_PROMO_NOT_COMBINED,
   type ZoneConfig,
 } from '@/lib/constants';
 import {
@@ -159,6 +161,8 @@ export function useBookingState() {
     staleTime: 60 * 1000,
   });
   const isRoutineMember = Boolean(routineStatus?.membership);
+  // Member pricing (client 2026-10-08): a member's every booking is priced at their plan
+  const planFrequency: 'one_time' | 'weekly' | 'biweekly' = routineStatus?.membership?.cadence ?? frequency;
 
   const handleSelectTier = (tier: 'standard' | 'express_24hr') => {
     setExpressTier(tier);
@@ -353,11 +357,13 @@ export function useBookingState() {
   const effectiveExpressTier: 'standard' | 'express_24hr' = isExpressActive ? 'express_24hr' : 'standard';
 
   // Fixed-dollar codes are dollars off, as the server applies them (SEC-15, P05 AR-02)
-  const { discountPercent, discountAmount: promoDiscountAmount } = promoFinancialInputs(appliedPromo);
+  // Promo codes don't combine with member pricing: the code is set aside while it applies
+  const effectivePromo = planFrequency === 'one_time' ? appliedPromo : null;
+  const { discountPercent, discountAmount: promoDiscountAmount } = promoFinancialInputs(effectivePromo);
 
   // Zone 5: the Extended Reach fee line, half off for Routine members (client 8C)
   const extendedReach = detectedZone?.id === 'zone_5' ? addressCoverage.extendedReach : null;
-  const isRoutine = isRoutineFrequency(frequency);
+  const isRoutine = isRoutineFrequency(planFrequency);
   const extendedReachFee = extendedReach ? (isRoutine ? extendedReach.routineFee : extendedReach.fullFee) : 0;
   // "Join the Routine": Bi-Weekly matches the Zone 5 route
   const joinRoutine = () => setFrequency('biweekly');
@@ -367,8 +373,9 @@ export function useBookingState() {
     isExpress: isExpressActive,
     discountPercent,
     discountAmount: promoDiscountAmount,
-    frequency,
+    frequency: planFrequency,
     extendedReachFee,
+    alterationSubtotal: calculatedAlterations,
   });
 
   // Route-day zones pick from their dates; keep the pickup on one of them (adjusted during
@@ -383,9 +390,9 @@ export function useBookingState() {
   const expressSurcharge = financials.expressSurcharge;
   const discountAmount = financials.discountAmount;
   const total = financials.finalTotal;
-  const zoneMinimumGap = getZoneMinimumGap(subtotal, detectedZone);
+  const zoneMinimumGap = orderMinimumGap(subtotal, detectedZone, planFrequency, calculatedAlterations);
   // Card hold shown at checkout; the server computes the real one from its own prices (Part A)
-  const holdAmount = holdAmountFor(total, detectedZone?.minimumOrder || 0);
+  const holdAmount = holdAmountFor(total, detectedZone ? memberZoneMinimum(detectedZone, planFrequency) : 0);
   const holdNow = Boolean(pickupDate) && shouldPlaceHoldNow(pickupDate);
 
   // Step Validations: Step 1 requires full address (including city) AND a valid recognized service zone
@@ -404,6 +411,10 @@ export function useBookingState() {
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
     setPromoNotice(null);
+    if (planFrequency !== 'one_time') {
+      addToast({ type: 'error', title: 'Promo not applied', message: MEMBER_PROMO_NOT_COMBINED });
+      return;
+    }
     try {
       const result = await validatePromoMutation.mutateAsync({ code: promoCodeInput.trim(), email });
       setAppliedPromo({ code: result.code, discount_type: result.discount_type, discount_value: result.discount_value });
@@ -469,7 +480,7 @@ export function useBookingState() {
           subtotal,
           discount_amount: discountAmount,
           total,
-          promo_code: appliedPromo?.code || null,
+          promo_code: effectivePromo?.code || null,
         },
         payment_method: {
           card_brand: cardBrand,
@@ -570,9 +581,10 @@ export function useBookingState() {
     setFrequency,
     promoCodeInput,
     setPromoCodeInput,
-    appliedPromo,
+    appliedPromo: effectivePromo,
     handleApplyPromo,
-    promoNotice,
+    // Set aside while member pricing applies (client 2026-10-08)
+    promoNotice: planFrequency !== 'one_time' && appliedPromo ? MEMBER_PROMO_NOT_COMBINED : promoNotice,
     cardNumber,
     setCardNumber,
     cardExpiry,

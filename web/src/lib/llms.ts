@@ -20,6 +20,7 @@ import {
 } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
+import { routinePricingLine } from '@/lib/ai/price-list';
 import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
 const money = (n: number) => `$${n.toFixed(2)}`;
@@ -55,6 +56,7 @@ export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
     '### Wash & Fold',
     `- ${money(WASH_FOLD_PRICE_PER_LB)} per pound, ${WASH_FOLD_MINIMUM_LBS} lb minimum (${money(WASH_FOLD_MINIMUM_PRICE)}).`,
     '- Washed, dried, sorted, folded and packaged.',
+    `- ${routinePricingLine()}`,
     '',
     '### Dry Cleaning (per item)',
     ...catalogItems('dry_clean').map(([, item]) => catalogLine(item)),

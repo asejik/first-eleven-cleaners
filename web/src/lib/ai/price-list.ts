@@ -12,6 +12,10 @@ import {
   EXTENDED_REACH_LABEL,
   EXTENDED_REACH_BAND_CITIES,
   extendedReachTurnaroundLine,
+  ZONE_CONFIG,
+  ROUTINE_PLAN_DISCOUNT_PERCENT,
+  memberWashFoldRate,
+  memberZoneMinimum,
 } from '@/lib/constants';
 import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
 
@@ -31,6 +35,17 @@ export function washFoldLine(lang: 'en' | 'es' = 'en'): string {
   return lang === 'es'
     ? `${money(WASH_FOLD_PRICE_PER_LB)} por libra (mínimo de ${WASH_FOLD_MINIMUM_LBS} lbs / ${money(WASH_FOLD_MINIMUM_PRICE)})`
     : `${money(WASH_FOLD_PRICE_PER_LB)} per lb (${WASH_FOLD_MINIMUM_LBS}-lb minimum / ${money(WASH_FOLD_MINIMUM_PRICE)})`;
+}
+
+/** Routine member pricing (client 2026-10-08): one rule, everything but alterations and fees. */
+export function routinePricingLine(lang: 'en' | 'es' = 'en'): string {
+  const w = money(memberWashFoldRate('weekly'));
+  const b = money(memberWashFoldRate('biweekly'));
+  const z1w = money(memberZoneMinimum(ZONE_CONFIG.zone_1, 'weekly'));
+  const z1b = money(memberZoneMinimum(ZONE_CONFIG.zone_1, 'biweekly'));
+  return lang === 'es'
+    ? `Miembros Routine (recogida fija): Semanal ${ROUTINE_PLAN_DISCOUNT_PERCENT.weekly}% de descuento, Quincenal ${ROUTINE_PLAN_DISCOUNT_PERCENT.biweekly}%, en todo excepto arreglos y cargos (Wash & Fold ${w}/lb semanal, ${b}/lb quincenal; mínimo de ${WASH_FOLD_MINIMUM_LBS} lbs). Mínimo de Zona 1 para miembros: ${z1w} / ${z1b}. Los códigos promocionales no se combinan con el precio de miembro.`
+    : `Routine members (a standing pickup): Weekly ${ROUTINE_PLAN_DISCOUNT_PERCENT.weekly}% off, Bi-Weekly ${ROUTINE_PLAN_DISCOUNT_PERCENT.biweekly}% off everything except alterations and fees (wash & fold ${w}/lb Weekly, ${b}/lb Bi-Weekly; the ${WASH_FOLD_MINIMUM_LBS}-lb floor stays). Zone 1 member minimum: ${z1w} Weekly / ${z1b} Bi-Weekly; Zones 2-5 keep their minimum. Promo codes don't combine with member pricing.`;
 }
 
 /** "Label: $price" (or "from $price", with any note) for every catalog item in a category. */
@@ -112,6 +127,7 @@ export function chatPriceList(lang: 'en' | 'es' = 'en'): string {
   const noLeather = lang === 'es' ? 'No limpiamos cuero ni gamuza.' : NO_LEATHER_LINE;
   return [
     `• **${washLabel}:** ${washFoldLine(lang)}`,
+    `• ${routinePricingLine(lang)}`,
     '',
     `**${dryLabel}**`,
     ...dryCleanLines('dry_clean').map((l) => `• ${l}`),

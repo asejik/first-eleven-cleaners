@@ -317,6 +317,8 @@ export async function POST(request: Request) {
       frequency,
       // Zone 5 delivery fee as booked (Routine discount already applied)
       extendedReachFee: Number(order.extended_reach_fee) || 0,
+      // The plan discount doesn't apply to alterations (client 2026-10-08)
+      alterationSubtotal,
     });
     const finalTotal = financials.finalTotal;
 
