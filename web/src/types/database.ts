@@ -748,6 +748,222 @@ export type Database = {
           },
         ];
       };
+      referral_codes: {
+        Row: {
+          customer_id: string;
+          code: string;
+          created_at: string;
+        };
+        Insert: {
+          customer_id: string;
+          code: string;
+          created_at?: string;
+        };
+        Update: {
+          customer_id?: string;
+          code?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'referral_codes_customer_id_fkey';
+            columns: ['customer_id'];
+            isOneToOne: false;
+            referencedRelation: 'customers';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referrer_customer_id: string;
+          referred_customer_id: string;
+          referred_order_id: string | null;
+          code: string;
+          status: string;
+          created_at: string;
+          rewarded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          referrer_customer_id: string;
+          referred_customer_id: string;
+          referred_order_id?: string | null;
+          code: string;
+          status?: string;
+          created_at?: string;
+          rewarded_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          referrer_customer_id?: string;
+          referred_customer_id?: string;
+          referred_order_id?: string | null;
+          code?: string;
+          status?: string;
+          created_at?: string;
+          rewarded_at?: string | null;
+        };
+        Relationships: [];
+      };
+      customer_credits: {
+        Row: {
+          id: string;
+          customer_id: string;
+          amount: number;
+          reason: string;
+          order_id: string | null;
+          referral_id: string | null;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          amount: number;
+          reason: string;
+          order_id?: string | null;
+          referral_id?: string | null;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          amount?: number;
+          reason?: string;
+          order_id?: string | null;
+          referral_id?: string | null;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      territories: {
+        Row: {
+          id: string;
+          name: string;
+          zone_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          zone_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          zone_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      territory_zips: {
+        Row: {
+          zip: string;
+          territory_id: string;
+        };
+        Insert: {
+          zip: string;
+          territory_id: string;
+        };
+        Update: {
+          zip?: string;
+          territory_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'territory_zips_territory_id_fkey';
+            columns: ['territory_id'];
+            isOneToOne: false;
+            referencedRelation: 'territories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      founding_members: {
+        Row: {
+          id: string;
+          territory_id: string;
+          number: number;
+          customer_id: string;
+          membership_id: string | null;
+          locked_weekly_percent: number;
+          locked_biweekly_percent: number;
+          granted_at: string;
+          ended_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          territory_id: string;
+          number: number;
+          customer_id: string;
+          membership_id?: string | null;
+          locked_weekly_percent: number;
+          locked_biweekly_percent: number;
+          granted_at?: string;
+          ended_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          territory_id?: string;
+          number?: number;
+          customer_id?: string;
+          membership_id?: string | null;
+          locked_weekly_percent?: number;
+          locked_biweekly_percent?: number;
+          granted_at?: string;
+          ended_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'founding_members_territory_id_fkey';
+            columns: ['territory_id'];
+            isOneToOne: false;
+            referencedRelation: 'territories';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      zip_tier_steps: {
+        Row: {
+          id: string;
+          zip: string;
+          action: string;
+          from_minimum: number | null;
+          to_minimum: number | null;
+          orders_counted: number | null;
+          approved_by: string | null;
+          approved_at: string;
+        };
+        Insert: {
+          id?: string;
+          zip: string;
+          action: string;
+          from_minimum?: number | null;
+          to_minimum?: number | null;
+          orders_counted?: number | null;
+          approved_by?: string | null;
+          approved_at?: string;
+        };
+        Update: {
+          id?: string;
+          zip?: string;
+          action?: string;
+          from_minimum?: number | null;
+          to_minimum?: number | null;
+          orders_counted?: number | null;
+          approved_by?: string | null;
+          approved_at?: string;
+        };
+        Relationships: [];
+      };
       waitlist: {
         Row: {
           id: string;
@@ -919,6 +1135,10 @@ export type Database = {
           late_cancel_fee: number | null;
           late_cancel_status: string | null;
           late_cancel_at: string | null;
+          late_cancel_reason: string | null;
+          referral_code: string | null;
+          referral_discount: number;
+          credit_applied: number;
         };
         Insert: {
           id?: string;
@@ -971,6 +1191,10 @@ export type Database = {
           late_cancel_fee?: number | null;
           late_cancel_status?: string | null;
           late_cancel_at?: string | null;
+          late_cancel_reason?: string | null;
+          referral_code?: string | null;
+          referral_discount?: number;
+          credit_applied?: number;
         };
         Update: {
           id?: string;
@@ -1023,6 +1247,10 @@ export type Database = {
           late_cancel_fee?: number | null;
           late_cancel_status?: string | null;
           late_cancel_at?: string | null;
+          late_cancel_reason?: string | null;
+          referral_code?: string | null;
+          referral_discount?: number;
+          credit_applied?: number;
         };
         Relationships: [
           {
@@ -1190,6 +1418,10 @@ export type Database = {
       normalize_phone_e164: { Args: { raw: string }; Returns: string };
       order_financial_summary: { Args: { p_from: string; p_to: string }; Returns: Json };
       reserve_promo_use: { Args: { p_code: string }; Returns: boolean };
+      claim_founding_number: {
+        Args: { p_territory: string; p_customer: string; p_membership: string | null; p_weekly: number; p_biweekly: number };
+        Returns: number | null;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
