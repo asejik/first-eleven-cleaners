@@ -4,7 +4,8 @@ import { PROMO_CODE_LAUNCH } from '@/lib/constants';
 /** A promo code as applied in the booking flow. */
 export interface AppliedPromo {
   code: string;
-  discount_type: 'percentage' | 'fixed';
+  /** 'referral': a friend's code, dollars off a first order (client 2026-10-10) */
+  discount_type: 'percentage' | 'fixed' | 'referral';
   discount_value: number;
 }
 
@@ -32,7 +33,7 @@ export function promoUsedMessage(code: string): string {
 /** The discount inputs calculateOrderFinancials() needs for an applied code (fixed codes are dollars, SEC-15). */
 export function promoFinancialInputs(promo: AppliedPromo | null): { discountPercent: number; discountAmount: number | undefined } {
   if (!promo) return { discountPercent: 0, discountAmount: undefined };
-  return promo.discount_type === 'fixed'
+  return promo.discount_type === 'fixed' || promo.discount_type === 'referral'
     ? { discountPercent: 0, discountAmount: promo.discount_value }
     : { discountPercent: promo.discount_value, discountAmount: undefined };
 }

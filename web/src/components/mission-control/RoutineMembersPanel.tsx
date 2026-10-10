@@ -24,6 +24,8 @@ interface MemberRow {
   created_at: string;
   bag_delivered_at: string | null;
   bag_delivered_by: string | null;
+  /** Founding 111 (client 2026-10-10) */
+  founder: { number: number; territory: string; active: boolean } | null;
   customer: One<{ full_name: string; email: string; phone: string | null }>;
   address: One<{ city: string; zip: string }>;
 }
@@ -103,7 +105,15 @@ export function RoutineMembersPanel() {
                       {c?.full_name || '—'}
                       <div style={{ color: '#94a3b8', fontSize: '12px' }}>{[c?.phone, c?.email].filter(Boolean).join(' · ')}{a ? ` · ${a.city} ${a.zip}` : ''}</div>
                     </td>
-                    <td style={cell}>{CADENCE_LABEL[m.cadence]}</td>
+                    <td style={cell}>
+                      {CADENCE_LABEL[m.cadence]}
+                      {m.founder && (
+                        <div style={{ color: m.founder.active ? '#C9A14A' : '#94a3b8', fontSize: '12px', fontWeight: 700 }}>
+                          Founder #{m.founder.number} · {m.founder.territory}
+                          {m.founder.active ? '' : ' (ended)'}
+                        </div>
+                      )}
+                    </td>
                     <td style={cell}>{m.pickup_day}s, {windowText(m.pickup_window)}</td>
                     <td style={cell}>
                       {m.status === 'active' && m.next_pickup_date
@@ -124,7 +134,11 @@ export function RoutineMembersPanel() {
                           aria-label={`Bag delivered to ${c?.full_name || 'member'}`}
                         />
                         <span style={{ color: m.bag_delivered_at ? '#94a3b8' : '#fde68a', fontSize: '12px' }}>
-                          {m.bag_delivered_at ? new Date(m.bag_delivered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Needs bag'}
+                          {m.bag_delivered_at
+                            ? new Date(m.bag_delivered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : m.founder?.active
+                              ? `Needs numbered bag #${m.founder.number}`
+                              : 'Needs bag'}
                         </span>
                       </label>
                     </td>

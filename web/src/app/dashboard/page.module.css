@@ -251,3 +251,9 @@
   font-size: var(--text-sm);
   color: var(--color-gray-500);
 }
+
+/* Give $15, Get $15 (client 2026-10-10) */
+.referralCard {
+  margin-bottom: var(--space-6);
+  background-color: var(--color-white);
+}

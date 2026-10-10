@@ -23,7 +23,7 @@ export default function DriverPage() {
   const addToast = useUIStore((s) => s.addToast);
 
   // Photo modal state
-  const [selectedOrder, setSelectedOrder] = useState<{ id: string; number: string; type: 'pickup' | 'delivery' } | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<{ id: string; number: string; type: 'pickup' | 'delivery' | 'no_show' } | null>(null);
   const [photoNote, setPhotoNote] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -74,7 +74,7 @@ export default function DriverPage() {
         const formData = new FormData();
         formData.append('file', uploadFile);
         formData.append('order_id', selectedOrder.id);
-        formData.append('photo_type', selectedOrder.type === 'pickup' ? 'pickup_proof' : 'delivery_proof');
+        formData.append('photo_type', selectedOrder.type === 'pickup' ? 'pickup_proof' : selectedOrder.type === 'no_show' ? 'no_show_proof' : 'delivery_proof');
 
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
@@ -89,18 +89,23 @@ export default function DriverPage() {
         setIsUploading(false);
       }
 
-      const actionType = selectedOrder.type === 'pickup' ? 'pickup_complete' : 'delivery_complete';
+      const actionType = selectedOrder.type === 'pickup' ? 'pickup_complete' : selectedOrder.type === 'no_show' ? 'no_show' : 'delivery_complete';
       await driverAction.mutateAsync({
         action: actionType,
         order_id: selectedOrder.id,
         photo_url: finalPhotoUrl,
-        notes: photoNote || (selectedOrder.type === 'pickup' ? 'Contactless porch pickup verified' : 'Delivered to porch'),
+        notes:
+          photoNote ||
+          (selectedOrder.type === 'pickup' ? 'Contactless porch pickup verified' : selectedOrder.type === 'no_show' ? 'Bag not out at pickup' : 'Delivered to porch'),
       });
 
       addToast({
         type: 'success',
-        title: selectedOrder.type === 'pickup' ? 'Pickup Confirmed' : 'Delivery Logged',
-        message: `Order #${selectedOrder.number} status updated and customer SMS/WhatsApp dispatched.`,
+        title: selectedOrder.type === 'pickup' ? 'Pickup Confirmed' : selectedOrder.type === 'no_show' ? 'No-Show Recorded' : 'Delivery Logged',
+        message:
+          selectedOrder.type === 'no_show'
+            ? `Order #${selectedOrder.number} cancelled as a no-show; the customer has been told.`
+            : `Order #${selectedOrder.number} status updated and customer SMS/WhatsApp dispatched.`,
       });
 
       setSelectedOrder(null);
@@ -454,11 +459,15 @@ export default function DriverPage() {
           <Modal
             isOpen={Boolean(selectedOrder)}
             onClose={() => setSelectedOrder(null)}
-            title={selectedOrder?.type === 'pickup' ? '📸 Verify Contactless Pickup' : '✅ Verify Drop-Off Proof'}
+            title={selectedOrder?.type === 'pickup' ? '📸 Verify Contactless Pickup' : selectedOrder?.type === 'no_show' ? '🚫 Bag Not Out' : '✅ Verify Drop-Off Proof'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-navy)', margin: 0 }}>
-                Order <strong>#{selectedOrder?.number}</strong> — Capture a quick photo of the laundry bag at the porch or concierge desk to attach to the customer&apos;s live tracking link.
+                {selectedOrder?.type === 'no_show' ? (
+                  <>Order <strong>#{selectedOrder?.number}</strong>: take a photo of the pickup spot showing the bag isn&apos;t out. The pickup is cancelled and the customer is told; the failed-pickup fee applies automatically.</>
+                ) : (
+                  <>Order <strong>#{selectedOrder?.number}</strong> — Capture a quick photo of the laundry bag at the porch or concierge desk to attach to the customer&apos;s live tracking link.</>
+                )}
               </p>
 
               <div>
@@ -516,7 +525,7 @@ export default function DriverPage() {
                   isLoading={driverAction.isPending || isUploading}
                   disabled={driverAction.isPending || isUploading || !photoPreview}
                 >
-                  {isUploading ? 'Uploading & Securing...' : (selectedOrder?.type === 'pickup' ? 'Confirm Pickup & Send SMS' : 'Complete Delivery & Send SMS')}
+                  {isUploading ? 'Uploading & Securing...' : (selectedOrder?.type === 'pickup' ? 'Confirm Pickup & Send SMS' : selectedOrder?.type === 'no_show' ? 'Record No-Show & Tell Customer' : 'Complete Delivery & Send SMS')}
                 </Button>
               </div>
             </div>

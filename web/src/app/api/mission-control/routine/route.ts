@@ -21,14 +21,26 @@ export async function GET(request: Request) {
     const auth = await verifyApiAuth(['admin'], request);
     if (auth.errorResponse) return auth.errorResponse;
     if (!isSupabaseConfigured()) return NextResponse.json({ members: [] });
-    const { data } = await createAdminClient()
+    const supabase = createAdminClient();
+    const { data } = await supabase
       .from('routine_memberships')
       .select(
-        'id, status, cadence, pickup_day, pickup_window, next_pickup_date, paused_until, consecutive_skips, created_at, cancelled_at, bag_delivered_at, bag_delivered_by, customer:customers!customer_id(full_name, email, phone), address:addresses(city, zip)'
+        'id, customer_id, status, cadence, pickup_day, pickup_window, next_pickup_date, paused_until, consecutive_skips, created_at, cancelled_at, bag_delivered_at, bag_delivered_by, customer:customers!customer_id(full_name, email, phone), address:addresses(city, zip)'
       )
       .order('created_at', { ascending: false })
       .limit(500);
-    return NextResponse.json({ members: data || [] });
+    // Founding 111 (client 2026-10-10): each founder's number and territory
+    const ids = [...new Set((data || []).map((m) => m.customer_id))];
+    const { data: founders } = ids.length
+      ? await supabase.from('founding_members').select('customer_id, number, territory_id, ended_at').in('customer_id', ids)
+      : { data: [] as { customer_id: string; number: number; territory_id: string; ended_at: string | null }[] };
+    const byCustomer = new Map((founders || []).map((f) => [f.customer_id, f]));
+    return NextResponse.json({
+      members: (data || []).map((m) => {
+        const f = byCustomer.get(m.customer_id);
+        return { ...m, founder: f ? { number: f.number, territory: f.territory_id, active: !f.ended_at } : null };
+      }),
+    });
   } catch (err: unknown) {
     return apiError('api/mission-control/routine', err, 500);
   }

@@ -74,6 +74,11 @@ export function plantScheduleLine(lang: 'en' | 'es' = 'en'): string {
     : 'Our plant runs Monday to Friday. Standard orders are delivered 2 plant days after pickup (Thursday pickups on Monday, Friday pickups on Tuesday). Saturday pickups are delivered Tuesday. 24-Hour Express pickups run Monday to Thursday (a Thursday Express pickup is delivered Friday).';
 }
 
+/** Give $15 / Get $15 (client 2026-10-10). */
+export function referralLine(): string {
+  return 'Give $15, Get $15: every customer has a referral code and link in their account. A friend gets $15 off their first order (the order minimum still applies), and the customer gets $15 of account credit once that order is delivered. Account credit (referrals, Make It Right) comes off the next order automatically, for Routine members too.';
+}
+
 /** Late-cancel fee (client 2026-10-08): the failed-service fee, one rule. */
 export function lateCancelLine(): string {
   return `Cancelling or rescheduling under ${LATE_CANCEL_CUTOFF_HOURS} hours before the pickup window costs ${money(FAILED_PICKUP_FEE)} (Zone 5: its Extended Reach fee instead); the first one is waived, and Routine members get one waived each calendar month. The customer sees the fee and confirms first.`;
@@ -146,5 +151,7 @@ export function chatPriceList(lang: 'en' | 'es' = 'en'): string {
     ...alterationLines().map((l) => `• ${l}`),
     '',
     `${feesLine(lang)} ${noLeather}`,
+    '',
+    referralLine(),
   ].join('\n');
 }

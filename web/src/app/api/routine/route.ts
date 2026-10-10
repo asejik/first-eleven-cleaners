@@ -6,6 +6,7 @@ import { getCoverage } from '@/lib/coverage-settings';
 import { allowedRoutineDays, ROUTINE_MAX_PAUSE_WEEKS, type RoutineMembership, type RoutineTemplate } from '@/lib/routine';
 import { applyRoutineChange, getOpenMembership, upcomingAutoPickup, zoneForTemplate } from '@/lib/routine-store';
 import { apiError } from '@/lib/api-errors';
+import { founderBadge, founderStatus } from '@/lib/founding';
 
 /**
  * The signed-in customer's Routine membership (client 2026-10-08): GET shows it, POST skips the
@@ -50,9 +51,12 @@ export async function GET(request: Request) {
     const zone = zoneForTemplate(membership.template as Partial<RoutineTemplate>, coverage);
     // A pickup already made (2 days ahead) comes before the next one on the schedule
     const made = membership.status === 'active' ? await upcomingAutoPickup(createAdminClient(), membership) : null;
+    const founder = await founderStatus(createAdminClient(), auth.customer.id);
     return NextResponse.json({
       membership,
       address,
+      // Founding 111 (client 2026-10-10)
+      founder: founder?.active ? { number: founder.number, territory: founder.territoryName, badge: founderBadge(founder) } : null,
       upcomingPickup: made?.pickup_date ?? membership.next_pickup_date,
       allowedDays: allowedRoutineDays(zone, coverage),
       zoneName: zone.name,

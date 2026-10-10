@@ -8,6 +8,8 @@ interface ClaimResolutionModalProps {
   setResolutionText: (val: string) => void;
   refundAmount: string;
   setRefundAmount: (val: string) => void;
+  creditAmount: string;
+  setCreditAmount: (val: string) => void;
   onSubmit: () => void;
   isLoading: boolean;
 }
@@ -19,6 +21,8 @@ export function ClaimResolutionModal({
   setResolutionText,
   refundAmount,
   setRefundAmount,
+  creditAmount,
+  setCreditAmount,
   onSubmit,
   isLoading,
 }: ClaimResolutionModalProps) {
@@ -99,6 +103,29 @@ export function ClaimResolutionModal({
             value={refundAmount}
             onChange={(e) => setRefundAmount(e.target.value)}
             placeholder="Optional e.g. 45.00 (leave blank for non-monetary resolution)"
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-gray-300)',
+              fontSize: 'var(--text-sm)',
+            }}
+          />
+        </div>
+
+        {/* Make It Right account credit (client 2026-10-10): comes off their next order */}
+        <div>
+          <label htmlFor="claim-credit" style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+            Optional Account Credit ($ USD, off their next order)
+          </label>
+          <input
+            id="claim-credit"
+            type="number"
+            step="0.01"
+            min="0"
+            value={creditAmount}
+            onChange={(e) => setCreditAmount(e.target.value)}
+            placeholder="Optional e.g. 15.00"
             style={{
               width: '100%',
               padding: '8px 12px',

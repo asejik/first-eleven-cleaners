@@ -16,6 +16,7 @@ import { runAfterResponse } from '@/lib/after-response';
 import { reportError } from '@/lib/error-reporting';
 import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
+import { rewardReferralForDeliveredOrder } from '@/lib/referrals';
 
 
 // Columns the board, archive and Express views read
@@ -175,6 +176,7 @@ export async function POST(request: Request) {
       claim_id,
       resolution_notes,
       refund_amount,
+      credit_amount,
       claim_status,
       manager_override = false,
       override_reason = '',
@@ -241,6 +243,10 @@ export async function POST(request: Request) {
           { error: 'This order was updated by someone else. Refresh the board and try again.' },
           { status: 409 }
         );
+      }
+      // A referred first order delivered: the friend who referred them earns $15 (2026-10-10)
+      if (new_stage === 'delivered') {
+        runAfterResponse(() => rewardReferralForDeliveredOrder(supabase, order.id), 'referral reward');
       }
 
       if (needsOverride) {
@@ -324,10 +330,15 @@ export async function POST(request: Request) {
       if (!Number.isFinite(refundNum) || refundNum < 0) {
         return NextResponse.json({ error: 'Refund amount must be a positive number.' }, { status: 400 });
       }
+      // Make It Right account credit (client 2026-10-10): comes off the customer's next order
+      const creditNum = credit_amount ? Number(credit_amount) : 0;
+      if (!Number.isFinite(creditNum) || creditNum < 0 || creditNum > 1000) {
+        return NextResponse.json({ error: 'Credit must be between $0 and $1,000.' }, { status: 400 });
+      }
 
       const { data: claim } = await supabase
         .from('claims')
-        .select('id, order_id, status, refund_amount, square_refund_id')
+        .select('id, order_id, customer_id, status, refund_amount, square_refund_id')
         .eq('id', claim_id)
         .maybeSingle();
       if (!claim) {
@@ -389,6 +400,18 @@ export async function POST(request: Request) {
         return apiError('api/mission-control', claimErr, 500);
       }
 
+      if (creditNum > 0) {
+        const { error: creditErr } = await supabase.from('customer_credits').insert({
+          customer_id: claim.customer_id,
+          amount: Number(creditNum.toFixed(2)),
+          reason: 'make_it_right',
+          order_id: claim.order_id,
+          note: `Make It Right credit for claim ${String(claim_id).slice(0, 8)}`,
+          created_by: auth.customer?.email || 'admin',
+        });
+        if (creditErr) return apiError('api/mission-control', creditErr, 500);
+      }
+
       await recordAdminAction(supabase, {
         actor: auth.customer,
         action: refundNum > 0 ? 'claim.refund' : 'claim.resolve',
@@ -398,6 +421,7 @@ export async function POST(request: Request) {
           order_id: claim.order_id,
           status: finalStatus,
           ...(refundNum > 0 ? { refund_amount: Number(refundNum.toFixed(2)), square_refund_id: refundId } : {}),
+          ...(creditNum > 0 ? { credit_amount: Number(creditNum.toFixed(2)) } : {}),
         },
         ip: getClientIp(request),
       });

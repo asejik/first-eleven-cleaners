@@ -8,7 +8,7 @@ export interface DriverStopCardProps {
   order: Order;
   stopIndex: number;
   type: 'to_pickup' | 'in_van' | 'picked_up' | 'ready_at_plant' | 'to_deliver' | 'delivered';
-  onActionClick?: (order: { id: string; number: string; type: 'pickup' | 'delivery' }) => void;
+  onActionClick?: (order: { id: string; number: string; type: 'pickup' | 'delivery' | 'no_show' }) => void;
   onLoadForDelivery?: (orderId: string, orderNumber: string) => void;
   onZoomPhoto?: (url: string) => void;
   isActionPending?: boolean;
@@ -89,7 +89,7 @@ export function DriverStopCard({
           <CustomerAccessNotes order={order} />
           {order.needs_routine_bag && (
             <div className={styles.notesAlert}>
-              <strong>🎒 Bring a Routine bag:</strong> this member hasn&apos;t had theirs yet. Tell the office once it&apos;s handed over.
+              <strong>🎒 Bring a Routine bag{order.routine_bag_number ? ` (Founding, numbered #${order.routine_bag_number})` : ''}:</strong> this member hasn&apos;t had theirs yet. Tell the office once it&apos;s handed over.
             </div>
           )}
         </div>
@@ -109,6 +109,15 @@ export function DriverStopCard({
           onClick={() => onActionClick?.({ id: order.id, number: orderNum, type: 'pickup' })}
         >
           📸 Confirm Pickup + Photo Proof
+        </button>
+        {/* No-show (client 2026-10-10): a photo shows the bag wasn't out; the fee is automatic */}
+        <button
+          type="button"
+          className={styles.navBtn}
+          style={{ width: '100%', marginTop: 'var(--space-2)' }}
+          onClick={() => onActionClick?.({ id: order.id, number: orderNum, type: 'no_show' })}
+        >
+          🚫 Bag Not Out
         </button>
       </div>
     );

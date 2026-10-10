@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import { apiError } from '@/lib/api-errors';
 import { hasUsedPromo, promoUsedMessage } from '@/lib/promo';
+import { checkReferralForBooking, referrerForCode, REFERRAL_AMOUNT } from '@/lib/referrals';
 
 export async function POST(request: Request) {
   try {
@@ -75,6 +76,20 @@ export async function POST(request: Request) {
             discount_type: promo.discount_type,
             discount_value: discountValue,
             message: discountMsg,
+          });
+        }
+
+        // A friend's referral code (client 2026-10-10): $15 off a first order
+        if (!promo && (await referrerForCode(supabase, cleanCode))) {
+          const signedInOrGuest = await resolveCustomerId(supabase, typeof email === 'string' ? email : null);
+          const check = await checkReferralForBooking(supabase, cleanCode, { customerId: signedInOrGuest, email: typeof email === 'string' ? email : '' });
+          if (!check.ok) return NextResponse.json({ valid: false, message: check.error });
+          return NextResponse.json({
+            valid: true,
+            code: check.code,
+            discount_type: 'referral',
+            discount_value: REFERRAL_AMOUNT,
+            message: `A friend's code: $${REFERRAL_AMOUNT} off your first order!`,
           });
         }
       } catch (dbErr) {

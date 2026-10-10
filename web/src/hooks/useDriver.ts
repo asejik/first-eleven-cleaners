@@ -58,7 +58,7 @@ export function useDriverAction() {
 
   return useMutation({
     mutationFn: async (payload: {
-      action: 'pickup_complete' | 'load_for_delivery' | 'out_for_delivery' | 'delivery_complete';
+      action: 'pickup_complete' | 'load_for_delivery' | 'out_for_delivery' | 'delivery_complete' | 'no_show';
       order_id: string;
       photo_url?: string;
       notes?: string;

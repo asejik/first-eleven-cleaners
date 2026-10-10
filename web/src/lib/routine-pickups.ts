@@ -23,6 +23,7 @@ import {
   type RoutineTemplate,
 } from '@/lib/routine';
 import { MEMBERSHIP_FIELDS, zoneForTemplate } from '@/lib/routine-store';
+import { founderStatus, planDiscountFor } from '@/lib/founding';
 
 /**
  * Automatic Routine pickups (client 2026-10-07, revised: "The system auto-creates each order
@@ -126,11 +127,14 @@ async function createPickupOrder(supabase: AdminClient, m: MembershipRow, date: 
   const services = (template.services || {}) as { dry_clean_items?: Array<{ garment_type: string; quantity: number }>; estimated_weight_lbs?: number };
   const band = template.extended_reach_band ? coverage.extendedReach.bands.find((b) => b.id === template.extended_reach_band) ?? null : null;
   const reachFee = band ? extendedReachFee(band, true, coverage.extendedReach) : 0;
+  // A Founding member's plan rate is locked for life (client 2026-10-10)
+  const founder = await founderStatus(supabase, m.customer_id);
   const computed = computeBookingFinancials({
     dryCleanItems: services.dry_clean_items || [],
     weightLbs: services.estimated_weight_lbs || 0,
     frequency: m.cadence,
     extendedReachFee: reachFee,
+    planDiscountPercent: founder?.active ? planDiscountFor(m.cadence, founder) : undefined,
   });
   const hasCard = Boolean(m.square_customer_id && m.square_card_id);
   const total = computed.financials.finalTotal;

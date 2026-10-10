@@ -68,6 +68,10 @@ vi.mock('@/lib/rate-limiter', () => ({
 const reportError = vi.fn();
 vi.mock('@/lib/error-reporting', () => ({ reportError: (...a: unknown[]) => reportError(...a) }));
 vi.mock('@/lib/messaging/contact', () => ({ sendContactMessage: async () => ({ ok: true }), sendSms: async () => ({ ok: true }) }));
+const dispatch = vi.fn(async () => ({ success: true }));
+vi.mock('@/lib/messaging', () => ({ messagingService: { dispatchStageNotification: (...x: unknown[]) => dispatch(...(x as [])) } }));
+vi.mock('@/lib/storage', () => ({ resolveAndUploadPhotoUrl: async (u: string) => u, withSignedPhotoUrls: async <T,>(v: T) => v }));
+vi.mock('@/lib/express', () => ({ handleExpressDeliverySLA: async () => ({ isExpress: false }) }));
 
 import { isLateCancel, lateCancelFeeFor, assessLateCancel } from '@/lib/late-cancel';
 import { PATCH as cancelPATCH } from '@/app/api/orders/[id]/route';
@@ -76,6 +80,7 @@ import { GET as skipGET, POST as skipPOST } from '@/app/api/routine/skip/route';
 import { routineSkipToken } from '@/lib/routine-pickups';
 import { buildLlmsTxt } from '@/lib/llms';
 import { feesLine } from '@/lib/ai/price-list';
+import { POST as driverPOST } from '@/app/api/driver/route';
 
 const ORDER = '22222222-aaaa-4bbb-8ccc-dddddddddddd';
 const order = (over: Row = {}): Row => ({
@@ -234,16 +239,74 @@ describe('Skipping late: the link and a SKIP reply', () => {
     expect(db.orders[0]).toMatchObject({ status: 'cancelled', late_cancel_status: 'charged' });
   });
 
+  it('SKIP acts on what our last text was about (client 2026-10-10)', async () => {
+    db.routine_memberships = [{ ...member, next_pickup_date: '2026-10-20' }];
+    const routinePickup = order({ id: 'routine-13', pickup_date: '2026-10-13', routine_membership_id: 'm-1' });
+    const zone5Pickup = order({ id: 'zone5-14', pickup_date: '2026-10-14', extended_reach_band: 'A', extended_reach_fee: 35 });
+    db.orders = [routinePickup, zone5Pickup];
+    // Our last text was the Zone 5 "route not reached" one: SKIP leaves that run, not the Routine pickup
+    db.messages = [{ customer_id: 'c-1', channel: 'sms', direction: 'outbound', order_id: 'zone5-14', created_at: '2026-10-12T09:00:00Z' }];
+    expect(await skipNextZone5Pickup(admin as never, '+12145550100', LATE_MORNING)).toContain('Your Extended Reach pickup on Wed Oct 14 is cancelled');
+    expect(db.orders.find((o) => o.id === 'zone5-14')?.status).toBe('cancelled');
+    expect(db.orders.find((o) => o.id === 'routine-13')?.status).toBe('booked');
+    // Our last text was the Routine reminder: SKIP skips that pickup
+    db.messages = [{ customer_id: 'c-1', channel: 'sms', direction: 'outbound', order_id: 'routine-13', created_at: '2026-10-12T09:30:00Z' }];
+    expect(await skipNextZone5Pickup(admin as never, '+12145550100', LATE_MORNING)).toContain('your Tue Oct 13 pickup is skipped');
+    expect(db.orders.find((o) => o.id === 'routine-13')?.status).toBe('cancelled');
+  });
+
   it('a late SKIP text explains the fee; a second SKIP within 15 minutes confirms it', async () => {
     db.orders = [order({ extended_reach_band: 'A', extended_reach_fee: 35 }), order({ id: 'old', status: 'cancelled', late_cancel_status: 'waived', late_cancel_at: '2026-01-05T12:00:00Z' })];
     const first = await skipNextZone5Pickup(admin as never, '+12145550100', LATE_MORNING);
     expect(first).toBe(
-      "First Eleven Cleaners: It's less than 2 hours before your pickup, so skipping now costs $35.00, charged to your card on file. Reply SKIP again within 15 minutes to confirm."
+      "First Eleven Cleaners: It's less than 2 hours before your pickup, so skipping now costs $35.00, charged to your card on file. Reply SKIP again within 15 minutes to confirm. If you don't, our driver will come for your pickup as planned."
     );
     expect(db.orders[0].status).toBe('booked');
     const second = await skipNextZone5Pickup(admin as never, '+12145550100', new Date(LATE_MORNING.getTime() + 5 * 60_000));
     expect(second).toContain('is cancelled. The $35.00 late-cancel fee was charged to your card.');
     expect(db.orders[0]).toMatchObject({ status: 'cancelled', late_cancel_status: 'charged', late_cancel_fee: 35 });
+  });
+});
+
+describe('No-show: the driver marks "bag not out" (client 2026-10-10)', () => {
+  const noShow = (photo?: string) =>
+    driverPOST(new Request('http://localhost/api/driver', { method: 'POST', body: JSON.stringify({ action: 'no_show', order_id: ORDER, photo_url: photo }) }));
+
+  beforeEach(() => {
+    signedIn = { id: 'driver-1', full_name: 'Dee Driver', role: 'driver' };
+    dispatch.mockClear();
+  });
+
+  it('needs a photo', async () => {
+    db.orders = [order()];
+    expect((await noShow()).status).toBe(400);
+    expect(db.orders[0].status).toBe('booked');
+  });
+
+  it('cancels the pickup and charges the fee automatically, no confirmation', async () => {
+    vi.setSystemTime(at('09:00:00')); // well before the window: a no-show is charged whatever the time
+    db.orders = [order(), order({ id: 'old', status: 'cancelled', late_cancel_status: 'waived', late_cancel_at: '2026-01-05T12:00:00Z' })];
+    const res = await noShow('https://example.com/porch.jpg');
+    expect(res.status).toBe(200);
+    expect(db.orders[0]).toMatchObject({ status: 'cancelled', late_cancel_status: 'charged', late_cancel_reason: 'no_show', late_cancel_fee: 15 });
+    expect(db.garment_photos).toEqual([expect.objectContaining({ photo_type: 'no_show_proof' })]);
+    expect(db.order_payments).toEqual([expect.objectContaining({ kind: 'late_cancel', amount: 15, note: 'No-show fee (bag not out)' })]);
+    await vi.waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ customMessage: expect.stringContaining("the bag wasn't out, so we couldn't collect it. The $15.00 failed-pickup fee was charged to your card.") }))
+    );
+  });
+
+  it('the same waiver rule: the first one is free', async () => {
+    db.orders = [order()];
+    await noShow('https://example.com/porch.jpg');
+    expect(db.orders[0]).toMatchObject({ status: 'cancelled', late_cancel_status: 'waived', late_cancel_reason: 'no_show' });
+    expect(db.order_payments).toBeUndefined();
+  });
+
+  it('a Zone 5 no-show pays what the trip would have cost (half for members)', async () => {
+    db.orders = [order({ extended_reach_band: 'B', extended_reach_fee: 30 }), order({ id: 'old', status: 'cancelled', late_cancel_status: 'waived', late_cancel_at: '2026-01-05T12:00:00Z' })];
+    await noShow('https://example.com/porch.jpg');
+    expect(db.orders[0]).toMatchObject({ late_cancel_status: 'charged', late_cancel_fee: 30 });
   });
 });
 

@@ -11,6 +11,7 @@ import { CreditCard, MapPin, User as UserIcon, Plus, Repeat } from 'lucide-react
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
 import { ROUTINE_PATH } from '@/lib/routine';
+import { ReferralCard } from '@/components/dashboard/ReferralCard';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
@@ -111,6 +112,9 @@ export default function DashboardPage() {
               </ButtonLink>
             </div>
           </div>
+
+          {/* Give $15, Get $15 (client 2026-10-10) */}
+          <ReferralCard className={styles.referralCard} />
 
           {/* Quick Stats Grid */}
           <div className={styles.statsGrid}>

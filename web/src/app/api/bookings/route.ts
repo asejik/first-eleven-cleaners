@@ -51,6 +51,8 @@ import { hasUsedPromo, promoUsedMessage } from '@/lib/promo';
 import { CADENCE_LABEL, ROUTINE_PATH, type RoutineCadence } from '@/lib/routine';
 import { createMembershipFromBooking, getOpenMembership } from '@/lib/routine-store';
 import { ensureAuthUser } from '@/lib/passwordless';
+import { claimFounding, founderStatus, planDiscountFor, FOUNDER_HEAD_START_DAYS } from '@/lib/founding';
+import { checkReferralForBooking, recordReferral, referrerForCode, REFERRAL_AMOUNT } from '@/lib/referrals';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -229,6 +231,7 @@ export async function POST(request: Request) {
     // Routine member pricing (client 2026-10-08): joining with this booking, or a signed-in
     // member (active or paused) booking an extra pickup, which is priced at their plan
     let memberCadence: RoutineCadence | null = null;
+    let signedInCustomerId: string | null = null;
     if (isSupabaseConfigured) {
       const {
         data: { user: signedIn },
@@ -236,12 +239,31 @@ export async function POST(request: Request) {
       if (signedIn) {
         const admin = createAdminClient();
         const { data: me } = await admin.from('customers').select('id').eq('auth_id', signedIn.id).maybeSingle();
+        signedInCustomerId = me?.id ?? null;
         const open = me ? await getOpenMembership(admin, me.id) : null;
         memberCadence = open ? (open.cadence as RoutineCadence) : null;
       }
     }
     const planFrequency: PlanFrequency = memberCadence ?? validated.schedule.frequency;
-    if (planFrequency !== 'one_time' && validated.pricing.promo_code?.trim()) {
+    // A Founding member (client 2026-10-10): their locked plan rate, and a day's head start
+    const founder = signedInCustomerId ? await founderStatus(createAdminClient(), signedInCustomerId) : null;
+    const founderActive = Boolean(founder?.active);
+
+    // A friend's referral code (client 2026-10-10): $15 off a new customer's first order. It's
+    // money, not a promo, so it also applies with member pricing.
+    let referral: { referrerId: string; code: string } | null = null;
+    const enteredCode = validated.pricing.promo_code?.trim() || '';
+    if (enteredCode && isSupabaseConfigured && (await referrerForCode(createAdminClient(), enteredCode))) {
+      const admin = createAdminClient();
+      const { data: byEmail } = await admin.from('customers').select('id, auth_id').eq('email', validated.customer.email).maybeSingle();
+      const check = await checkReferralForBooking(admin, enteredCode, {
+        customerId: signedInCustomerId ?? (byEmail && !byEmail.auth_id ? byEmail.id : null),
+        email: validated.customer.email,
+      });
+      if (!check.ok) return NextResponse.json({ error: check.error, code: 'REFERRAL_INVALID' }, { status: 400 });
+      referral = { referrerId: check.referrerId, code: check.code };
+    }
+    if (planFrequency !== 'one_time' && enteredCode && !referral) {
       return NextResponse.json({ error: MEMBER_PROMO_NOT_COMBINED, code: 'PROMO_NOT_COMBINED' }, { status: 400 });
     }
     // Zone 5: the Extended Reach fee, half off for Routine members
@@ -303,7 +325,9 @@ export async function POST(request: Request) {
     let verifiedPromoCode: string | null = null;
     // True when the code has a promo_codes row, so a use must be reserved atomically (SEC-15)
     let promoNeedsReservation = false;
-    if (validated.pricing.promo_code) {
+    if (referral) {
+      promoDiscountAmount = REFERRAL_AMOUNT;
+    } else if (validated.pricing.promo_code) {
       const cleanPromo = validated.pricing.promo_code.toUpperCase().trim();
       let promoRow: {
         discount_type: string;
@@ -366,6 +390,7 @@ export async function POST(request: Request) {
       promoDiscountAmount,
       frequency: planFrequency,
       extendedReachFee: reachFee,
+      planDiscountPercent: founderActive && planFrequency !== 'one_time' ? planDiscountFor(planFrequency, founder) : undefined,
     });
 
     // 5. Enforce Zone Minimum (F010 Fix). Zone 5: the minimum is on the garments; the delivery
@@ -394,6 +419,7 @@ export async function POST(request: Request) {
       pickupDate: validated.schedule.pickup_date,
       pickupWindow: validated.schedule.pickup_window,
       tier: validated.schedule.express_tier,
+      extraDaysAhead: founderActive ? FOUNDER_HEAD_START_DAYS : 0,
     });
     if (!scheduleCheck.ok) {
       return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
@@ -791,10 +817,17 @@ export async function POST(request: Request) {
               });
             }
 
+            // A friend's referral: the discount on this first order, and the referral, so the
+            // friend earns $15 of credit once it's delivered (client 2026-10-10)
+            if (referral) {
+              await supabase.from('orders').update({ referral_code: referral.code, referral_discount: REFERRAL_AMOUNT }).eq('id', insertedOrder.id);
+              await recordReferral(supabase, { referrerId: referral.referrerId, referredId: customerId, orderId: insertedOrder.id, code: referral.code });
+            }
+
             // Joining the Routine (client 2026-10-08): this booking is the first pickup. The
             // membership needs an account behind it, made silently (sign-in is a text code or
             // email link, no password)
-            let routine: { cadence: RoutineCadence; next_pickup_date: string } | null = null;
+            let routine: { cadence: RoutineCadence; next_pickup_date: string; founder?: { number: number; territory: string } } | null = null;
             if (routineCadence) {
               const membership = await createMembershipFromBooking(supabase, {
                 customerId,
@@ -819,6 +852,9 @@ export async function POST(request: Request) {
               });
               if (membership) {
                 routine = { cadence: routineCadence, next_pickup_date: membership.next_pickup_date };
+                // One of the first 111 in their territory: a Founding member (client 2026-10-10)
+                const founding = await claimFounding(supabase, { customerId, membershipId: membership.id, zip: validated.address.zip });
+                if (founding) routine.founder = { number: founding.number, territory: founding.territoryName };
                 const { data: member } = await supabase.from('customers').select('id, email, full_name, role, auth_id, phone').eq('id', customerId).maybeSingle();
                 if (member && !member.auth_id && member.role === 'customer') {
                   try {
@@ -830,7 +866,7 @@ export async function POST(request: Request) {
               }
             }
             const routineLine = routine
-              ? `You're in the ${CADENCE_LABEL[routine.cadence]} Routine: next pickup ${formatLongDate(routine.next_pickup_date)}. Manage it anytime at ${getAppBaseUrl()}${ROUTINE_PATH}.`
+              ? `You're in the ${CADENCE_LABEL[routine.cadence]} Routine: next pickup ${formatLongDate(routine.next_pickup_date)}.${routine.founder ? ` You're Founding Member #${routine.founder.number} in ${routine.founder.territory}.` : ''} Manage it anytime at ${getAppBaseUrl()}${ROUTINE_PATH}.`
               : undefined;
 
             // Zone 5: where this run stands now (this booking included). It's confirmed when the

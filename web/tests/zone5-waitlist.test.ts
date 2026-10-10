@@ -127,7 +127,7 @@ describe('Waitlist: when the first Zone 5 run date is set', () => {
     ];
     expect(await announceZone5Open(fake as never, LIVE, now)).toEqual({ told: 2 });
     expect(smsBody(0)).toMatch(
-      /^First Eleven Cleaners: Good news, Dana\. Extended Reach now serves Sherman\. Wednesday pickups start Wed Oct 21, back the next Wednesday\. Book at .+\/book\. Reply STOP to opt out\.$/
+      /^First Eleven Cleaners: Good news, Dana\. Extended Reach now serves Sherman\. First pickup Wed Oct 21, back the following Wednesday\. Book at .+\/book\. Reply STOP to opt out\.$/
     );
     expect(calls[1].url).toContain('api.resend.com');
     expect(writes.filter((w) => w.table === 'waitlist' && w.op === 'update')).toHaveLength(2);

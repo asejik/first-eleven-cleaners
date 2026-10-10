@@ -10,6 +10,8 @@ import { reportError } from '@/lib/error-reporting';
  * Reach fee instead. The first one is waived as a courtesy; Routine members get one waived
  * each calendar month instead. Charged to the card on file; staff cancels never pay it.
  * Customers always see the fee and confirm before it is charged.
+ * A no-show (client 2026-10-10: the driver marks "bag not out" with a photo) is the same fee
+ * under the same waiver rule, charged automatically with no confirmation.
  */
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -60,6 +62,15 @@ function monthStartUtc(now: Date): string {
 /** Is the cancel late, what does it cost, and is it waived (first ever; members: first this month)? */
 export async function assessLateCancel(supabase: AdminClient, order: LateCancelOrder, now: Date = new Date()): Promise<LateCancelAssessment> {
   if (!isLateCancel(order, now)) return { late: false };
+  return assessFailedServiceFee(supabase, order, now);
+}
+
+/** The fee and its waiver, whatever the time (a no-show always carries it). */
+export async function assessFailedServiceFee(
+  supabase: AdminClient,
+  order: LateCancelOrder,
+  now: Date = new Date()
+): Promise<Extract<LateCancelAssessment, { late: true }>> {
   const fee = lateCancelFeeFor(order);
   let member = Boolean(order.routine_membership_id);
   if (!member) {
@@ -97,20 +108,28 @@ export async function applyLateCancelFee(
   order: LateCancelOrder,
   assessment: LateCancelAssessment,
   actor: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  reason: 'late_cancel' | 'no_show' = 'late_cancel'
 ): Promise<LateCancelOutcome> {
   if (!assessment.late) return { status: 'none' };
   const orderRef = order.order_number || order.id.slice(0, 8);
+  const what = reason === 'no_show' ? 'No-show (bag not out)' : `Late cancel (under ${LATE_CANCEL_CUTOFF_HOURS} hours before the window)`;
   const record = async (status: 'waived' | 'charged' | 'declined', note: string) => {
     await supabase
       .from('orders')
-      .update({ late_cancel_fee: assessment.fee, late_cancel_status: status, late_cancel_at: now.toISOString(), updated_at: now.toISOString() })
+      .update({
+        late_cancel_fee: assessment.fee,
+        late_cancel_status: status,
+        late_cancel_reason: reason,
+        late_cancel_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      })
       .eq('id', order.id);
     await supabase.from('order_events').insert({ order_id: order.id, status: 'cancelled', note, triggered_by: actor });
   };
 
   if (assessment.waived) {
-    await record('waived', `Late cancel (under ${LATE_CANCEL_CUTOFF_HOURS} hours before the window): $${assessment.fee.toFixed(2)} fee waived (${assessment.member ? "member's free one this month" : 'first one'}).`);
+    await record('waived', `${what}: $${assessment.fee.toFixed(2)} fee waived (${assessment.member ? "member's free one this month" : 'first one'}).`);
     return { status: 'waived', fee: assessment.fee };
   }
 
@@ -140,12 +159,12 @@ export async function applyLateCancelFee(
       kind: 'late_cancel',
       amount: assessment.fee,
       status: 'completed',
-      note: `Late-cancel fee (under ${LATE_CANCEL_CUTOFF_HOURS} hours before the window)`,
+      note: reason === 'no_show' ? 'No-show fee (bag not out)' : `Late-cancel fee (under ${LATE_CANCEL_CUTOFF_HOURS} hours before the window)`,
     });
-    await record('charged', `Late cancel (under ${LATE_CANCEL_CUTOFF_HOURS} hours before the window): $${assessment.fee.toFixed(2)} fee charged.`);
+    await record('charged', `${what}: $${assessment.fee.toFixed(2)} fee charged.`);
     return { status: 'charged', fee: assessment.fee };
   }
-  await record('declined', `Late cancel: the $${assessment.fee.toFixed(2)} fee could not be charged (${charged.error}).`);
-  reportError('late-cancel/charge', charged.error, { alert: true, details: `Order ${orderRef}: late-cancel fee of $${assessment.fee.toFixed(2)} not charged` });
+  await record('declined', `${what}: the $${assessment.fee.toFixed(2)} fee could not be charged (${charged.error}).`);
+  reportError('late-cancel/charge', charged.error, { alert: true, details: `Order ${orderRef}: ${reason === 'no_show' ? 'no-show' : 'late-cancel'} fee of $${assessment.fee.toFixed(2)} not charged` });
   return { status: 'declined', fee: assessment.fee };
 }

@@ -28,6 +28,8 @@ interface RoutineView {
   address?: { street: string; unit: string | null; city: string; zip: string } | null;
   /** The next pickup: one already made (2 days ahead), else the next on the schedule */
   upcomingPickup?: string | null;
+  /** Founding 111 (client 2026-10-10) */
+  founder?: { number: number; territory: string; badge: string } | null;
   allowedDays?: string[];
   zoneName?: string;
 }
@@ -111,6 +113,11 @@ export default function RoutinePage() {
                   {CADENCE_LABEL[m.cadence]} Routine{' '}
                   {m.status === 'paused' ? <Badge variant="warning">Paused</Badge> : <Badge variant="success">Active</Badge>}
                 </h2>
+                {data?.founder && (
+                  <p className={styles.note} style={{ marginTop: 0, marginBottom: 'var(--space-3)' }}>
+                    <Badge variant="gold">🏅 {data.founder.badge}</Badge> Your plan rate is locked for life, and you can book each route day a day before everyone else.
+                  </p>
+                )}
                 <dl className={styles.facts}>
                   <div>
                     <dt>Pickup</dt>

@@ -85,6 +85,8 @@ export interface Order {
   id: string;
   /** Driver manifest: a Routine member still without their branded bag (client 2026-10-08) */
   needs_routine_bag?: boolean;
+  /** A Founding member's numbered bag (client 2026-10-10) */
+  routine_bag_number?: number | null;
   order_number?: string;
   customer_id: string;
   address_id: string;
@@ -288,5 +290,5 @@ export interface BookingSubmissionResult {
   /** Zone 5: the run's bookings (this one included) against its threshold */
   route_threshold?: { booked: number; threshold: number; deliveriesDue: number; dispatched: boolean };
   /** Joined the Routine with this booking (client 2026-10-08) */
-  routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string };
+  routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string; founder?: { number: number; territory: string } };
 }

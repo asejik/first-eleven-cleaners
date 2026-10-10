@@ -142,6 +142,8 @@ export function useResolveClaim() {
       claim_id: string;
       resolution_notes: string;
       refund_amount?: number | null;
+      /** Make It Right account credit (client 2026-10-10) */
+      credit_amount?: number | null;
       claim_status?: 'resolved' | 'refunded';
     }) => {
       const res = await fetch('/api/mission-control', {
