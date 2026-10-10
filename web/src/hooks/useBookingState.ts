@@ -183,6 +183,16 @@ export function useBookingState() {
   });
   // Why a pre-applied code was removed (e.g. a first-order code already used), shown on Review
   const [promoNotice, setPromoNotice] = useState<string | null>(null);
+  // A friend's referral link (/r/CODE -> /book?ref=CODE, client 2026-10-10): their code is
+  // applied in place of the launch code, and checked against this customer on Review
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    const code = ref ? ref.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20) : '';
+    if (!code) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the URL after hydration
+    setPromoCodeInput(code);
+    setAppliedPromo({ code, discount_type: 'referral', discount_value: 15 });
+  }, []);
 
   // Step 5: Card Simulator
   const [cardNumber, setCardNumber] = useState('•••• •••• •••• 4242');
@@ -357,8 +367,9 @@ export function useBookingState() {
   const effectiveExpressTier: 'standard' | 'express_24hr' = isExpressActive ? 'express_24hr' : 'standard';
 
   // Fixed-dollar codes are dollars off, as the server applies them (SEC-15, P05 AR-02)
-  // Promo codes don't combine with member pricing: the code is set aside while it applies
-  const effectivePromo = planFrequency === 'one_time' ? appliedPromo : null;
+  // Promo codes don't combine with member pricing: the code is set aside while it applies. A
+  // friend's referral code is money, not a promo, so it stays (client 2026-10-10)
+  const effectivePromo = planFrequency === 'one_time' || appliedPromo?.discount_type === 'referral' ? appliedPromo : null;
   const { discountPercent, discountAmount: promoDiscountAmount } = promoFinancialInputs(effectivePromo);
 
   // Zone 5: the Extended Reach fee line, half off for Routine members (client 8C)
@@ -411,10 +422,7 @@ export function useBookingState() {
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
     setPromoNotice(null);
-    if (planFrequency !== 'one_time') {
-      addToast({ type: 'error', title: 'Promo not applied', message: MEMBER_PROMO_NOT_COMBINED });
-      return;
-    }
+    // (A member's code is checked by the server: only a friend's referral code applies)
     try {
       const result = await validatePromoMutation.mutateAsync({ code: promoCodeInput.trim(), email });
       setAppliedPromo({ code: result.code, discount_type: result.discount_type, discount_value: result.discount_value });
@@ -584,7 +592,7 @@ export function useBookingState() {
     appliedPromo: effectivePromo,
     handleApplyPromo,
     // Set aside while member pricing applies (client 2026-10-08)
-    promoNotice: planFrequency !== 'one_time' && appliedPromo ? MEMBER_PROMO_NOT_COMBINED : promoNotice,
+    promoNotice: planFrequency !== 'one_time' && appliedPromo && !effectivePromo ? MEMBER_PROMO_NOT_COMBINED : promoNotice,
     cardNumber,
     setCardNumber,
     cardExpiry,

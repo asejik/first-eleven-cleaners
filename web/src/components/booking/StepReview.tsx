@@ -9,7 +9,7 @@ import type { AppliedPromo } from '@/lib/promo';
 
 /** "15%" for percentage codes, "$5.00" for fixed-dollar codes (P05 AR-02) */
 function promoLabel(promo: AppliedPromo): string {
-  return promo.discount_type === 'fixed' ? `$${promo.discount_value.toFixed(2)}` : `${promo.discount_value}%`;
+  return promo.discount_type === 'fixed' || promo.discount_type === 'referral' ? `$${promo.discount_value.toFixed(2)}` : `${promo.discount_value}%`;
 }
 
 interface StepReviewProps {

@@ -11,6 +11,7 @@ import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
 import { releaseOrderHold } from '@/lib/payment-capture';
+import { rewardReferralForDeliveredOrder } from '@/lib/referrals';
 import { assessFailedServiceFee, applyLateCancelFee, LATE_CANCEL_ORDER_FIELDS, type LateCancelOutcome } from '@/lib/late-cancel';
 
 
@@ -628,6 +629,8 @@ export async function POST(request: Request) {
       // 2. Update order to delivered
       const deliveryBlocked = await moveOrderStatus(supabase, order.id, 'out_for_delivery', 'delivered');
       if (deliveryBlocked) return deliveryBlocked;
+      // A referred first order delivered: the friend who referred them earns $15 (2026-10-10)
+      runAfterResponse(() => rewardReferralForDeliveredOrder(supabase, order.id), 'referral reward');
 
       // 2. Insert event
       await supabase.from('order_events').insert({

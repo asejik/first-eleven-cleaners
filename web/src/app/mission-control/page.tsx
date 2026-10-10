@@ -51,6 +51,7 @@ export default function MissionControlPage() {
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const [resolutionText, setResolutionText] = useState('');
   const [refundAmount, setRefundAmount] = useState<string>('');
+  const [creditAmount, setCreditAmount] = useState<string>('');
 
   // Simulator test message state
   const [testEmailRecipient, setTestEmailRecipient] = useState('');
@@ -172,6 +173,7 @@ export default function MissionControlPage() {
         claim_id: selectedClaim.id,
         resolution_notes: resolutionText || 'Resolved under 100% Make It Right guarantee.',
         refund_amount: refundAmount ? parseFloat(refundAmount) : null,
+        credit_amount: creditAmount ? parseFloat(creditAmount) : null,
         claim_status: refundAmount ? 'refunded' : 'resolved',
       });
 
@@ -180,12 +182,15 @@ export default function MissionControlPage() {
         title: 'Claim Resolved',
         message: refundAmount
           ? `Claim #${selectedClaim.id.slice(0, 8)} resolved; $${parseFloat(refundAmount).toFixed(2)} refunded to the customer's card via Square.`
-          : `Claim #${selectedClaim.id.slice(0, 8)} updated with Executive Resolution.`,
+          : creditAmount
+            ? `Claim #${selectedClaim.id.slice(0, 8)} resolved; $${parseFloat(creditAmount).toFixed(2)} of account credit added.`
+            : `Claim #${selectedClaim.id.slice(0, 8)} updated with Executive Resolution.`,
       });
 
       setSelectedClaim(null);
       setResolutionText('');
       setRefundAmount('');
+      setCreditAmount('');
     } catch (err: unknown) {
       addToast({
         type: 'error',
@@ -468,6 +473,8 @@ export default function MissionControlPage() {
             resolutionText={resolutionText}
             setResolutionText={setResolutionText}
             refundAmount={refundAmount}
+            creditAmount={creditAmount}
+            setCreditAmount={setCreditAmount}
             setRefundAmount={setRefundAmount}
             onSubmit={handleResolveClaimSubmit}
             isLoading={resolveClaim.isPending}

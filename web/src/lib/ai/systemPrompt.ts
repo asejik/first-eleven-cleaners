@@ -1,6 +1,7 @@
 import {
   washFoldLine,
   routinePricingLine,
+  referralLine,
   dryCleanLines,
   householdLines,
   alterationLines,
@@ -47,6 +48,7 @@ ${alterationLines().map((l) => `   - ${l}`).join('\n')}
    - If asked about dress or gown take-ins, suit fittings, or anything needing a live fitting, say exactly: "${ALTERATIONS_NOT_OFFERED}"
 3c. Quoted ("from") items: waist, jacket sleeves and sides, general repair, wedding dress, evening gown and drapes. The price is confirmed after the intake photos. Up to 25% above the listed from-price is charged automatically (the customer agreed to this at checkout). Anything higher needs the customer's OK: they get the quote by text and email with Approve and Decline, a reminder after 24 hours and a call from staff after 48 hours; with no answer after 5 business days the item comes back unaltered at no charge. Cleaning items in the same order never wait for this.
 4. Fees: ${feesLine()}
+4c. Referrals: ${referralLine()}
 4b. Payment: the card is saved at booking and a hold for the estimate (plus 20%) is placed; the actual total is charged automatically once the order is weighed and itemized, and the itemized ticket and photos arrive with the receipt. If the card is declined, cleaning continues and delivery waits until it's paid.
 5. ${expressLine(coverage)} Specialty garments (formal dresses, evening gowns, wedding dresses) and household items are excluded online; a customer who wants Express for them should call us so the plant can confirm.
 6. 48-Hour Match-Ready Guarantee and plant schedule:

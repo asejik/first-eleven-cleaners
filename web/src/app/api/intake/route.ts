@@ -12,7 +12,8 @@ import {
   calculateOrderFinancials,
   getAppBaseUrl,
 } from '@/lib/constants';
-import { captureOrderPayment } from '@/lib/payment-capture';
+import { captureOrderPayment, releaseOrderHold } from '@/lib/payment-capture';
+import { applyCreditToOrder } from '@/lib/referrals';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import { withStaffPreferences } from '@/lib/care-preferences';
 import type { MessagePayload } from '@/lib/messaging/templates';
@@ -138,6 +139,9 @@ export async function POST(request: Request) {
         discount_amount,
         express_tier,
         promo_code,
+        referral_code,
+        referral_discount,
+        customer_id,
         frequency,
         extended_reach_fee,
         payment_status,
@@ -298,6 +302,8 @@ export async function POST(request: Request) {
         promoDiscountPercent = Number(promoRow.discount_value) || 0;
       }
     }
+    // A friend's referral code: $15 off this first order, as booked (client 2026-10-10)
+    if (Number(order.referral_discount) > 0) promoDiscountAmount = Number(order.referral_discount);
     // The recurring plan is saved on the order (20261007_zones_extended_reach); older orders
     // have it only in the notes ("Recurring Plan: Weekly | Bi-Weekly")
     const frequency =
@@ -364,14 +370,25 @@ export async function POST(request: Request) {
     let paymentId = order.payment_id;
     let capture: Awaited<ReturnType<typeof captureOrderPayment>> | null = null;
 
+    // Account credit (referral rewards, Make It Right; client 2026-10-10) comes off what the
+    // card is charged; the order total stays the full price
+    let creditApplied = 0;
     if (finalTotal > 0 && (paymentStatus === 'authorized' || paymentStatus === 'pending' || paymentStatus === 'failed')) {
-      capture = await captureOrderPayment(supabase, order, finalTotal);
-      paymentStatus = capture.paymentStatus;
-      paymentId = capture.paymentId ?? paymentId;
+      creditApplied = order.customer_id ? await applyCreditToOrder(supabase, order.customer_id, order.id, finalTotal) : 0;
+      const toCharge = Math.round((finalTotal - creditApplied) * 100) / 100;
+      if (toCharge <= 0) {
+        await releaseOrderHold(supabase, order, 'paid in full with account credit');
+        paymentStatus = 'charged';
+        capture = { paymentStatus: 'charged', paymentId: null, amountDue: 0, note: `Paid in full with $${creditApplied.toFixed(2)} of account credit.` };
+      } else {
+        capture = await captureOrderPayment(supabase, order, toCharge);
+        paymentStatus = capture.paymentStatus;
+        paymentId = capture.paymentId ?? paymentId;
+      }
       await supabase.from('order_events').insert({
         order_id: order.id,
         status: capture.paymentStatus === 'charged' ? 'charged' : 'payment_failed',
-        note: capture.note,
+        note: creditApplied > 0 && toCharge > 0 ? `$${creditApplied.toFixed(2)} of account credit used. ${capture.note}` : capture.note,
         triggered_by: 'Square Web Payments (Intake Auto-Charge)',
       });
     }
@@ -395,6 +412,7 @@ export async function POST(request: Request) {
         environmental_fee: financials.environmentalFee, // PR-15
         sales_tax: financials.salesTax,
         total: finalTotal,
+        credit_applied: creditApplied,
         status: 'weighed_itemized',
         payment_status: paymentStatus,
         payment_id: paymentId,
