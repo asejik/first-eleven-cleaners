@@ -1,6 +1,6 @@
 import { addDaysToDate, dayOfWeek, texasDate } from '@/lib/texas-time';
 import type { Coverage } from '@/lib/coverage';
-import type { ZoneConfig } from '@/lib/constants';
+import { FAILED_PICKUP_FEE, LATE_CANCEL_CUTOFF_HOURS, type ZoneConfig } from '@/lib/constants';
 import { isZoneRouteDay } from '@/lib/coverage';
 
 /**
@@ -16,7 +16,7 @@ export const ROUTINE_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 export type RoutineDay = (typeof ROUTINE_DAYS)[number];
 
 export const ROUTINE_PATH = '/dashboard/routine';
-export const ROUTINE_TERMS_VERSION = '2026-10-08';
+export const ROUTINE_TERMS_VERSION = '2026-10-10';
 export const ROUTINE_MAX_PAUSE_WEEKS = 8;
 export const ROUTINE_AUTO_PAUSE_SKIPS = 3;
 /** Changes and resumes start this many days ahead at the earliest (the booking notice). */
@@ -58,13 +58,14 @@ export function windowText(window: string): string {
   return window === 'evening' ? '5:00 to 8:00 PM' : '7:30 to 10:00 AM';
 }
 
-/** The auto-renewal agreement shown at checkout (the client should approve the wording). */
+/** The auto-renewal agreement shown at checkout, as the client approved it (2026-10-10). */
 export function routineAgreementText({ cadence, day, window }: { cadence: RoutineCadence; day: string; window: string }): string {
-  const every = cadence === 'weekly' ? 'every week' : 'every 2 weeks';
+  const every = cadence === 'weekly' ? 'every week' : 'every other week';
   return (
     `Routine membership: we pick up ${every} on ${day}, ${windowText(window)}, at this address, until you cancel. ` +
     'Two days before each pickup we place a hold for the estimate on your saved card and text you; after we weigh and count the order we charge the actual total. ' +
     `Skip any pickup, or pause for up to ${ROUTINE_MAX_PAUSE_WEEKS} weeks, from your dashboard or by replying SKIP. ` +
+    `Cancelling or skipping less than ${LATE_CANCEL_CUTOFF_HOURS} hours before your window carries the $${FAILED_PICKUP_FEE.toFixed(0)} late-cancel fee (members get one waived per month). ` +
     `${ROUTINE_AUTO_PAUSE_SKIPS} skips in a row pause the membership. Cancel anytime, no fee.`
   );
 }

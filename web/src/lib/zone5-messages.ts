@@ -29,7 +29,7 @@ export const ZONE5_MESSAGE_DEFAULTS: Zone5Messages = {
   thresholdReached:
     'First Eleven Cleaners: [City] just hit [threshold] pickups. Your Wed [date] pickup is confirmed, [window]. Bag at the door and we handle the rest.',
   zone5Open:
-    'First Eleven Cleaners: Good news, [First name]. Extended Reach now serves [City]. Wednesday pickups start Wed [date], back the next Wednesday. Book at [link]. Reply STOP to opt out.',
+    'First Eleven Cleaners: Good news, [First name]. Extended Reach now serves [City]. First pickup Wed [date], back the following Wednesday. Book at [link]. Reply STOP to opt out.',
 };
 
 /** What Mission Control shows for each template. */

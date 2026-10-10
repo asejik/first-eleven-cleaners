@@ -9,7 +9,7 @@ import type { AIConversationMessage, ConciergeContext } from '@/lib/ai/types';
 import { toE164 } from '@/lib/phone';
 import { reportError } from '@/lib/error-reporting';
 import { logMessages, recentMessages } from '@/lib/message-log';
-import { skipNextZone5Pickup, SKIP_NOTHING_REPLY } from '@/lib/zone5-skip';
+import { handleSkipReply, SKIP_NOTHING_REPLY } from '@/lib/zone5-skip';
 
 // Helper to wrap message text in valid TwiML XML
 function createTwimlResponse(message: string): Response {
@@ -218,11 +218,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // SKIP: off the next Zone 5 run (client 2026-10-08, the "route not reached" text)
+    // SKIP: acts on what our last text to them was about (a Routine reminder, a Zone 5 run,
+    // or a late-cancel warning; client 2026-10-10). Both sides are logged, so the next SKIP
+    // resolves against this reply.
     if (/^SKIP$/i.test(upperMsg)) {
       if (!adminSupabase || !senderE164) return createTwimlResponse(SKIP_NOTHING_REPLY);
       try {
-        return createTwimlResponse(await skipNextZone5Pickup(adminSupabase, senderE164));
+        const skip = await handleSkipReply(adminSupabase, senderE164);
+        if (skip.customerId) {
+          const nowIso = new Date().toISOString();
+          await logMessages(adminSupabase, [
+            { customerId: skip.customerId, channel: 'sms', direction: 'inbound', body: trimmedBody, orderId: skip.orderId, externalId: messageSid || null, from, to, createdAt: nowIso },
+            { customerId: skip.customerId, channel: 'sms', direction: 'outbound', body: skip.reply, orderId: skip.orderId, mode: 'skip_reply', from: to, to: from, createdAt: new Date(Date.now() + 500).toISOString() },
+          ]);
+        }
+        return createTwimlResponse(skip.reply);
       } catch (skipErr) {
         reportError('twilio/skip', skipErr, { alert: true, details: 'A SKIP reply could not cancel the Zone 5 pickup' });
         return createTwimlResponse('First Eleven Cleaners: We could not skip your pickup just now. Please call (682) 200-0039 and we will take care of it.');

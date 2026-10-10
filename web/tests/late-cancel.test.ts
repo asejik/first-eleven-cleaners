@@ -234,11 +234,27 @@ describe('Skipping late: the link and a SKIP reply', () => {
     expect(db.orders[0]).toMatchObject({ status: 'cancelled', late_cancel_status: 'charged' });
   });
 
+  it('SKIP acts on what our last text was about (client 2026-10-10)', async () => {
+    db.routine_memberships = [{ ...member, next_pickup_date: '2026-10-20' }];
+    const routinePickup = order({ id: 'routine-13', pickup_date: '2026-10-13', routine_membership_id: 'm-1' });
+    const zone5Pickup = order({ id: 'zone5-14', pickup_date: '2026-10-14', extended_reach_band: 'A', extended_reach_fee: 35 });
+    db.orders = [routinePickup, zone5Pickup];
+    // Our last text was the Zone 5 "route not reached" one: SKIP leaves that run, not the Routine pickup
+    db.messages = [{ customer_id: 'c-1', channel: 'sms', direction: 'outbound', order_id: 'zone5-14', created_at: '2026-10-12T09:00:00Z' }];
+    expect(await skipNextZone5Pickup(admin as never, '+12145550100', LATE_MORNING)).toContain('Your Extended Reach pickup on Wed Oct 14 is cancelled');
+    expect(db.orders.find((o) => o.id === 'zone5-14')?.status).toBe('cancelled');
+    expect(db.orders.find((o) => o.id === 'routine-13')?.status).toBe('booked');
+    // Our last text was the Routine reminder: SKIP skips that pickup
+    db.messages = [{ customer_id: 'c-1', channel: 'sms', direction: 'outbound', order_id: 'routine-13', created_at: '2026-10-12T09:30:00Z' }];
+    expect(await skipNextZone5Pickup(admin as never, '+12145550100', LATE_MORNING)).toContain('your Tue Oct 13 pickup is skipped');
+    expect(db.orders.find((o) => o.id === 'routine-13')?.status).toBe('cancelled');
+  });
+
   it('a late SKIP text explains the fee; a second SKIP within 15 minutes confirms it', async () => {
     db.orders = [order({ extended_reach_band: 'A', extended_reach_fee: 35 }), order({ id: 'old', status: 'cancelled', late_cancel_status: 'waived', late_cancel_at: '2026-01-05T12:00:00Z' })];
     const first = await skipNextZone5Pickup(admin as never, '+12145550100', LATE_MORNING);
     expect(first).toBe(
-      "First Eleven Cleaners: It's less than 2 hours before your pickup, so skipping now costs $35.00, charged to your card on file. Reply SKIP again within 15 minutes to confirm."
+      "First Eleven Cleaners: It's less than 2 hours before your pickup, so skipping now costs $35.00, charged to your card on file. Reply SKIP again within 15 minutes to confirm. If you don't, our driver will come for your pickup as planned."
     );
     expect(db.orders[0].status).toBe('booked');
     const second = await skipNextZone5Pickup(admin as never, '+12145550100', new Date(LATE_MORNING.getTime() + 5 * 60_000));

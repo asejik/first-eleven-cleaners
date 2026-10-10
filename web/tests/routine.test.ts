@@ -149,7 +149,7 @@ describe('Joining the Routine at checkout', () => {
       pickup_day: 'Monday',
       pickup_window: 'morning',
       next_pickup_date: plusDays(pickup, 7),
-      terms_version: '2026-10-08',
+      terms_version: '2026-10-10',
       template: { zone_id: 'zone_1', extended_reach_band: null, order_type: 'mixed', services: expect.objectContaining({ estimated_weight_lbs: 15 }) },
     });
     expect(membership?.template).not.toHaveProperty('services.alteration_items');
@@ -181,7 +181,11 @@ describe('Joining the Routine at checkout', () => {
 
   it('the agreement states the renewal, holds, skipping, pausing and free cancellation', () => {
     const text = routineAgreementText({ cadence: 'biweekly', day: 'Tuesday', window: 'evening' });
-    expect(text).toContain('every 2 weeks on Tuesday, 5:00 to 8:00 PM');
+    // The client's approved wording (2026-10-10)
+    expect(text).toBe(
+      'Routine membership: we pick up every other week on Tuesday, 5:00 to 8:00 PM, at this address, until you cancel. Two days before each pickup we place a hold for the estimate on your saved card and text you; after we weigh and count the order we charge the actual total. Skip any pickup, or pause for up to 8 weeks, from your dashboard or by replying SKIP. Cancelling or skipping less than 2 hours before your window carries the $15 late-cancel fee (members get one waived per month). 3 skips in a row pause the membership. Cancel anytime, no fee.'
+    );
+    expect(routineAgreementText({ cadence: 'weekly', day: 'Monday', window: 'morning' })).toContain('we pick up every week on Monday, 7:30 to 10:00 AM');
     expect(text).toContain('until you cancel');
     expect(text).toContain('pause for up to 8 weeks');
     expect(text).toContain('Cancel anytime, no fee.');
