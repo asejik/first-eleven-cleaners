@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { reportError } from '@/lib/error-reporting';
 import type { Json } from '@/types/database';
-import { buildCoverage, mergeCoverageSettings, DEFAULT_COVERAGE_SETTINGS, type Coverage, type CoverageSettings } from '@/lib/coverage';
+import { buildCoverage, mergeCoverageSettings, DEFAULT_COVERAGE_SETTINGS, DEFAULT_TIER_DOWN, type Coverage, type CoverageSettings } from '@/lib/coverage';
 
 /**
  * Coverage settings edited in Mission Control (client 2026-10-07, request 8), stored as one
@@ -60,6 +60,16 @@ export const CoverageSettingsSchema = z
     zones: z.object({ zone_1: zoneSchema, zone_2: zoneSchema, zone_3: zoneSchema, zone_4: zoneSchema }),
     // ZIP code -> Zone 1-4 (the editable ZIP table)
     zipZones: z.record(z.string().regex(/^\d{5}$/, 'ZIP codes are 5 digits.'), z.enum(['zone_1', 'zone_2', 'zone_3', 'zone_4'])),
+    // Approved tier-down minimums by ZIP, and the flag thresholds (client 2026-10-10)
+    zipMinimums: z.record(z.string().regex(/^\d{5}$/, 'ZIP codes are 5 digits.'), money).default({}),
+    tierDown: z
+      .object({
+        flagOrders: z.number().int().min(1).max(1000),
+        flagWeeks: z.number().int().min(1).max(52),
+        reviewOrders: z.number().int().min(1).max(1000),
+        reviewWeeks: z.number().int().min(1).max(52),
+      })
+      .default(DEFAULT_TIER_DOWN),
     extendedReach: z.object({
       minimumOrder: money,
       routineDiscountPercent: z.number().min(0).max(100),

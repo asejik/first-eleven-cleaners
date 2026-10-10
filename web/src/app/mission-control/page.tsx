@@ -27,6 +27,7 @@ import styles from './page.module.css';
 import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlists';
 import { RoutineMembersPanel } from '@/components/mission-control/RoutineMembersPanel';
 import { TerritoriesPanel } from '@/components/mission-control/TerritoriesPanel';
+import { TierDownPanel } from '@/components/mission-control/TierDownPanel';
 
 const STAGES: OrderStatusKey[] = [
   'booked',
@@ -459,7 +460,10 @@ export default function MissionControlPage() {
               )}
 
               {activeTab === 'zones' && (
-                <ZoneGovernance />
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  <ZoneGovernance />
+                  <TierDownPanel />
+                </div>
               )}
 
               {activeTab === 'routine' && (

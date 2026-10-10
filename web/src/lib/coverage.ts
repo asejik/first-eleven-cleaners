@@ -48,8 +48,21 @@ export interface CoverageSettings {
   zones: Record<MetroZoneId, MetroZoneSettings>;
   /** ZIP code -> Zone 1-4 (the client's lists; edited in Mission Control) */
   zipZones: Record<string, MetroZoneId>;
+  /** A ZIP's own order minimum after an approved tier-down step (client 2026-10-10) */
+  zipMinimums: Record<string, number>;
+  /** When Mission Control flags a ZIP for a tier-down step, or for review (editable) */
+  tierDown: TierDownSettings;
   extendedReach: ExtendedReachConfig;
 }
+
+/** Client 2026-10-10: 20 orders in 4 weeks flags a step; under 10 in 8 weeks flags a review. */
+export interface TierDownSettings {
+  flagOrders: number;
+  flagWeeks: number;
+  reviewOrders: number;
+  reviewWeeks: number;
+}
+export const DEFAULT_TIER_DOWN: TierDownSettings = { flagOrders: 20, flagWeeks: 4, reviewOrders: 10, reviewWeeks: 8 };
 
 export const METRO_ZONE_IDS: MetroZoneId[] = ['zone_1', 'zone_2', 'zone_3', 'zone_4'];
 
@@ -62,6 +75,8 @@ export const DEFAULT_COVERAGE_SETTINGS: CoverageSettings = {
     })
   ) as Record<MetroZoneId, MetroZoneSettings>,
   zipZones: Object.fromEntries(METRO_ZONE_IDS.flatMap((id) => ZONE_CONFIG[id].zipCodes.map((zip) => [zip, id]))),
+  zipMinimums: {},
+  tierDown: DEFAULT_TIER_DOWN,
   extendedReach: EXTENDED_REACH_DEFAULTS,
 };
 
@@ -73,6 +88,9 @@ export interface Coverage {
   zonesList: ZoneConfig[];
   extendedReach: ExtendedReachConfig;
   extendedReachZone: ZoneConfig;
+  /** Approved tier-down minimums by ZIP (client 2026-10-10) */
+  zipMinimums: Record<string, number>;
+  tierDown: TierDownSettings;
 }
 
 const sameDays = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((d) => b.includes(d));
@@ -104,6 +122,8 @@ export function buildCoverage(settings: CoverageSettings = DEFAULT_COVERAGE_SETT
     zonesList: METRO_ZONE_IDS.map((id) => zones[id]),
     extendedReach: settings.extendedReach,
     extendedReachZone: extendedReachZone(settings.extendedReach),
+    zipMinimums: settings.zipMinimums,
+    tierDown: settings.tierDown,
   };
 }
 
@@ -156,10 +176,28 @@ export function mergeCoverageSettings(saved: unknown): CoverageSettings {
   const zipZones = savedZips
     ? Object.fromEntries(savedZips.filter(([zip, id]) => /^\d{5}$/.test(zip) && (METRO_ZONE_IDS as string[]).includes(String(id)))) as Record<string, MetroZoneId>
     : d.zipZones;
+  // Approved tier-down minimums, and the flag thresholds (client 2026-10-10)
+  const savedMinimums = (saved as { zipMinimums?: unknown }).zipMinimums;
+  const zipMinimums =
+    savedMinimums && typeof savedMinimums === 'object'
+      ? (Object.fromEntries(
+          Object.entries(savedMinimums as Record<string, unknown>).filter(([zip, v]) => /^\d{5}$/.test(zip) && typeof v === 'number' && Number.isFinite(v) && v >= 0)
+        ) as Record<string, number>)
+      : d.zipMinimums;
+  const t = ((saved as { tierDown?: Record<string, unknown> }).tierDown || {}) as Record<string, unknown>;
+  const whole = (v: unknown, fallback: number) => Math.max(1, Math.round(num(v, fallback)));
+  const tierDown: TierDownSettings = {
+    flagOrders: whole(t.flagOrders, d.tierDown.flagOrders),
+    flagWeeks: whole(t.flagWeeks, d.tierDown.flagWeeks),
+    reviewOrders: whole(t.reviewOrders, d.tierDown.reviewOrders),
+    reviewWeeks: whole(t.reviewWeeks, d.tierDown.reviewWeeks),
+  };
   return {
     expressEnabled: typeof s.expressEnabled === 'boolean' ? s.expressEnabled : d.expressEnabled,
     zones,
     zipZones,
+    zipMinimums,
+    tierDown,
     extendedReach: {
       minimumOrder: num(e.minimumOrder, de.minimumOrder),
       routineDiscountPercent: Math.min(100, num(e.routineDiscountPercent, de.routineDiscountPercent)),
@@ -211,9 +249,20 @@ export function isListedMetroZip(zip: string, coverage: Coverage = DEFAULT_COVER
 }
 
 export function resolveCoverage(
-  { zip, miles = null }: { zip: string; miles?: number | null },
+  where: { zip: string; miles?: number | null },
   coverage: Coverage = DEFAULT_COVERAGE
 ): CoverageResolution {
+  const result = resolveZone(where, coverage);
+  // A ZIP stepped down by Mission Control has its own minimum (client 2026-10-10)
+  const zip5 = zip5Of(where.zip);
+  const own = zip5 ? coverage.zipMinimums?.[zip5] : undefined;
+  if (result.status === 'served' && result.zone.id !== 'zone_5' && typeof own === 'number') {
+    return { ...result, zone: { ...result.zone, minimumOrder: own } };
+  }
+  return result;
+}
+
+function resolveZone({ zip, miles = null }: { zip: string; miles?: number | null }, coverage: Coverage): CoverageResolution {
   const zip5 = zip5Of(zip);
   if (!zip5) return { status: 'incomplete' };
 
