@@ -212,7 +212,16 @@ export async function GET(request: Request) {
           .is('bag_delivered_at', null)
       : { data: [] as { customer_id: string }[] };
     const needsBag = new Set((needBag || []).map((m) => m.customer_id));
-    const pickups = scheduledPickups.map((o) => ({ ...o, needs_routine_bag: needsBag.has(o.customer_id) }));
+    // Founders get a numbered bag (client 2026-10-10)
+    const { data: bagFounders } = needsBag.size
+      ? await supabase.from('founding_members').select('customer_id, number').in('customer_id', [...needsBag]).is('ended_at', null)
+      : { data: [] as { customer_id: string; number: number }[] };
+    const bagNumber = new Map((bagFounders || []).map((f) => [f.customer_id, f.number]));
+    const pickups = scheduledPickups.map((o) => ({
+      ...o,
+      needs_routine_bag: needsBag.has(o.customer_id),
+      routine_bag_number: bagNumber.get(o.customer_id) ?? null,
+    }));
 
     // 2. Bags in Van (Customer bags picked up by THIS specific driver, en route to plant)
     const pickedUpHistory = allActive.filter((o) => {

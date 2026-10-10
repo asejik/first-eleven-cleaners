@@ -14,7 +14,7 @@ interface StepConfirmationProps {
     /** Zone 5: the run's bookings (this one included) against its threshold */
     routeThreshold?: { booked: number; threshold: number } | null;
     /** Joined the Routine with this booking (client 2026-10-08) */
-    routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string } | null;
+    routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string; founder?: { number: number; territory: string } } | null;
   };
   pickupDate: string;
   pickupWindow: 'morning' | 'evening';
@@ -66,6 +66,11 @@ export function StepConfirmation({
             🔄 You&apos;re in the {CADENCE_LABEL[confirmedOrder.routine.cadence]} Routine. Next pickup:{' '}
             <strong>{formatLongDate(confirmedOrder.routine.next_pickup_date)}</strong>. Skip, pause or change it anytime from{' '}
             <a href={ROUTINE_PATH}>your Routine page</a>. To sign in, use your email or (once verified) a text code. No password needed.
+          </p>
+        )}
+        {confirmedOrder.routine?.founder && (
+          <p className={styles.confSubtitle}>
+            🏅 You&apos;re <strong>Founding Member #{confirmedOrder.routine.founder.number}</strong> in {confirmedOrder.routine.founder.territory}: your plan rate is locked for life, and a numbered bag is coming with your first pickup.
           </p>
         )}
       </div>

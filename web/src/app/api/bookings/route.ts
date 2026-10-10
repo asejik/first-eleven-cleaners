@@ -51,6 +51,7 @@ import { hasUsedPromo, promoUsedMessage } from '@/lib/promo';
 import { CADENCE_LABEL, ROUTINE_PATH, type RoutineCadence } from '@/lib/routine';
 import { createMembershipFromBooking, getOpenMembership } from '@/lib/routine-store';
 import { ensureAuthUser } from '@/lib/passwordless';
+import { claimFounding, founderStatus, planDiscountFor, FOUNDER_HEAD_START_DAYS } from '@/lib/founding';
 import { checkReferralForBooking, recordReferral, referrerForCode, REFERRAL_AMOUNT } from '@/lib/referrals';
 
 const BookingSchema = z.object({
@@ -244,6 +245,9 @@ export async function POST(request: Request) {
       }
     }
     const planFrequency: PlanFrequency = memberCadence ?? validated.schedule.frequency;
+    // A Founding member (client 2026-10-10): their locked plan rate, and a day's head start
+    const founder = signedInCustomerId ? await founderStatus(createAdminClient(), signedInCustomerId) : null;
+    const founderActive = Boolean(founder?.active);
 
     // A friend's referral code (client 2026-10-10): $15 off a new customer's first order. It's
     // money, not a promo, so it also applies with member pricing.
@@ -386,6 +390,7 @@ export async function POST(request: Request) {
       promoDiscountAmount,
       frequency: planFrequency,
       extendedReachFee: reachFee,
+      planDiscountPercent: founderActive && planFrequency !== 'one_time' ? planDiscountFor(planFrequency, founder) : undefined,
     });
 
     // 5. Enforce Zone Minimum (F010 Fix). Zone 5: the minimum is on the garments; the delivery
@@ -414,6 +419,7 @@ export async function POST(request: Request) {
       pickupDate: validated.schedule.pickup_date,
       pickupWindow: validated.schedule.pickup_window,
       tier: validated.schedule.express_tier,
+      extraDaysAhead: founderActive ? FOUNDER_HEAD_START_DAYS : 0,
     });
     if (!scheduleCheck.ok) {
       return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
@@ -821,7 +827,7 @@ export async function POST(request: Request) {
             // Joining the Routine (client 2026-10-08): this booking is the first pickup. The
             // membership needs an account behind it, made silently (sign-in is a text code or
             // email link, no password)
-            let routine: { cadence: RoutineCadence; next_pickup_date: string } | null = null;
+            let routine: { cadence: RoutineCadence; next_pickup_date: string; founder?: { number: number; territory: string } } | null = null;
             if (routineCadence) {
               const membership = await createMembershipFromBooking(supabase, {
                 customerId,
@@ -846,6 +852,9 @@ export async function POST(request: Request) {
               });
               if (membership) {
                 routine = { cadence: routineCadence, next_pickup_date: membership.next_pickup_date };
+                // One of the first 111 in their territory: a Founding member (client 2026-10-10)
+                const founding = await claimFounding(supabase, { customerId, membershipId: membership.id, zip: validated.address.zip });
+                if (founding) routine.founder = { number: founding.number, territory: founding.territoryName };
                 const { data: member } = await supabase.from('customers').select('id, email, full_name, role, auth_id, phone').eq('id', customerId).maybeSingle();
                 if (member && !member.auth_id && member.role === 'customer') {
                   try {
@@ -857,7 +866,7 @@ export async function POST(request: Request) {
               }
             }
             const routineLine = routine
-              ? `You're in the ${CADENCE_LABEL[routine.cadence]} Routine: next pickup ${formatLongDate(routine.next_pickup_date)}. Manage it anytime at ${getAppBaseUrl()}${ROUTINE_PATH}.`
+              ? `You're in the ${CADENCE_LABEL[routine.cadence]} Routine: next pickup ${formatLongDate(routine.next_pickup_date)}.${routine.founder ? ` You're Founding Member #${routine.founder.number} in ${routine.founder.territory}.` : ''} Manage it anytime at ${getAppBaseUrl()}${ROUTINE_PATH}.`
               : undefined;
 
             // Zone 5: where this run stands now (this booking included). It's confirmed when the

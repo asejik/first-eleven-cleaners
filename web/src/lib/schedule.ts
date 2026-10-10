@@ -81,7 +81,18 @@ export function earliestPickupDate(tier: ScheduleTier, now: Date = new Date()): 
 export type ScheduleCheck = { ok: true } | { ok: false; error: string };
 
 export function validateSchedule(
-  { pickupDate, pickupWindow, tier }: { pickupDate: string; pickupWindow: string; tier: ScheduleTier },
+  {
+    pickupDate,
+    pickupWindow,
+    tier,
+    extraDaysAhead = 0,
+  }: {
+    pickupDate: string;
+    pickupWindow: string;
+    tier: ScheduleTier;
+    /** Founding members see each route day's windows a day before everyone else (2026-10-10) */
+    extraDaysAhead?: number;
+  },
   now: Date = new Date()
 ): ScheduleCheck {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) || addDaysToDate(pickupDate, 0) !== pickupDate) {
@@ -92,7 +103,7 @@ export function validateSchedule(
   if (pickupDate < today) {
     return { ok: false, error: 'Pickup date cannot be in the past. Please select an upcoming service date.' };
   }
-  if (pickupDate > addDaysToDate(today, MAX_DAYS_AHEAD)) {
+  if (pickupDate > addDaysToDate(today, MAX_DAYS_AHEAD + extraDaysAhead)) {
     return { ok: false, error: `Pickups can be booked up to ${MAX_DAYS_AHEAD} days ahead. Please choose an earlier date.` };
   }
   if (dayOfWeek(pickupDate) === 0) {

@@ -700,6 +700,7 @@ export function calculateOrderFinancials({
   frequency = 'one_time',
   extendedReachFee = 0,
   alterationSubtotal = 0,
+  planDiscountPercent,
 }: {
   subtotal: number;
   expressMultiplier?: number;
@@ -712,6 +713,8 @@ export function calculateOrderFinancials({
   extendedReachFee?: number;
   /** Alterations in the subtotal: the Routine plan discount doesn't apply to them (2026-10-08) */
   alterationSubtotal?: number;
+  /** A Founding member's locked plan discount (client 2026-10-10), in place of today's rate */
+  planDiscountPercent?: number;
 }): OrderFinancials {
   const subtotalCents = toCents(subtotal);
 
@@ -727,7 +730,7 @@ export function calculateOrderFinancials({
 
   // Routine plan discount: 10% Weekly, 5% Bi-Weekly, on everything except alterations and
   // fees (client 2026-10-08)
-  const frequencyDiscountPercent = ROUTINE_PLAN_DISCOUNT_PERCENT[frequency] ?? 0;
+  const frequencyDiscountPercent = frequency === 'one_time' ? 0 : (planDiscountPercent ?? ROUTINE_PLAN_DISCOUNT_PERCENT[frequency] ?? 0);
   const discountableCents = Math.max(0, subtotalCents - toCents(alterationSubtotal));
   const frequencyCents = applyRate(discountableCents, frequencyDiscountPercent, 100);
 
@@ -802,6 +805,7 @@ export function computeBookingFinancials({
   promoDiscountAmount,
   frequency = 'one_time',
   extendedReachFee = 0,
+  planDiscountPercent,
 }: {
   dryCleanItems?: BookingItemInput[];
   /** One line per alteration piece (buttons: one line with a quantity), already validated */
@@ -814,6 +818,8 @@ export function computeBookingFinancials({
   frequency?: 'one_time' | 'weekly' | 'biweekly';
   /** Zone 5 Extended Reach delivery fee, already discounted for Routine members */
   extendedReachFee?: number;
+  /** A Founding member's locked plan discount (client 2026-10-10) */
+  planDiscountPercent?: number;
 }): RecomputedBookingPricing {
   let washFoldSubtotal = 0;
   const itemizedList: RecomputedBookingPricing['itemizedList'] = [];
@@ -878,6 +884,7 @@ export function computeBookingFinancials({
     frequency,
     extendedReachFee,
     alterationSubtotal,
+    planDiscountPercent,
   });
 
   return {

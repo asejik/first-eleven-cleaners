@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants';
 import { captureOrderPayment, releaseOrderHold } from '@/lib/payment-capture';
 import { applyCreditToOrder } from '@/lib/referrals';
+import { founderStatus, planDiscountFor } from '@/lib/founding';
 import { resolveAndUploadPhotoUrl, withSignedPhotoUrls } from '@/lib/storage';
 import { withStaffPreferences } from '@/lib/care-preferences';
 import type { MessagePayload } from '@/lib/messaging/templates';
@@ -315,7 +316,10 @@ export async function POST(request: Request) {
             ? 'weekly'
             : 'one_time';
 
+    // A Founding member's plan rate is locked for life (client 2026-10-10)
+    const founder = frequency !== 'one_time' && order.customer_id ? await founderStatus(supabase, order.customer_id) : null;
     const financials = calculateOrderFinancials({
+      planDiscountPercent: founder?.active && frequency !== 'one_time' ? planDiscountFor(frequency, founder) : undefined,
       subtotal,
       isExpress: order.express_tier === 'express_24hr',
       discountPercent: promoDiscountPercent,

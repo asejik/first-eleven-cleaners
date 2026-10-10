@@ -3,6 +3,7 @@ import type { Json } from '@/types/database';
 import { addDaysToDate, texasDate } from '@/lib/texas-time';
 import { getAppBaseUrl } from '@/lib/constants';
 import { releaseOrderHold } from '@/lib/payment-capture';
+import { endFounding } from '@/lib/founding';
 import { assessLateCancel, applyLateCancelFee, lateCancelWarning, LATE_CANCEL_ORDER_FIELDS, type LateCancelOrder } from '@/lib/late-cancel';
 import { sendContactMessage } from '@/lib/messaging/contact';
 import { reportError } from '@/lib/error-reporting';
@@ -216,6 +217,8 @@ export async function applyRoutineChange(
     await cancelBookedPickups(supabase, m, { fromDate: texasDate(now) }, 'moved to the new day');
   }
   if (made) await applyLateCancelFee(supabase, made, lateFee, options.actor ?? 'Customer (Routine)', now);
+  // A cancel ends Founding status, with 60 days to come back; a pause doesn't (2026-10-10)
+  if (change.action === 'cancel') await endFounding(supabase, m.customer_id, now);
   if (decision.autoPaused) await sendAutoPauseCheckIn(supabase, m.customer_id);
   return decision;
 }

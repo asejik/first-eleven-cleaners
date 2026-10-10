@@ -26,6 +26,7 @@ import {
 import styles from './page.module.css';
 import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlists';
 import { RoutineMembersPanel } from '@/components/mission-control/RoutineMembersPanel';
+import { TerritoriesPanel } from '@/components/mission-control/TerritoriesPanel';
 
 const STAGES: OrderStatusKey[] = [
   'booked',
@@ -462,7 +463,10 @@ export default function MissionControlPage() {
               )}
 
               {activeTab === 'routine' && (
-                <RoutineMembersPanel />
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  <RoutineMembersPanel />
+                  <TerritoriesPanel />
+                </div>
               )}
             </>
           )}

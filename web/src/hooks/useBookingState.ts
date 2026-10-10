@@ -207,7 +207,7 @@ export function useBookingState() {
     /** Zone 5: where this run stands with this booking included */
     routeThreshold?: { booked: number; threshold: number } | null;
     /** Joined the Routine with this booking (client 2026-10-08) */
-    routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string } | null;
+    routine?: { cadence: 'weekly' | 'biweekly'; next_pickup_date: string; founder?: { number: number; territory: string } } | null;
   } | null>(null);
   // One key per checkout: resubmitting (double click, retry after a timeout) returns the
   // order already created instead of booking twice (PR-11)

@@ -112,6 +112,8 @@ describe('The driver sees who still needs their bag', () => {
   it('the stop card shows the reminder', () => {
     const card = readFileSync(join(__dirname, '..', 'src', 'components', 'driver', 'DriverStopCard.tsx'), 'utf8');
     expect(card).toContain('order.needs_routine_bag');
-    expect(card).toContain('Bring a Routine bag:');
+    expect(card).toContain('Bring a Routine bag');
+    // Founders get a numbered one (client 2026-10-10)
+    expect(card).toContain('(Founding, numbered #${order.routine_bag_number})');
   });
 });
