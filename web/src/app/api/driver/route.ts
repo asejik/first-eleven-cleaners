@@ -10,6 +10,8 @@ import type { MessagePayload } from '@/lib/messaging/templates';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
+import { releaseOrderHold } from '@/lib/payment-capture';
+import { assessFailedServiceFee, applyLateCancelFee, LATE_CANCEL_ORDER_FIELDS, type LateCancelOutcome } from '@/lib/late-cancel';
 
 
 interface DriverContext {
@@ -338,15 +340,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'action and order_id are required' }, { status: 400 });
     }
 
-    // Business rule: Mandatory photo validation for pickup and delivery verification
-    if (action === 'pickup_complete' || action === 'delivery_complete') {
+    // Business rule: Mandatory photo validation for pickup and delivery verification (and a
+    // no-show: the photo shows the bag wasn't out, client 2026-10-10)
+    if (action === 'pickup_complete' || action === 'delivery_complete' || action === 'no_show') {
       if (!photo_url || typeof photo_url !== 'string' || photo_url.trim().length === 0) {
         return NextResponse.json(
           {
             error:
               action === 'pickup_complete'
                 ? 'A photo snapshot of the laundry bag at the pickup location is mandatory.'
-                : 'A photo snapshot verifying contactless drop-off is mandatory.',
+                : action === 'no_show'
+                  ? 'A photo of the pickup spot showing the bag is not out is mandatory.'
+                  : 'A photo snapshot verifying contactless drop-off is mandatory.',
           },
           { status: 400 }
         );
@@ -420,6 +425,57 @@ export async function POST(request: Request) {
       photoUrl: photo_url || undefined,
       trackingUrl,
     };
+
+    // No-show (client 2026-10-10): the driver marks "bag not out" with a photo. The pickup is
+    // cancelled and the failed-service fee charged automatically, under the same waiver rule
+    // as a late cancel (first one free; members one a month; Zone 5 pays its trip fee).
+    if (action === 'no_show') {
+      if (order.status !== 'booked') {
+        return NextResponse.json({ error: 'Only a pickup that is still booked can be marked as not out.' }, { status: 409 });
+      }
+      const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'no_show_proof');
+      if (!resolvedPhotoUrl) {
+        return NextResponse.json({ error: 'The photo could not be saved. Please retake it and try again.' }, { status: 502 });
+      }
+      const { data: feeOrder } = await supabase.from('orders').select(`${LATE_CANCEL_ORDER_FIELDS}, hold_payment_id, hold_status`).eq('id', order.id).maybeSingle();
+      const blocked = await moveOrderStatus(supabase, order.id, 'booked', 'cancelled');
+      if (blocked) return blocked;
+      await supabase.from('order_events').insert({
+        order_id: order.id,
+        status: 'cancelled',
+        note: notes ? `No-show: bag not out. ${notes}` : 'No-show: the bag was not out at the pickup.',
+        triggered_by: driverLabel,
+      });
+      await supabase.from('garment_photos').insert({
+        order_id: order.id,
+        photo_type: 'no_show_proof',
+        photo_url: resolvedPhotoUrl,
+        condition_notes: notes || 'Bag not out at pickup',
+        captured_by: driverLabel,
+      });
+      let outcome: LateCancelOutcome = { status: 'none' };
+      if (feeOrder) {
+        await releaseOrderHold(supabase, feeOrder, 'no-show at pickup');
+        outcome = await applyLateCancelFee(supabase, feeOrder, await assessFailedServiceFee(supabase, feeOrder), driverLabel, new Date(), 'no_show');
+      }
+      const feeLine =
+        outcome.status === 'charged'
+          ? ` The $${outcome.fee.toFixed(2)} failed-pickup fee was charged to your card.`
+          : outcome.status === 'waived'
+            ? ' This first one is on us, so there is no fee.'
+            : outcome.status === 'declined'
+              ? ` We couldn't charge the $${outcome.fee.toFixed(2)} failed-pickup fee; we'll be in touch.`
+              : '';
+      const notice: MessagePayload = {
+        ...basePayload,
+        stage: 'cancelled',
+        photoUrl: resolvedPhotoUrl,
+        customTitle: '🚐 We missed your pickup',
+        customMessage: `First Eleven Cleaners: Our driver came for your pickup (Order #${basePayload.orderNumber}) but the bag wasn't out, so we couldn't collect it.${feeLine} Book again anytime: ${origin}/book`,
+      };
+      runAfterResponse(() => messagingService.dispatchStageNotification(notice), 'driver no-show notification');
+      return NextResponse.json({ success: true, new_status: 'cancelled', fee: outcome });
+    }
 
     if (action === 'pickup_complete') {
       if (order.status !== 'booked') {
