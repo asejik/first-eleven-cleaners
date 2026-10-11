@@ -95,6 +95,11 @@ describe('Client validation: zones rebuilt from the distance bands', () => {
     expect(served('75201').zone).toMatchObject({ id: 'zone_2', name: 'Zone 2 — Dallas Central & Mid-Cities', minimumOrder: 60 });
   });
 
+  it('client 2026-10-11: the ZIP list is the rule; his four ZIPs are on it, whatever the distance', () => {
+    for (const zip of ['75223', '75270']) expect(served(zip, 60).zone.id).toBe('zone_2');
+    for (const zip of ['75054', '76014']) expect(served(zip, 60).zone.id).toBe('zone_3');
+  });
+
   it('Fort Worth -> Zone 4 Far Metroplex, $100, Tuesday and Friday', () => {
     const r = served('76102');
     expect(r.zone).toMatchObject({ id: 'zone_4', name: 'Zone 4 — Far Metroplex', minimumOrder: 100, routeDays: ['Tuesday', 'Friday'] });
