@@ -7,23 +7,24 @@ import { greetingFirstName } from '@/lib/sanitize';
  * (stored as app_settings key 'zone5_messages' over these defaults). Client-safe.
  * Placeholders are written in square brackets, as the client wrote them: [First name], [City],
  * [date] (the run, "Oct 21"), [date+7] (the next run), [window], [threshold] (3 for Band A,
- * 4 for Band B) and [link] (the booking page).
+ * 4 for Band B), [link] (the booking page) and [Referral link] (the customer's own Give $15
+ * link, client 2026-10-11; filled in texts about a booked pickup, left out elsewhere).
  */
 export const ZONE5_MESSAGE_KEYS = ['onTheList', 'routeConfirmed', 'routeNotReached', 'waitlistJoined', 'thresholdReached', 'zone5Open'] as const;
 export type Zone5MessageKey = (typeof ZONE5_MESSAGE_KEYS)[number];
 export type Zone5Messages = Record<Zone5MessageKey, string>;
 
-export const ZONE5_PLACEHOLDERS = ['First name', 'City', 'date', 'date+7', 'window', 'threshold', 'link'] as const;
+export const ZONE5_PLACEHOLDERS = ['First name', 'City', 'date', 'date+7', 'window', 'threshold', 'link', 'Referral link'] as const;
 export type Zone5Placeholder = (typeof ZONE5_PLACEHOLDERS)[number];
 
-/** The client's wording, with the threshold filled per band and no referral link yet. */
+/** The client's wording, with the threshold filled per band; the referral line only in "route not reached" (2026-10-11). */
 export const ZONE5_MESSAGE_DEFAULTS: Zone5Messages = {
   onTheList:
     "First Eleven Cleaners: You're on the list for Wednesday pickup in [City]. We confirm routes Monday by 6 PM once your area reaches [threshold] pickups. No charge until we confirm. Reply STOP to opt out.",
   routeConfirmed:
     'First Eleven Cleaners: Good news, [First name]. Your [City] pickup is confirmed for Wed [date], [window]. Have your bag at the door. Return is Wed [date+7]. Questions? Just reply.',
   routeNotReached:
-    "First Eleven Cleaners: Hi [First name], [City] didn't reach [threshold] pickups this week, so Wed [date] won't run. You stay on the list for Wed [date+7] at no charge. Reply SKIP to come off the list.",
+    "First Eleven Cleaners: Hi [First name], [City] didn't reach [threshold] pickups this week, so Wed [date] won't run. You stay on the list for Wed [date+7] at no charge. Know a neighbor? Send them [Referral link]. They get $15 off, you get $15, and it helps fill your route. Reply SKIP to come off the list.",
   waitlistJoined:
     "First Eleven Cleaners: Thanks, [First name]. [City] is just outside our current routes. You're on the waitlist and we'll text you first when we open your area. Reply STOP to opt out.",
   thresholdReached:

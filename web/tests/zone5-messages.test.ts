@@ -14,13 +14,17 @@ import {
 
 // Client 2026-10-08: the Zone 5 texts, editable in Mission Control
 describe('Zone 5 message templates', () => {
-  it("keeps the client's wording, with the threshold filled per band and no referral link", () => {
+  it("keeps the client's wording, with the threshold filled per band; the referral link only in \"route not reached\"", () => {
     expect(ZONE5_MESSAGE_DEFAULTS.routeConfirmed).toBe(
       'First Eleven Cleaners: Good news, [First name]. Your [City] pickup is confirmed for Wed [date], [window]. Have your bag at the door. Return is Wed [date+7]. Questions? Just reply.'
     );
     expect(ZONE5_MESSAGE_DEFAULTS.onTheList).toContain('reaches [threshold] pickups');
     expect(ZONE5_MESSAGE_DEFAULTS.routeNotReached).toContain('Reply SKIP to come off the list.');
     expect(ZONE5_MESSAGE_DEFAULTS.routeNotReached).not.toContain('[link]');
+    // Client 2026-10-11: "bring it back, but only in the 'route not reached' text, with their own link"
+    for (const key of ZONE5_MESSAGE_KEYS) {
+      expect(ZONE5_MESSAGE_DEFAULTS[key].includes('[Referral link]')).toBe(key === 'routeNotReached');
+    }
     for (const key of ZONE5_MESSAGE_KEYS) {
       expect(unknownPlaceholders(ZONE5_MESSAGE_DEFAULTS[key])).toEqual([]);
       expect(ZONE5_MESSAGE_DEFAULTS[key]).not.toMatch(/[—–]/);
@@ -34,9 +38,10 @@ describe('Zone 5 message templates', () => {
       threshold: '4',
       date: shortRunDate('2026-10-21'),
       'date+7': shortRunDate('2026-10-28'),
+      'Referral link': 'https://firstelevencleaners.com/r/DANA7K3Q',
     });
     expect(text).toBe(
-      "First Eleven Cleaners: Hi Dana, Denison didn't reach 4 pickups this week, so Wed Oct 21 won't run. You stay on the list for Wed Oct 28 at no charge. Reply SKIP to come off the list."
+      "First Eleven Cleaners: Hi Dana, Denison didn't reach 4 pickups this week, so Wed Oct 21 won't run. You stay on the list for Wed Oct 28 at no charge. Know a neighbor? Send them https://firstelevencleaners.com/r/DANA7K3Q. They get $15 off, you get $15, and it helps fill your route. Reply SKIP to come off the list."
     );
   });
 

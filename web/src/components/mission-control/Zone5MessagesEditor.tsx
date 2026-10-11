@@ -61,7 +61,7 @@ export function Zone5MessagesEditor() {
       <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', margin: '0 0 4px' }}>💬 Zone 5 messages</h3>
       <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px' }}>
         Sent by text to customers who agreed to texts, by email to everyone else. Placeholders:{' '}
-        {ZONE5_PLACEHOLDERS.map((p) => `[${p}]`).join(' ')}. [date] is the run (&quot;Oct 21&quot;), [date+7] the next run, [threshold] the pickups the band needs.
+        {ZONE5_PLACEHOLDERS.map((p) => `[${p}]`).join(' ')}. [date] is the run (&quot;Oct 21&quot;), [date+7] the next run, [threshold] the pickups the band needs, [Referral link] the customer&apos;s own Give $15 link (texts about a booked pickup only).
       </p>
       {isLoading || !draft || !data ? (
         <p style={{ color: '#cbd5e1' }}>Loading…</p>
