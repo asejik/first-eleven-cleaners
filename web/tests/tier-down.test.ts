@@ -136,9 +136,19 @@ describe('Approving', () => {
 
   it('promoting a Zone 5 ZIP puts it on the Zone 4 list', async () => {
     db.orders = orders('75090', 20, 'zone_5');
+    db.addresses = [{ customer_id: 'c1', zip: '75090' }];
+    db.customers = [{ id: 'c1', full_name: 'Dana Lee', phone: '+12145550100', email: 'd@example.com', sms_consent: true, role: 'customer' }];
     const result = await approveTierFlag(supabase, coverage(), { zip: '75090', kind: 'promote_zone_4', by: 'owner' }, NOW);
     expect(result.ok).toBe(true);
     expect((savedSettings as unknown as CoverageSettings).zipZones['75090']).toBe('zone_4');
+    // Client 2026-10-11: his added line, so they feel the benefit
+    expect(contact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining(
+          'Your neighborhood just unlocked our regular routes: pickups in 75090 now run Tuesday and Friday with no Extended Reach fee ($100 minimum), and your clothes come back in days, not a week. Book at '
+        ),
+      })
+    );
   });
 
   it('a ZIP that is not eligible is refused', async () => {

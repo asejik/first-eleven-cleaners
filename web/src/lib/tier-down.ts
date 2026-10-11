@@ -161,7 +161,7 @@ export async function approveTierFlag(
             supabase,
             zip,
             (name) =>
-              `First Eleven Cleaners: Good news, ${name}. Your neighborhood just unlocked our regular routes: pickups in ${zip} now run ${zone4.routeDays.join(' and ')}, with no Extended Reach fee ($${zone4.minimumOrder.toFixed(0)} minimum). Book at ${link}. Reply STOP to opt out.`,
+              `First Eleven Cleaners: Good news, ${name}. Your neighborhood just unlocked our regular routes: pickups in ${zip} now run ${zone4.routeDays.join(' and ')} with no Extended Reach fee ($${zone4.minimumOrder.toFixed(0)} minimum), and your clothes come back in days, not a week. Book at ${link}. Reply STOP to opt out.`,
             'Your neighborhood just unlocked our regular routes'
           );
   } catch (err) {
