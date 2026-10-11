@@ -8,7 +8,8 @@ import { texasDateTime, addDaysToDate, dayOfWeek } from '@/lib/texas-time';
  * - 24-Hour Express: Mon-Thu morning pickups only (the plant is closed on weekends, so a
  *   Friday pickup can't be delivered Saturday morning). Booked before 7:00 AM on an Express
  *   day: this morning; before 9:00 PM: tomorrow morning; after 9:00 PM: the day after.
- * - Nothing more than 60 days ahead.
+ * - Booking opens 14 days ahead; Founding members see one more day, so they get first pick
+ *   of each new day before it opens to everyone (client 2026-10-11; Express slots too).
  * - Delivery (client 2026-10-06): the plant runs Monday to Friday, so turnaround counts plant
  *   days only. Standard is 2 plant days after pickup, Express 1: Thursday pickups are
  *   delivered Monday (Express: Friday), Friday and Saturday pickups Tuesday.
@@ -16,7 +17,9 @@ import { texasDateTime, addDaysToDate, dayOfWeek } from '@/lib/texas-time';
 export type ScheduleTier = 'standard' | 'express_24hr';
 
 const STANDARD_NOTICE_DAYS = 2;
-const MAX_DAYS_AHEAD = 60;
+export const BOOKING_DAYS_AHEAD = 14;
+/** Founding 111 (client 2026-10-11): founders book one day further ahead than everyone else */
+export const FOUNDER_HEAD_START_DAYS = 1;
 const EXPRESS_SAME_DAY_CUTOFF_MIN = 7 * 60;
 const EXPRESS_NEXT_DAY_CUTOFF_MIN = 21 * 60;
 
@@ -78,6 +81,11 @@ export function earliestPickupDate(tier: ScheduleTier, now: Date = new Date()): 
   return date;
 }
 
+/** The last date that can be booked today (Dallas time): 14 days ahead, plus a founder's head start. */
+export function latestPickupDate(extraDaysAhead = 0, now: Date = new Date()): string {
+  return addDaysToDate(texasDateTime(now).date, BOOKING_DAYS_AHEAD + extraDaysAhead);
+}
+
 export type ScheduleCheck = { ok: true } | { ok: false; error: string };
 
 export function validateSchedule(
@@ -86,12 +94,15 @@ export function validateSchedule(
     pickupWindow,
     tier,
     extraDaysAhead = 0,
+    openBeyondWindow,
   }: {
     pickupDate: string;
     pickupWindow: string;
     tier: ScheduleTier;
-    /** Founding members see each route day's windows a day before everyone else (2026-10-10) */
+    /** Founding members get first pick of each new day (FOUNDER_HEAD_START_DAYS) */
     extraDaysAhead?: number;
+    /** A date bookable even past the window: Zone 5's next open run (its first can be weeks out) */
+    openBeyondWindow?: string | null;
   },
   now: Date = new Date()
 ): ScheduleCheck {
@@ -103,8 +114,8 @@ export function validateSchedule(
   if (pickupDate < today) {
     return { ok: false, error: 'Pickup date cannot be in the past. Please select an upcoming service date.' };
   }
-  if (pickupDate > addDaysToDate(today, MAX_DAYS_AHEAD + extraDaysAhead)) {
-    return { ok: false, error: `Pickups can be booked up to ${MAX_DAYS_AHEAD} days ahead. Please choose an earlier date.` };
+  if (pickupDate > latestPickupDate(extraDaysAhead, now) && pickupDate !== openBeyondWindow) {
+    return { ok: false, error: `Pickups can be booked up to ${BOOKING_DAYS_AHEAD + extraDaysAhead} days ahead. Please choose an earlier date.` };
   }
   if (dayOfWeek(pickupDate) === 0) {
     return { ok: false, error: 'Our processing hub is closed on Sundays for maintenance. Please choose Monday through Saturday.' };

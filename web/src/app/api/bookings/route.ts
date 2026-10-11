@@ -413,13 +413,16 @@ export async function POST(request: Request) {
     }
 
     // 5b. Server-side schedule rules in Dallas time: notice period, Sunday closure, Express
-    // weekdays / morning window / 7 AM & 9 PM cutoffs, 60-day horizon (PR-12)
+    // weekdays / morning window / 7 AM & 9 PM cutoffs, 14-day horizon (client 2026-10-11)
     const todayTexasStr = texasDate();
+    const earliestRun = band ? earliestExtendedReachRun(todayTexasStr, coverage.extendedReach) : null;
     const scheduleCheck = validateSchedule({
       pickupDate: validated.schedule.pickup_date,
       pickupWindow: validated.schedule.pickup_window,
       tier: validated.schedule.express_tier,
       extraDaysAhead: founderActive ? FOUNDER_HEAD_START_DAYS : 0,
+      // Zone 5's next open run can always be booked (the "now open" text invites it)
+      openBeyondWindow: earliestRun ? nextZoneRouteDay(zone, earliestRun, coverage) : null,
     });
     if (!scheduleCheck.ok) {
       return NextResponse.json({ error: scheduleCheck.error }, { status: 400 });
@@ -428,7 +431,6 @@ export async function POST(request: Request) {
     // Route days: Zone 3 Mon & Thu, Zone 4 Tue & Fri, Zone 5 its bi-weekly run dates (which
     // close a few days ahead, so the threshold is decided before any card hold)
     if (band) {
-      const earliestRun = earliestExtendedReachRun(todayTexasStr, coverage.extendedReach);
       if (!earliestRun) {
         return NextResponse.json({ error: extendedReachStartLine(coverage.extendedReach), code: 'WAITLIST' }, { status: 400 });
       }

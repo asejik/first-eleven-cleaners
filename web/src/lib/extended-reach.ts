@@ -5,6 +5,7 @@ import { notifyOrderCustomer } from '@/lib/daily-jobs';
 import { reportError } from '@/lib/error-reporting';
 import { getAppBaseUrl, extendedReachTurnaroundLine, type ExtendedReachConfig } from '@/lib/constants';
 import { getZone5Messages } from '@/lib/zone5-message-settings';
+import { getOrCreateReferralCode, referralLink } from '@/lib/referrals';
 import { fillZone5Template, shortRunDate, windowLabel, templateCity, templateFirstName, type Zone5MessageKey } from '@/lib/zone5-messages';
 import {
   extendedReachRunDates,
@@ -33,7 +34,7 @@ export type Band = 'A' | 'B';
 
 /** The fields a Zone 5 text needs: the customer, the pickup window and the city. */
 const RUN_ORDER_FIELDS =
-  'id, order_number, pickup_date, pickup_window, extended_reach_band, customer:customers!customer_id(full_name, phone, email), address:addresses(city)';
+  'id, order_number, customer_id, pickup_date, pickup_window, extended_reach_band, customer:customers!customer_id(full_name, phone, email), address:addresses(city)';
 
 type One<T> = T | T[] | null | undefined;
 const firstOf = <T,>(value: One<T>): T | null => (Array.isArray(value) ? value[0] : value) ?? null;
@@ -41,6 +42,7 @@ const firstOf = <T,>(value: One<T>): T | null => (Array.isArray(value) ? value[0
 export interface RunOrder {
   id: string;
   order_number?: string | null;
+  customer_id?: string | null;
   pickup_window?: string | null;
   customer?: One<{ full_name?: string | null; phone?: string | null; email?: string | null }>;
   address?: One<{ city?: string | null }>;
@@ -57,9 +59,19 @@ const MESSAGE_TITLES: Record<Exclude<Zone5MessageKey, 'waitlistJoined' | 'zone5O
 export async function sendRunMessage(
   order: RunOrder,
   key: keyof typeof MESSAGE_TITLES,
-  { runDate, nextRun, threshold }: { runDate: string; nextRun: string; threshold: number }
+  { runDate, nextRun, threshold }: { runDate: string; nextRun: string; threshold: number },
+  supabase?: AdminClient
 ): Promise<void> {
   const messages = await getZone5Messages();
+  // The customer's own Give $15 link, made only when the template asks for it (client 2026-10-11)
+  let referral = '';
+  if (supabase && order.customer_id && messages[key].includes('[Referral link]')) {
+    try {
+      referral = referralLink(await getOrCreateReferralCode(supabase, { id: order.customer_id, full_name: firstOf(order.customer)?.full_name }));
+    } catch (err) {
+      reportError('extended-reach/referral-link', err, { details: `Order ${order.id}: sent without the referral link` });
+    }
+  }
   const text = fillZone5Template(messages[key], {
     'First name': templateFirstName(firstOf(order.customer)?.full_name),
     City: templateCity(firstOf(order.address)?.city),
@@ -68,6 +80,7 @@ export async function sendRunMessage(
     window: windowLabel(order.pickup_window),
     threshold: String(threshold),
     link: `${getAppBaseUrl()}/book`,
+    'Referral link': referral,
   });
   await notifyOrderCustomer(order, MESSAGE_TITLES[key], text, 'booked');
 }
@@ -163,7 +176,7 @@ export async function dispatchRunIfReady(
   let notified = 0;
   for (const order of orders || []) {
     try {
-      await sendRunMessage(order, 'thresholdReached', { runDate, nextRun: nextExtendedReachRun(runDate, reach), threshold });
+      await sendRunMessage(order, 'thresholdReached', { runDate, nextRun: nextExtendedReachRun(runDate, reach), threshold }, supabase);
       notified += 1;
     } catch (err) {
       reportError('extended-reach/announce', err, { details: `Run ${runDate} band ${band}: confirmation not sent` });
@@ -234,7 +247,7 @@ export async function rollExtendedReachRuns(
       const returnRun = nextExtendedReachRun(runDate, reach);
       for (const order of runOrders) {
         try {
-          await sendRunMessage(order, 'routeConfirmed', { runDate, nextRun: returnRun, threshold });
+          await sendRunMessage(order, 'routeConfirmed', { runDate, nextRun: returnRun, threshold }, supabase);
         } catch (err) {
           reportError('extended-reach/confirm', err, { details: `Run ${runDate} band ${band}: "route confirmed" not sent` });
         }
@@ -264,7 +277,7 @@ export async function rollExtendedReachRuns(
         triggered_by: 'Monday Route Check',
       });
       try {
-        await sendRunMessage(order, 'routeNotReached', { runDate, nextRun, threshold });
+        await sendRunMessage(order, 'routeNotReached', { runDate, nextRun, threshold }, supabase);
       } catch (err) {
         reportError('extended-reach/roll', err, { details: `Run ${runDate} band ${band}: "route not reached" not sent` });
       }
@@ -308,7 +321,7 @@ export async function sendOnTheList(
 ): Promise<void> {
   const { data: order } = await supabase.from('orders').select(RUN_ORDER_FIELDS).eq('id', orderId).maybeSingle();
   if (!order) return;
-  await sendRunMessage(order, 'onTheList', { runDate, nextRun: nextExtendedReachRun(runDate, reach), threshold: bandThreshold(reach, band) });
+  await sendRunMessage(order, 'onTheList', { runDate, nextRun: nextExtendedReachRun(runDate, reach), threshold: bandThreshold(reach, band) }, supabase);
 }
 
 /** The confirmation's run line: confirmed, or where the threshold stands (this booking included). */

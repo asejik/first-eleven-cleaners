@@ -95,6 +95,11 @@ describe('Client validation: zones rebuilt from the distance bands', () => {
     expect(served('75201').zone).toMatchObject({ id: 'zone_2', name: 'Zone 2 — Dallas Central & Mid-Cities', minimumOrder: 60 });
   });
 
+  it('client 2026-10-11: the ZIP list is the rule; his four ZIPs are on it, whatever the distance', () => {
+    for (const zip of ['75223', '75270']) expect(served(zip, 60).zone.id).toBe('zone_2');
+    for (const zip of ['75054', '76014']) expect(served(zip, 60).zone.id).toBe('zone_3');
+  });
+
   it('Fort Worth -> Zone 4 Far Metroplex, $100, Tuesday and Friday', () => {
     const r = served('76102');
     expect(r.zone).toMatchObject({ id: 'zone_4', name: 'Zone 4 — Far Metroplex', minimumOrder: 100, routeDays: ['Tuesday', 'Friday'] });
@@ -402,7 +407,7 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
     },
   };
   const order = (id: string) => ({
-    id, order_number: `F11-${id}`, pickup_date: '2026-10-28', pickup_window: 'morning', extended_reach_band: 'A',
+    id, order_number: `F11-${id}`, customer_id: `c-${id}`, pickup_date: '2026-10-28', pickup_window: 'morning', extended_reach_band: 'A',
     customer: { full_name: 'Ada', phone: '+12145550100', email: 'a@example.com' },
     address: { city: 'Sherman' },
   });
@@ -472,12 +477,15 @@ describe('Zone 5 runs: the threshold gates new pickups; deliveries always go out
       expect.objectContaining({ pickup_date: '2026-11-04', delivery_date: '2026-11-11' }),
       expect.objectContaining({ pickup_date: '2026-11-04', delivery_date: '2026-11-11' }),
     ]);
+    // With the customer's own referral link (client 2026-10-11)
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
-        customMessage:
-          "First Eleven Cleaners: Hi Ada, Sherman didn't reach 3 pickups this week, so Wed Oct 28 won't run. You stay on the list for Wed Nov 4 at no charge. Reply SKIP to come off the list.",
+        customMessage: expect.stringMatching(
+          /^First Eleven Cleaners: Hi Ada, Sherman didn't reach 3 pickups this week, so Wed Oct 28 won't run\. You stay on the list for Wed Nov 4 at no charge\. Know a neighbor\? Send them https?:\/\/\S+\/r\/ADA[A-Z0-9]{4}\. They get \$15 off, you get \$15, and it helps fill your route\. Reply SKIP to come off the list\.$/
+        ),
       })
     );
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'referral_codes', op: 'insert', values: expect.objectContaining({ customer_id: 'c-1' }) }));
   });
 
   it('at the threshold the run is dispatched; "dispatch anyway" runs a short one', async () => {

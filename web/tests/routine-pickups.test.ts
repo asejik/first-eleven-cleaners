@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, onTestFinished } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Client 2026-10-07 (revised): "The system auto-creates each order 48 hours
@@ -230,6 +230,10 @@ describe('Skipping a pickup already made', () => {
   });
 
   it('one tap: the signed link skips it (no sign-in); a tampered link does nothing', async () => {
+    // The route reads the real clock: pin it to NOW so the pickup stays ahead of it
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+    onTestFinished(() => void vi.useRealTimers());
     db.routine_memberships = [membership({ next_pickup_date: '2026-10-17' })];
     db.orders = [{ ...auto }];
     const token = routineSkipToken(auto.id);

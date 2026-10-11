@@ -150,6 +150,7 @@ export default function BookingPage() {
             isRoutineMember={b.isRoutineMember}
             slotData={b.slotData}
             getMinPickupDate={getMinPickupDate}
+            maxPickupDate={b.maxPickupDate}
             formatDisplayDate={formatDisplayDate}
             formatLocalDate={formatLocalDate}
             getEstimatedDeliveryDate={b.getDeliveryDate}

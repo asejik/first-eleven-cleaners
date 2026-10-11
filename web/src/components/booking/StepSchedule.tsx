@@ -35,6 +35,8 @@ interface StepScheduleProps {
   isRoutineMember: boolean;
   slotData: { is_available?: boolean; reason?: string } | undefined;
   getMinPickupDate: (tier?: 'standard' | 'express_24hr') => string;
+  /** The last date open for booking: 14 days ahead, a Founding member 15 (client 2026-10-11) */
+  maxPickupDate: string;
   formatDisplayDate: (dateStr: string) => string;
   formatLocalDate: (d: Date) => string;
   getEstimatedDeliveryDate: (pickupDateStr: string, tier?: 'standard' | 'express_24hr', hasAlterations?: boolean) => string;
@@ -70,6 +72,7 @@ export function StepSchedule({
   isRoutineMember,
   slotData,
   getMinPickupDate,
+  maxPickupDate,
   formatDisplayDate,
   formatLocalDate,
   getEstimatedDeliveryDate,
@@ -134,6 +137,7 @@ export function StepSchedule({
           type="date"
           value={pickupDate}
           min={getMinPickupDate(expressTier)}
+          max={maxPickupDate}
           onChange={(e) => {
             const val = e.target.value;
             const minVal = getMinPickupDate(expressTier);
@@ -144,6 +148,15 @@ export function StepSchedule({
                 type: 'warning',
                 title: 'Advance Schedule Rule',
                 message: `${expressTier === 'standard' ? '48-Hour Standard' : 'Express'} service requires advance booking. Earliest available pickup is ${formatDisplayDate(minVal)}.`,
+              });
+              return;
+            }
+            if (val > maxPickupDate) {
+              setPickupDate(maxPickupDate);
+              onToast({
+                type: 'warning',
+                title: 'Booking Window',
+                message: `Pickups open for booking up to two weeks ahead. The latest date you can choose today is ${formatDisplayDate(maxPickupDate)}.`,
               });
               return;
             }

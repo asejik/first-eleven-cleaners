@@ -170,9 +170,9 @@ export const ZONE_CONFIG: Record<MetroZoneId, ZoneConfig> = {
     ],
     zipCodes: [
       // Uptown, Victory Park, Downtown, Deep Ellum, Oak Lawn, Turtle Creek, Design District
-      '75201', '75202', '75204', '75219', '75226', '75207', '75235',
+      '75201', '75202', '75204', '75219', '75226', '75207', '75235', '75270',
       // Lakewood & East Dallas, Kessler Park & Bishop Arts
-      '75206', '75214', '75218', '75208',
+      '75206', '75214', '75218', '75223', '75208',
       // Irving & Las Colinas
       '75038', '75039', '75060', '75061', '75062', '75063',
       // Allen, McKinney & Craig Ranch, Prosper
@@ -205,7 +205,7 @@ export const ZONE_CONFIG: Record<MetroZoneId, ZoneConfig> = {
       // Bedford, Hurst, Keller, Westlake
       '76021', '76022', '76053', '76054', '76244', '76248', '76262',
       // Grand Prairie, Arlington
-      '75050', '75051', '75052', '76006', '76010', '76011', '76012', '76013', '76015', '76016', '76017', '76018',
+      '75050', '75051', '75052', '75054', '76006', '76010', '76011', '76012', '76013', '76014', '76015', '76016', '76017', '76018',
       // Denton
       '76201', '76202', '76203', '76204', '76205', '76207', '76208', '76209', '76210',
       // Rockwall & Heath, Forney

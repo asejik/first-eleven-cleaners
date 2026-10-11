@@ -18,8 +18,8 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 
 export const FOUNDING_LIMIT = 111;
 export const FOUNDING_RETURN_DAYS = 60;
-/** Founders see each route day's windows 24 hours before everyone else. */
-export const FOUNDER_HEAD_START_DAYS = 1;
+/** Founders book one day further ahead than everyone else (the rule lives in schedule.ts). */
+export { FOUNDER_HEAD_START_DAYS } from '@/lib/schedule';
 
 export interface Territory {
   id: string;

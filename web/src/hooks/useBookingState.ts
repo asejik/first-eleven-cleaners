@@ -27,7 +27,7 @@ import { addDaysToDate } from '@/lib/texas-time';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
-import { earliestPickupDate, isExpressPickupDay } from '@/lib/schedule';
+import { earliestPickupDate, isExpressPickupDay, latestPickupDate, FOUNDER_HEAD_START_DAYS } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
 import { holdAmountFor, shouldPlaceHoldNow } from '@/lib/payment-hold';
 import {
@@ -79,13 +79,15 @@ export function getEstimatedDeliveryDate(
 }
 
 /** Zones with set route days pick from a list: Zone 3/4 route days, Zone 5 run dates (client 8B-8C). */
-function routeDateOptions(zone: ZoneConfig | null, coverage: Coverage, zone5Runs: string[] | null): string[] | null {
+// Only days inside the booking window (14 days ahead, a founder 15: client 2026-10-11)
+function routeDateOptions(zone: ZoneConfig | null, coverage: Coverage, zone5Runs: string[] | null, latest: string): string[] | null {
   if (!zone) return null;
-  if (zone.id === 'zone_5') return zone5Runs;
+  // Zone 5: the next open run always shows (its first can be weeks out), later ones in the window
+  if (zone.id === 'zone_5') return zone5Runs ? zone5Runs.filter((d, i) => i === 0 || d <= latest) : null;
   if (zone.routeDays.length >= 6) return null;
   const dates: string[] = [];
   let date = nextZoneRouteDay(zone, earliestPickupDate('standard'), coverage);
-  while (dates.length < 8) {
+  while (dates.length < 8 && date <= latest) {
     dates.push(date);
     date = nextZoneRouteDay(zone, addDaysToDate(date, 1), coverage);
   }
@@ -152,7 +154,7 @@ export function useBookingState() {
   // Already a member (signed in): this booking is an extra one-time pickup
   const { data: routineStatus } = useQuery({
     queryKey: ['routine-membership'],
-    queryFn: async (): Promise<{ membership: { cadence: 'weekly' | 'biweekly' } | null }> => {
+    queryFn: async (): Promise<{ membership: { cadence: 'weekly' | 'biweekly' } | null; founder?: { number: number } | null }> => {
       const res = await fetch('/api/routine');
       if (!res.ok) return { membership: null };
       return res.json();
@@ -161,6 +163,8 @@ export function useBookingState() {
     staleTime: 60 * 1000,
   });
   const isRoutineMember = Boolean(routineStatus?.membership);
+  // Founding members get first pick of each new day (client 2026-10-11); the server checks too
+  const maxPickupDate = latestPickupDate(routineStatus?.founder ? FOUNDER_HEAD_START_DAYS : 0);
   // Member pricing (client 2026-10-08): a member's every booking is priced at their plan
   const planFrequency: 'one_time' | 'weekly' | 'biweekly' = routineStatus?.membership?.cadence ?? frequency;
 
@@ -391,7 +395,7 @@ export function useBookingState() {
 
   // Route-day zones pick from their dates; keep the pickup on one of them (adjusted during
   // render, like the sign-in prefill above)
-  const routeDates = routeDateOptions(detectedZone, coverage, extendedReach ? extendedReach.runs.map((r) => r.date) : null);
+  const routeDates = routeDateOptions(detectedZone, coverage, extendedReach ? extendedReach.runs.map((r) => r.date) : null, maxPickupDate);
   if (routeDates && routeDates.length > 0 && !routeDates.includes(pickupDate) && expressTier === 'standard') {
     setPickupDate(routeDates[0]);
   }
@@ -625,6 +629,7 @@ export function useBookingState() {
     routineTermsAccepted,
     setRoutineTermsAccepted,
     isRoutineMember,
+    maxPickupDate,
     handleCompleteBooking,
   };
 }
