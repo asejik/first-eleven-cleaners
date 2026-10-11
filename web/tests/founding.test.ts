@@ -89,7 +89,7 @@ vi.mock('@/lib/rate-limiter', () => ({ checkRateLimitAsync: async () => ({ allow
 
 import { claimFounding, endFounding, founderStatus, planDiscountFor, founderBadge } from '@/lib/founding';
 import { calculateOrderFinancials } from '@/lib/constants';
-import { validateSchedule } from '@/lib/schedule';
+import { validateSchedule, latestPickupDate, FOUNDER_HEAD_START_DAYS } from '@/lib/schedule';
 import { GET as territoriesGET, POST as territoriesPOST } from '@/app/api/mission-control/territories/route';
 
 const supabase = admin as never;
@@ -145,11 +145,26 @@ describe('Lifetime pricing and first pick', () => {
     expect(calculateOrderFinancials({ subtotal: 100, frequency: 'one_time', planDiscountPercent: 12 }).frequencyDiscount).toBe(0);
   });
 
-  it('founders can book a day further ahead than everyone else', () => {
+  it('client 2026-10-11: everyone books 14 days ahead, founders 15 (first pick of each new day)', () => {
+    const now = new Date('2026-10-10T15:00:00Z'); // Saturday, October 10
+    const book = (pickupDate: string, extraDaysAhead = 0, tier: 'standard' | 'express_24hr' = 'standard') =>
+      validateSchedule({ pickupDate, pickupWindow: 'morning', tier, extraDaysAhead }, now);
+    expect(latestPickupDate(0, now)).toBe('2026-10-24');
+    expect(book('2026-10-24')).toEqual({ ok: true });
+    expect(book('2026-10-26')).toMatchObject({ ok: false, error: 'Pickups can be booked up to 14 days ahead. Please choose an earlier date.' });
+    // October 25 is a Sunday, so the founders' extra day here is Monday the 26th from the 11th
+    const sunday = new Date('2026-10-11T15:00:00Z');
+    expect(validateSchedule({ pickupDate: '2026-10-26', pickupWindow: 'morning', tier: 'standard' }, sunday)).toMatchObject({ ok: false });
+    expect(validateSchedule({ pickupDate: '2026-10-26', pickupWindow: 'morning', tier: 'standard', extraDaysAhead: FOUNDER_HEAD_START_DAYS }, sunday)).toEqual({ ok: true });
+    expect(book('2026-11-05', FOUNDER_HEAD_START_DAYS)).toMatchObject({ ok: false });
+  });
+
+  it("Zone 5's next open run can be booked past the window (its first run can be weeks out)", () => {
     const now = new Date('2026-10-10T15:00:00Z');
-    const day61 = '2026-12-10'; // 61 days after October 10 (a Thursday)
-    expect(validateSchedule({ pickupDate: day61, pickupWindow: 'morning', tier: 'standard' }, now)).toMatchObject({ ok: false });
-    expect(validateSchedule({ pickupDate: day61, pickupWindow: 'morning', tier: 'standard', extraDaysAhead: 1 }, now)).toEqual({ ok: true });
+    const run = '2026-11-04'; // a Wednesday 25 days away
+    expect(validateSchedule({ pickupDate: run, pickupWindow: 'morning', tier: 'standard' }, now)).toMatchObject({ ok: false });
+    expect(validateSchedule({ pickupDate: run, pickupWindow: 'morning', tier: 'standard', openBeyondWindow: run }, now)).toEqual({ ok: true });
+    expect(validateSchedule({ pickupDate: '2026-11-11', pickupWindow: 'morning', tier: 'standard', openBeyondWindow: run }, now)).toMatchObject({ ok: false });
   });
 });
 
