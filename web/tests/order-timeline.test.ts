@@ -14,9 +14,9 @@ const src = (rel: string) => readFileSync(join(__dirname, '..', rel), 'utf8');
 const PAGES = ['src/app/track/[orderId]/page.tsx', 'src/app/dashboard/orders/[id]/page.tsx'];
 
 describe('Order progress timeline (AR-04)', () => {
-  it('has the six real stages and no Cancelled step', () => {
+  it('has the seven real stages (with the Match-Ready Check, client 2026-10-14) and no Cancelled step', () => {
     expect(PROGRESS_STAGES.map((s) => s.key)).toEqual([
-      'booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered',
+      'booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered',
     ]);
   });
 

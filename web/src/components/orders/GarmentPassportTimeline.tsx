@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Badge, Modal, Button } from '@/components/ui';
 import type { Order, GarmentPhoto } from '@/types';
+import { photoLabel } from '@/lib/match-ready';
 import styles from './GarmentPassportTimeline.module.css';
 
 interface GarmentPassportTimelineProps {
@@ -15,7 +16,8 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
 
   const photos = order.photos || [];
   const intakePhotos = photos.filter((p) => p.photo_type === 'intake' || p.photo_type === 'pickup_proof');
-  const returnPhotos = photos.filter((p) => p.photo_type === 'delivery_proof' || p.photo_type === 'return');
+  // The Match-Ready return photo comes first (client 2026-10-14), then the delivery proof
+  const returnPhotos = [...photos.filter((p) => p.photo_type === 'return'), ...photos.filter((p) => p.photo_type === 'delivery_proof')];
 
   const primaryIntake = intakePhotos[0] || photos[0];
   const primaryReturn = returnPhotos[0] || (photos.length > 1 ? photos[photos.length - 1] : null);
@@ -190,7 +192,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
                 onClick={() =>
                   setZoomPhoto({
                     url: photo.photo_url,
-                    title: photo.photo_type === 'intake' ? 'Intake Inspection Record' : 'Delivery Verification Record',
+                    title: photoLabel(photo.photo_type),
                     notes: photo.condition_notes,
                   })
                 }
@@ -201,7 +203,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
               </div>
               <div className={styles.captionBox}>
                 <span className={styles.captionTitle}>
-                  {photo.photo_type === 'intake' ? 'Intake Check' : 'Delivery Proof'}
+                  {photoLabel(photo.photo_type)}
                 </span>
                 <p className={styles.captionNote}>{photo.condition_notes || 'Verified'}</p>
                 <span className={styles.timestamp}>

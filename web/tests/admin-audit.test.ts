@@ -58,7 +58,8 @@ beforeEach(() => {
 describe('Admin audit trail (PR-24)', () => {
   it('a stage change records the admin, the move and any override', async () => {
     // Delivery is the stage that waits for payment (client 2026-10-06, Part A)
-    orderFixture = { ...orderFixture, status: 'in_cleaning' };
+    // It leaves the Match-Ready Check (client 2026-10-14; here with the owner's override)
+    orderFixture = { ...orderFixture, status: 'match_ready_check', match_ready_override_reason: 'Plant photo app down' };
     const res = await mc({ action: 'advance_stage', new_stage: 'out_for_delivery', manager_override: true, override_reason: 'Paid by phone' });
     expect(res.status).toBe(200);
     expect(audits()).toHaveLength(1);
@@ -70,7 +71,7 @@ describe('Admin audit trail (PR-24)', () => {
       target_id: ORDER_ID,
       ip_address: '203.0.113.7',
     });
-    expect(audits()[0].details).toMatchObject({ from: 'in_cleaning', to: 'out_for_delivery', manager_override: true, override_reason: 'Paid by phone' });
+    expect(audits()[0].details).toMatchObject({ from: 'match_ready_check', to: 'out_for_delivery', manager_override: true, override_reason: 'Paid by phone' });
   });
 
   it('a refused action records nothing', async () => {

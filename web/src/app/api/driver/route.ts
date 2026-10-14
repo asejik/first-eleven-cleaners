@@ -12,6 +12,7 @@ import { texasDate } from '@/lib/texas-time';
 import { runAfterResponse } from '@/lib/after-response';
 import { releaseOrderHold } from '@/lib/payment-capture';
 import { rewardReferralForDeliveredOrder } from '@/lib/referrals';
+import { recordDoorCheck } from '@/lib/match-ready-store';
 import { assessFailedServiceFee, applyLateCancelFee, LATE_CANCEL_ORDER_FIELDS, type LateCancelOutcome } from '@/lib/late-cancel';
 
 
@@ -154,7 +155,7 @@ export async function GET(request: Request) {
           photos:garment_photos(id, order_id, photo_type, photo_url, condition_notes, captured_by, captured_at),
           events:order_events(id, status, triggered_by, timestamp, note)
         `)
-        .in('status', ['booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'out_for_delivery'])
+        .in('status', ['booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery'])
         .order('created_at', { ascending: false }),
       supabase
         .from('orders')
@@ -344,7 +345,7 @@ export async function POST(request: Request) {
     if (auth.errorResponse) return auth.errorResponse;
 
     const body = await request.json();
-    const { action, order_id, photo_url, notes = '' } = body;
+    const { action, order_id, photo_url, notes = '', sealed } = body;
 
     if (!action || !order_id) {
       return NextResponse.json({ error: 'action and order_id are required' }, { status: 400 });
@@ -626,6 +627,11 @@ export async function POST(request: Request) {
         }
       }
 
+      // Match-Ready item 11 (client 2026-10-14): sealed in the First Eleven bag, with the photo
+      if (sealed !== true) {
+        return NextResponse.json({ error: 'Tick "Sealed in the First Eleven bag" before marking it delivered.' }, { status: 400 });
+      }
+
       // 1. Save the mandatory proof photo first: no photo, no status change (PR-06)
       const resolvedPhotoUrl = await resolveAndUploadPhotoUrl(photo_url, order.id, 'delivery_proof');
       if (!resolvedPhotoUrl) {
@@ -657,10 +663,12 @@ export async function POST(request: Request) {
         condition_notes: notes || 'Delivery drop-off proof',
         captured_by: driverLabel,
       });
+      await recordDoorCheck(supabase, order.id, driverLabel);
 
-      // 4. Dispatch SMS/WhatsApp
+      // 4. Dispatch SMS/WhatsApp: a link to the return photo and the Garment Passport, not a
+      // picture message (client 2026-10-14)
       basePayload.stage = 'delivered';
-      basePayload.photoUrl = resolvedPhotoUrl;
+      basePayload.photoUrl = undefined;
       const notifyPayload = { ...basePayload };
       runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 

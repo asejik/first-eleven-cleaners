@@ -30,7 +30,7 @@ const FeedbackSchema = z.discriminatedUnion('response', [
 ]);
 
 /** Stages with an itemized ticket to respond to */
-const TICKET_STAGES = ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'];
+const TICKET_STAGES = ['weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered'];
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

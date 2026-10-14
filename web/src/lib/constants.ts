@@ -563,6 +563,8 @@ export const ORDER_STATUSES = [
   { key: 'picked_up', label: 'Picked Up', icon: '🚐', color: 'var(--color-status-picked-up)', message: 'We\'ve got your clothes!' },
   { key: 'weighed_itemized', label: 'Weighed & Itemized', icon: '⚖️', color: 'var(--color-status-weighed)', message: 'Your order is itemized.' },
   { key: 'in_cleaning', label: 'In Cleaning', icon: '✨', color: 'var(--color-status-cleaning)', message: 'Your garments are being cleaned with care.' },
+  // Client 2026-10-14: the 11-point check as a real gate before delivery (lib/match-ready.ts)
+  { key: 'match_ready_check', label: 'Match-Ready Check', icon: '🛡️', color: 'var(--color-status-match-ready)', message: 'Every garment gets our 11-point Match-Ready Check before it comes home.' },
   { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🚚', color: 'var(--color-status-out-for-delivery)', message: 'Your clothes are on the way!' },
   { key: 'delivered', label: 'Delivered', icon: '✅', color: 'var(--color-status-delivered)', message: 'Delivered! Fresh. Pressed. Game-ready.' },
   { key: 'cancelled', label: 'Cancelled', icon: '❌', color: 'var(--color-error)', message: 'Your pickup has been cancelled.' },

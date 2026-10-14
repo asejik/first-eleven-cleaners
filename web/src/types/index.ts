@@ -155,6 +155,11 @@ export interface Order {
   items?: OrderItem[];
   events?: OrderEvent[];
   photos?: GarmentPhoto[];
+  /** The Match-Ready Check as the customer sees it (client 2026-10-14) */
+  match_ready?: { ready: boolean; passed: boolean };
+  /** The plant's own ticket number (client 2026-10-14) */
+  plant_ticket_number?: string | null;
+  match_ready_override_reason?: string | null;
 }
 
 // --- Order Item ---
@@ -191,7 +196,7 @@ export interface GarmentPhoto {
   id: string;
   order_id: string;
   order_item_id: string | null;
-  photo_type: 'intake' | 'return' | 'delivery_proof' | 'pickup_proof' | 'customer_reference';
+  photo_type: 'intake' | 'return' | 'delivery_proof' | 'pickup_proof' | 'customer_reference' | 'no_show_proof' | 'pocket_item' | 'stain';
   photo_url: string;
   condition_notes: string | null;
   captured_by: string | null;

@@ -113,8 +113,11 @@ describe('Public order tracking exposes only the tracking view (SEC-07)', () => 
         'delivery_date', 'delivery_window', 'created_at', 'updated_at', 'photos',
         // PR-04: hold flag only; the amount due appears only while the order is on Payment Hold
         'payment_hold',
+        // Client 2026-10-14: whether it passed the Match-Ready Check (no override reason)
+        'match_ready',
       ].sort()
     );
+    expect(order.match_ready).toEqual({ ready: false, passed: false });
     expect(order.payment_hold).toBe(false);
     expect(order.photos[0]).not.toHaveProperty('captured_by');
     expect(order.photos[0].photo_url).toContain('garment-photos');

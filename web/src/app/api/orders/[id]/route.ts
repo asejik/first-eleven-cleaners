@@ -4,13 +4,14 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { apiError } from '@/lib/api-errors';
+import { summarizeMatchReady } from '@/lib/match-ready';
 import { withSignedPhotoUrls } from '@/lib/storage';
 import { amountOwed } from '@/lib/payment-recovery';
 import { releaseOrderHold } from '@/lib/payment-capture';
 import { assessLateCancel, applyLateCancelFee, lateCancelWarning, LATE_CANCEL_ORDER_FIELDS } from '@/lib/late-cancel';
 
 /** Stages with an itemized ticket the tracking link shows (Part A) */
-const TICKET_STAGES = ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'];
+const TICKET_STAGES = ['weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered'];
 
 export async function GET(
   request: Request,
@@ -64,6 +65,7 @@ export async function GET(
           items:order_items(*),
           events:order_events(*),
           photos:garment_photos(*),
+          checks:match_ready_checks(item),
           address:addresses(*)
         `);
 
@@ -72,6 +74,13 @@ export async function GET(
         : await query.or(`order_number.eq.${cleanId},id.eq.${cleanId}`).maybeSingle();
 
       if (!error && dbOrder) {
+        // The Match-Ready Check, as the customer sees it (client 2026-10-14)
+        const matchReadySummary = summarizeMatchReady(
+          (dbOrder.checks || []) as Array<{ item: number }>,
+          (dbOrder.photos || []) as Array<{ photo_type?: string }>,
+          { exempt: dbOrder.match_ready_intake_exempt }
+        );
+        const matchReady = { ready: matchReadySummary.ready, passed: matchReadySummary.passed };
         // IDOR Enforcement:
         // If an authenticated customer accesses an order, ensure it belongs to them (unless staff or admin)
         if (customer && customer.role !== 'admin' && customer.role !== 'staff' && customer.role !== 'driver' && customer.role !== 'intake_staff') {
@@ -140,11 +149,18 @@ export async function GET(
               condition_notes: photo.condition_notes,
               captured_at: photo.captured_at,
             })),
+            match_ready: matchReady,
           };
           return NextResponse.json(await withSignedPhotoUrls({ order: trackingView }));
         }
 
-        return NextResponse.json(await withSignedPhotoUrls({ order: dbOrder }));
+        // The owner's override reason is internal
+        const isStaff = ['admin', 'driver', 'intake_staff'].includes(customer.role || '');
+        const { match_ready_override_reason, match_ready_override_by, ...customerOrder } = dbOrder;
+        const visibleOrder = isStaff ? { ...dbOrder, match_ready: matchReady } : { ...customerOrder, match_ready: matchReady };
+        void match_ready_override_reason;
+        void match_ready_override_by;
+        return NextResponse.json(await withSignedPhotoUrls({ order: visibleOrder }));
       }
 
       if (error) {

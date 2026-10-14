@@ -17,6 +17,14 @@ import { reportError } from '@/lib/error-reporting';
 import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
 import { rewardReferralForDeliveredOrder } from '@/lib/referrals';
+import { checkMatchReadyGate, MATCH_READY_STAGE } from '@/lib/match-ready';
+import { loadMatchReady } from '@/lib/match-ready-store';
+
+/** Intake staff may make these two moves (the Match-Ready Check, client 2026-10-14); the rest is admin only. */
+const INTAKE_MOVES: Array<[string, string]> = [
+  ['in_cleaning', MATCH_READY_STAGE],
+  [MATCH_READY_STAGE, 'out_for_delivery'],
+];
 
 
 // Columns the board, archive and Express views read
@@ -46,6 +54,9 @@ const ORDER_COLUMNS = `
         payment_needed_since,
         payment_reminder_stage,
         notes,
+        plant_ticket_number,
+        match_ready_override_reason,
+        rep_code,
         created_at,
         updated_at,
         customer:customers!customer_id(id, full_name, email, phone, role),
@@ -165,8 +176,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const auth = await verifyApiAuth(['admin'], request);
+    const auth = await verifyApiAuth(['admin', 'intake_staff'], request);
     if (auth.errorResponse) return auth.errorResponse;
+    const isAdmin = auth.customer?.role === 'admin';
 
     const body = await request.json();
     const {
@@ -183,6 +195,47 @@ export async function POST(request: Request) {
     } = body;
 
     const supabase = createAdminClient();
+
+    // Intake staff: only the Match-Ready moves, and never a manager override
+    if (!isAdmin && (action !== 'advance_stage' || manager_override)) {
+      return NextResponse.json({ error: 'Only an admin can do this.' }, { status: 403 });
+    }
+
+    // The owner sends an order out without a finished Match-Ready Check: a reason, logged (client 2026-10-14)
+    if (action === 'match_ready_override') {
+      const reason = String(override_reason || '').trim().slice(0, 500);
+      if (!order_id || reason.length < 5) {
+        return NextResponse.json({ error: 'Give a reason for the override (at least a few words).' }, { status: 400 });
+      }
+      const { data: overridden } = await supabase
+        .from('orders')
+        .update({
+          match_ready_override_reason: reason,
+          match_ready_override_by: auth.customer?.email || 'admin',
+          match_ready_override_at: new Date().toISOString(),
+        })
+        .eq('id', order_id)
+        .eq('status', MATCH_READY_STAGE)
+        .select('id, order_number');
+      if (!overridden || overridden.length === 0) {
+        return NextResponse.json({ error: 'This order is not in the Match-Ready Check.' }, { status: 409 });
+      }
+      await supabase.from('order_events').insert({
+        order_id,
+        status: MATCH_READY_STAGE,
+        note: `[MATCH-READY OVERRIDE] Sent on without a finished check. Reason: ${reason}`,
+        triggered_by: auth.customer?.full_name ? `Mission Control (${auth.customer.full_name})` : 'Mission Control Operator',
+      });
+      await recordAdminAction(supabase, {
+        actor: auth.customer,
+        action: 'order.match_ready_override',
+        targetType: 'order',
+        targetId: order_id,
+        details: { order_number: overridden[0].order_number, reason },
+        ip: getClientIp(request),
+      });
+      return NextResponse.json({ success: true });
+    }
 
     // 1. Advance Order Stage Action
     if (action === 'advance_stage') {
@@ -208,6 +261,21 @@ export async function POST(request: Request) {
       const transition = checkMissionControlTransition(order.status, new_stage);
       if (!transition.ok) {
         return NextResponse.json({ error: transition.error }, { status: 409 });
+      }
+      if (!isAdmin && !INTAKE_MOVES.some(([from, to]) => from === order.status && to === new_stage)) {
+        return NextResponse.json({ error: 'Only an admin can make this move.' }, { status: 403 });
+      }
+
+      // The Match-Ready gate: items 1-10 and the return photo, or the owner's override (client 2026-10-14)
+      if (order.status === MATCH_READY_STAGE) {
+        const state = await loadMatchReady(supabase, order.id);
+        const gate = state ? checkMatchReadyGate(state.summary, order.match_ready_override_reason) : null;
+        if (!gate || !gate.ok) {
+          return NextResponse.json(
+            { error: gate?.error || 'Order not found', requires_match_ready_override: true, missing: gate?.missing ?? [], return_photo: gate?.returnPhoto ?? false },
+            { status: 409 }
+          );
+        }
       }
 
       // Keep "Mission Control" in the label: the driver manifest uses it to tell board moves from driver van loads
@@ -309,7 +377,10 @@ export async function POST(request: Request) {
         trackingUrl: `${origin}/track/${order.id}`,
       };
 
-      runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'stage change notification');
+      // No text for the Match-Ready Check itself: it shows on the tracking page
+      if (new_stage !== MATCH_READY_STAGE) {
+        runAfterResponse(() => messagingService.dispatchStageNotification(payload), 'stage change notification');
+      }
 
       let expressSLAResult = null;
       if (new_stage === 'delivered') {

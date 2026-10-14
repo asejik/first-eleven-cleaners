@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useOrderDetail, isNotFoundError } from '@/hooks/useOrders';
 import { Button, Card, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
 import { ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
+import { photoLabel } from '@/lib/match-ready';
 import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import { PayNowCard } from '@/components/orders/PayNowCard';
@@ -57,7 +58,7 @@ export default function PublicTrackingPage() {
 
         {order?.card_needed && <PayNowCard orderId={order.id} amountDue={Number(order.hold_amount) || 0} mode="hold" />}
 
-        {order && ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'].includes(order.status) && (
+        {order && ['weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered'].includes(order.status) && (
           <TicketFeedbackCard orderId={order.id} ticket={order.ticket} />
         )}
 
@@ -75,7 +76,7 @@ export default function PublicTrackingPage() {
                 variant={
                   order.status === 'delivered'
                     ? 'delivered'
-                    : order.status === 'in_cleaning'
+                    : order.status === 'in_cleaning' || order.status === 'match_ready_check'
                     ? 'cleaning'
                     : order.status === 'out_for_delivery'
                     ? 'out_for_delivery'
@@ -173,6 +174,13 @@ export default function PublicTrackingPage() {
               </>
             )}
 
+            {/* The 11-point Match-Ready Check, passed (client 2026-10-14) */}
+            {order.match_ready?.passed && (
+              <p className={styles.matchReadyBadge} role="status">
+                🛡️ Passed our 11-point Match-Ready Check
+              </p>
+            )}
+
             {/* Garment Passport Photos (Intake Inspection & Delivery Proof) */}
             {order.photos && order.photos.length > 0 && (
               <div className={styles.photosSection}>
@@ -189,7 +197,7 @@ export default function PublicTrackingPage() {
                         onClick={() =>
                           setZoomPhoto({
                             url: photo.photo_url,
-                            title: photo.photo_type === 'intake' ? 'Intake Inspection Check' : 'Delivery Drop Proof',
+                            title: photoLabel(photo.photo_type),
                             notes: photo.condition_notes,
                           })
                         }
@@ -205,7 +213,7 @@ export default function PublicTrackingPage() {
                       </div>
                       <div className={styles.photoCaption}>
                         <span className={styles.photoTypeBadge}>
-                          {photo.photo_type === 'intake' ? 'Intake Check' : 'Delivery Proof'}
+                          {photoLabel(photo.photo_type)}
                         </span>
                         {photo.condition_notes && (
                           <p className={styles.conditionText}>{photo.condition_notes}</p>
