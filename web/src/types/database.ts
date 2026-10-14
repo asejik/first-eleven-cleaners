@@ -1013,6 +1013,7 @@ export type Database = {
           code: string;
           territory_id: string;
           rep_name: string;
+          kind: string;
           active: boolean;
           created_by: string | null;
           created_at: string;
@@ -1022,6 +1023,7 @@ export type Database = {
           code: string;
           territory_id: string;
           rep_name: string;
+          kind?: string;
           active?: boolean;
           created_by?: string | null;
           created_at?: string;
@@ -1031,6 +1033,7 @@ export type Database = {
           code?: string;
           territory_id?: string;
           rep_name?: string;
+          kind?: string;
           active?: boolean;
           created_by?: string | null;
           created_at?: string;
@@ -1080,6 +1083,39 @@ export type Database = {
           tap_count?: number;
           booked_order_id?: string | null;
           booked_at?: string | null;
+        };
+        Relationships: [];
+      };
+      rep_conversions: {
+        Row: {
+          id: string;
+          customer_id: string;
+          order_id: string;
+          rep_code: string;
+          rep_kind: string;
+          territory_id: string | null;
+          captured_at: string;
+          refunded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          order_id: string;
+          rep_code: string;
+          rep_kind: string;
+          territory_id?: string | null;
+          captured_at?: string;
+          refunded_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          order_id?: string;
+          rep_code?: string;
+          rep_kind?: string;
+          territory_id?: string | null;
+          captured_at?: string;
+          refunded_at?: string | null;
         };
         Relationships: [];
       };
