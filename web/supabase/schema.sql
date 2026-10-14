@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
   address_id UUID REFERENCES addresses(id) ON DELETE RESTRICT,
   status VARCHAR(50) NOT NULL DEFAULT 'booked' CHECK (
-    status IN ('booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered', 'cancelled')
+    status IN ('booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered', 'cancelled')
   ),
   order_type VARCHAR(50) NOT NULL DEFAULT 'mixed' CHECK (
     order_type IN ('dry_clean', 'wash_fold', 'mixed')
@@ -150,6 +150,13 @@ CREATE TABLE IF NOT EXISTS orders (
   referral_code VARCHAR(20),
   referral_discount NUMERIC(10, 2) NOT NULL DEFAULT 0,
   credit_applied NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  -- Match-Ready Check (20261014): weighed before it existed (no items 1-5), and the owner's override
+  match_ready_intake_exempt BOOLEAN NOT NULL DEFAULT false,
+  match_ready_override_reason TEXT,
+  match_ready_override_by VARCHAR(255),
+  match_ready_override_at TIMESTAMPTZ,
+  plant_ticket_number VARCHAR(40), -- the plant's own ticket (20261014)
+  -- rep_code (FK to reps) is added after reps (20261014)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -212,7 +219,7 @@ CREATE TABLE IF NOT EXISTS garment_photos (
   order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   order_item_id UUID REFERENCES order_items(id) ON DELETE SET NULL,
   photo_type VARCHAR(50) NOT NULL CONSTRAINT garment_photos_photo_type_check CHECK (
-    photo_type IN ('intake', 'return', 'delivery_proof', 'pickup_proof', 'customer_reference', 'no_show_proof')
+    photo_type IN ('intake', 'return', 'delivery_proof', 'pickup_proof', 'customer_reference', 'no_show_proof', 'pocket_item', 'stain')
   ),
   photo_url TEXT NOT NULL,
   condition_notes TEXT,
@@ -1141,6 +1148,44 @@ CREATE INDEX IF NOT EXISTS idx_zip_tier_steps_zip ON zip_tier_steps(zip, approve
 ALTER TABLE zip_tier_steps ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON zip_tier_steps FROM anon, authenticated;
 GRANT ALL ON zip_tier_steps TO service_role;
+
+-- ============================================================================
+-- Growth Engine batch 1 (20261014_match_ready_reps)
+-- ============================================================================
+-- Match-Ready Check: one row per ticked item (1-5 at intake, 6-10 back from the plant, 11 at the door)
+CREATE TABLE IF NOT EXISTS match_ready_checks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  item SMALLINT NOT NULL CHECK (item BETWEEN 1 AND 11),
+  note TEXT,
+  done_by VARCHAR(255),
+  done_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (order_id, item)
+);
+ALTER TABLE match_ready_checks ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON match_ready_checks FROM anon, authenticated;
+GRANT ALL ON match_ready_checks TO service_role;
+
+-- Rep codes: TERRITORY-WAVE-REP (e.g. 1D-W1-JM); switched off with active = false
+CREATE TABLE IF NOT EXISTS reps (
+  code VARCHAR(20) PRIMARY KEY CHECK (code ~ '^[0-9A-Z]{1,4}-W[0-9]{1,3}-[A-Z]{2,4}$'),
+  territory_id VARCHAR(10) NOT NULL REFERENCES territories(id) ON UPDATE CASCADE,
+  rep_name VARCHAR(120) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_by VARCHAR(255),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deactivated_at TIMESTAMPTZ
+);
+ALTER TABLE reps ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON reps FROM anon, authenticated;
+GRANT ALL ON reps TO service_role;
+
+-- The rep code is stamped on the customer (the first one stays) and on the order
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS rep_code VARCHAR(20) REFERENCES reps(code) ON UPDATE CASCADE ON DELETE SET NULL;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS rep_code_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS rep_code VARCHAR(20) REFERENCES reps(code) ON UPDATE CASCADE ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_customers_rep_code ON customers(rep_code) WHERE rep_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_rep_code ON orders(rep_code) WHERE rep_code IS NOT NULL;
 
 -- Zone 5 runs per band: dispatched (threshold met or "dispatch anyway") and announced
 CREATE TABLE IF NOT EXISTS route_cycles (
