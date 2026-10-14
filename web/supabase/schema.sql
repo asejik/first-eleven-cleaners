@@ -1173,6 +1173,8 @@ CREATE TABLE IF NOT EXISTS reps (
   code VARCHAR(20) PRIMARY KEY CHECK (code ~ '^[0-9A-Z]{1,4}-W[0-9]{1,3}-[A-Z]{2,4}$'),
   territory_id VARCHAR(10) NOT NULL REFERENCES territories(id) ON UPDATE CASCADE,
   rep_name VARCHAR(120) NOT NULL,
+  -- 'field' rep or 'driver' (referral cards), paid at different rates (20261017_rep_payouts)
+  kind VARCHAR(10) NOT NULL DEFAULT 'field' CONSTRAINT reps_kind_check CHECK (kind IN ('field', 'driver')),
   active BOOLEAN NOT NULL DEFAULT true,
   created_by VARCHAR(255),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1188,6 +1190,25 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS rep_code_at TIMESTAMPTZ;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS rep_code VARCHAR(20) REFERENCES reps(code) ON UPDATE CASCADE ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_customers_rep_code ON customers(rep_code) WHERE rep_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_rep_code ON orders(rep_code) WHERE rep_code IS NOT NULL;
+
+-- Verified first orders on a rep code (20261017_rep_payouts): recorded when the card is charged,
+-- one per customer; refunded_at when later fully refunded (same payout week: it drops off)
+CREATE TABLE IF NOT EXISTS rep_conversions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL UNIQUE REFERENCES customers(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  rep_code VARCHAR(20) NOT NULL REFERENCES reps(code) ON UPDATE CASCADE,
+  rep_kind VARCHAR(10) NOT NULL CHECK (rep_kind IN ('field', 'driver')),
+  territory_id VARCHAR(10) REFERENCES territories(id) ON UPDATE CASCADE ON DELETE SET NULL,
+  captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  refunded_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_rep_conversions_captured ON rep_conversions(captured_at);
+CREATE INDEX IF NOT EXISTS idx_rep_conversions_territory ON rep_conversions(territory_id, captured_at);
+CREATE INDEX IF NOT EXISTS idx_rep_conversions_order ON rep_conversions(order_id);
+ALTER TABLE rep_conversions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON rep_conversions FROM anon, authenticated;
+GRANT ALL ON rep_conversions TO service_role;
 
 -- A/B message tests (20261016_message_tests): each tested message sent, its version, the tap
 -- (through /m/<id>) and the booking within 7 days. The texts are in app_settings 'message_tests'.

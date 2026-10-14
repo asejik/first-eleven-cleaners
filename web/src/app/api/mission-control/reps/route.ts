@@ -9,8 +9,8 @@ import { apiError } from '@/lib/api-errors';
 
 /**
  * Field reps (client 2026-10-14): the owner's list of rep codes, TERRITORY-WAVE-REP (e.g.
- * 1D-W1-JM). GET lists them with how many customers carry each code; POST adds a rep or
- * switches one off (or back on). A code is never deleted, so past signups keep it. Admin only.
+ * 1D-W1-JM), each a field rep or a driver (referral cards). GET lists them with how many
+ * customers carry each code; POST adds a rep, switches one off (or back on), or sets its type. A code is never deleted, so past signups keep it. Admin only.
  */
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +18,10 @@ const isSupabaseConfigured = () =>
   Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your-project');
 
 const ActionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('add'), code: z.string().max(40), rep_name: z.string().trim().min(2).max(120) }),
+  z.object({ action: z.literal('add'), code: z.string().max(40), rep_name: z.string().trim().min(2).max(120), kind: z.enum(['field', 'driver']).default('field') }),
   z.object({ action: z.literal('set_active'), code: z.string().max(40), active: z.boolean() }),
+  // Field rep or driver (referral cards): paid at different rates (client 2026-10-14)
+  z.object({ action: z.literal('set_kind'), code: z.string().max(40), kind: z.enum(['field', 'driver']) }),
 ]);
 
 export async function GET(request: Request) {
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
     if (!isSupabaseConfigured()) return NextResponse.json({ reps: [] });
     const supabase = createAdminClient();
     const [{ data: reps }, { data: stamped }] = await Promise.all([
-      supabase.from('reps').select('code, territory_id, rep_name, active, created_at, deactivated_at').order('code'),
+      supabase.from('reps').select('code, territory_id, rep_name, kind, active, created_at, deactivated_at').order('code'),
       supabase.from('customers').select('rep_code').not('rep_code', 'is', null).limit(20000),
     ]);
     const counts = new Map<string, number>();
@@ -60,7 +62,7 @@ export async function POST(request: Request) {
       if (!territory) {
         return NextResponse.json({ error: `${parts.territory} isn't one of your territories. Check the code, or add the territory first.` }, { status: 400 });
       }
-      const { error } = await supabase.from('reps').insert({ code, territory_id: parts.territory, rep_name: body.rep_name, created_by: auth.customer?.email || 'admin' });
+      const { error } = await supabase.from('reps').insert({ code, territory_id: parts.territory, rep_name: body.rep_name, kind: body.kind, created_by: auth.customer?.email || 'admin' });
       if (error) {
         return NextResponse.json({ error: error.code === '23505' ? `${code} is already on the list.` : 'The rep was not saved.' }, { status: 409 });
       }
@@ -69,7 +71,7 @@ export async function POST(request: Request) {
         action: 'rep.add',
         targetType: 'rep',
         targetId: code,
-        details: { rep_name: body.rep_name },
+        details: { rep_name: body.rep_name, kind: body.kind },
         ip: getClientIp(request),
       });
       return NextResponse.json({ success: true, code });
@@ -77,16 +79,16 @@ export async function POST(request: Request) {
 
     const { data: changed } = await supabase
       .from('reps')
-      .update({ active: body.active, deactivated_at: body.active ? null : new Date().toISOString() })
+      .update(body.action === 'set_kind' ? { kind: body.kind } : { active: body.active, deactivated_at: body.active ? null : new Date().toISOString() })
       .eq('code', code)
       .select('code');
     if (!changed || changed.length === 0) return NextResponse.json({ error: 'No rep has that code.' }, { status: 404 });
     await recordAdminAction(supabase, {
       actor: auth.customer,
-      action: body.active ? 'rep.activate' : 'rep.deactivate',
+      action: body.action === 'set_kind' ? 'rep.kind' : body.active ? 'rep.activate' : 'rep.deactivate',
       targetType: 'rep',
       targetId: code,
-      details: {},
+      details: body.action === 'set_kind' ? { kind: body.kind } : {},
       ip: getClientIp(request),
     });
     return NextResponse.json({ success: true });
