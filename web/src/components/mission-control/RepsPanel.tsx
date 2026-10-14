@@ -14,6 +14,7 @@ interface Rep {
   code: string;
   territory_id: string;
   rep_name: string;
+  kind: 'field' | 'driver';
   active: boolean;
   customers: number;
 }
@@ -34,6 +35,8 @@ export function RepsPanel() {
   });
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  // Field rep or driver (referral cards), paid at different rates (client 2026-10-14)
+  const [kind, setKind] = useState<'field' | 'driver'>('field');
   const [busy, setBusy] = useState<string | null>(null);
 
   const post = async (body: Record<string, unknown>, key: string, done: string) => {
@@ -64,7 +67,7 @@ export function RepsPanel() {
         style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}
         onSubmit={async (e) => {
           e.preventDefault();
-          if (await post({ action: 'add', code, rep_name: name }, 'add', `${code.toUpperCase()} added`)) {
+          if (await post({ action: 'add', code, rep_name: name, kind }, 'add', `${code.toUpperCase()} added`)) {
             setCode('');
             setName('');
           }
@@ -72,6 +75,10 @@ export function RepsPanel() {
       >
         <input aria-label="Rep code" placeholder="1D-W1-JM" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={20} style={{ ...input, width: '130px' }} />
         <input aria-label="Rep name" placeholder="Rep's name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} style={{ ...input, flex: 1, minWidth: '140px' }} />
+        <select aria-label="Rep type" value={kind} onChange={(e) => setKind(e.target.value as 'field' | 'driver')} style={input}>
+          <option value="field">Field rep</option>
+          <option value="driver">Driver (referral cards)</option>
+        </select>
         <Button type="submit" variant="outlineGold" size="sm" disabled={busy === 'add' || !code.trim() || name.trim().length < 2}>
           Add rep
         </Button>
@@ -89,6 +96,18 @@ export function RepsPanel() {
                   <strong>{r.code}</strong>
                 </td>
                 <td style={cell}>{r.rep_name}</td>
+                <td style={cell}>
+                  <select
+                    aria-label={`${r.code} type`}
+                    value={r.kind}
+                    disabled={busy === `kind:${r.code}`}
+                    onChange={(e) => post({ action: 'set_kind', code: r.code, kind: e.target.value }, `kind:${r.code}`, `${r.code} is now a ${e.target.value === 'driver' ? 'driver' : 'field rep'}`)}
+                    style={input}
+                  >
+                    <option value="field">Field rep</option>
+                    <option value="driver">Driver</option>
+                  </select>
+                </td>
                 <td style={cell}>{r.customers} customer{r.customers === 1 ? '' : 's'}</td>
                 <td style={cell}>
                   <Button

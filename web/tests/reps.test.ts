@@ -101,6 +101,15 @@ describe('Reps in Mission Control', () => {
     expect(listed.reps).toEqual([expect.objectContaining({ code: '1D-W1-JM', active: false, customers: 2 })]);
   });
 
+  it('client 2026-10-14: a rep is a field rep or a driver (referral cards), and can be changed', async () => {
+    expect((await reps({ action: 'add', code: '1D-W1-DR', rep_name: 'Dana Driver', kind: 'driver' })).status).toBe(200);
+    expect((await reps({ action: 'add', code: '1D-W2-JM', rep_name: 'Jamie M' })).status).toBe(200);
+    expect(db.reps).toEqual([expect.objectContaining({ code: '1D-W1-DR', kind: 'driver' }), expect.objectContaining({ code: '1D-W2-JM', kind: 'field' })]);
+    expect((await reps({ action: 'set_kind', code: '1D-W2-JM', kind: 'driver' })).status).toBe(200);
+    expect(db.reps[1]).toMatchObject({ kind: 'driver' });
+    expect(db.admin_audit_logs.at(-1)).toMatchObject({ action: 'rep.kind', target_id: '1D-W2-JM' });
+  });
+
   it('admin only', async () => {
     role = 'intake_staff';
     expect((await reps({ action: 'add', code: '1D-W1-JM', rep_name: 'Jamie M' })).status).toBe(403);

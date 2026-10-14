@@ -27,6 +27,7 @@ import type { Database } from '@/types/database';
 import { priceIntakeLine } from '@/lib/intake-quote';
 import { recordAdminAction } from '@/lib/audit-log';
 import { getClientIp } from '@/lib/rate-limiter';
+import { recordRepConversion } from '@/lib/rep-payouts';
 
 
 const IntakeSchema = z.object({
@@ -468,6 +469,9 @@ export async function POST(request: Request) {
         ip: getClientIp(request),
       });
     }
+
+    // Charged: a rep-coded customer's first order is now a verified first order (client 2026-10-14)
+    if (paymentStatus === 'charged') await recordRepConversion(supabase, order.id);
 
     // 7. Log Timeline Events
     await supabase.from('order_events').insert({

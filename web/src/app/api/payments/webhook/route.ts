@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { recordRepConversion } from '@/lib/rep-payouts';
 import { getAppBaseUrl } from '@/lib/constants';
 import { apiError } from '@/lib/api-errors';
 import { syncOrderRefundStateFromSquare } from '@/lib/refunds';
@@ -119,6 +120,8 @@ export async function POST(request: Request) {
                 updated_at: new Date().toISOString(),
               })
               .eq('id', matchedOrder.id);
+            // Now captured: a rep-coded first order is verified (client 2026-10-14)
+            await recordRepConversion(supabase, matchedOrder.id);
           }
         } else if (paymentId && paymentStatus === 'FAILED') {
           const { data: matchedOrder } = await supabase

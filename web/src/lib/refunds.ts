@@ -1,4 +1,5 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
+import { markRepConversionRefunded } from '@/lib/rep-payouts';
 import { getSquareConfig, refundPayment, getPayment } from '@/lib/square';
 import { reportError } from '@/lib/error-reporting';
 
@@ -102,6 +103,9 @@ export async function refundOrder(
     triggered_by: actorLabel,
   });
 
+  // Fully refunded: in the same payout week, it drops off the rep payout report (client 2026-10-14)
+  if (fullyRefunded) await markRepConversionRefunded(supabase, order.id);
+
   return { ok: true, refundId, amount: refundAmount, refundedTotal };
 }
 
@@ -143,6 +147,7 @@ export async function syncOrderRefundStateFromSquare(supabase: AdminClient, paym
       .from('orders')
       .update({ refunded_amount: refundedAmount, payment_status: nextStatus, updated_at: new Date().toISOString() })
       .eq('id', order.id);
+    if (nextStatus === 'refunded') await markRepConversionRefunded(supabase, order.id);
   }
   return true;
 }

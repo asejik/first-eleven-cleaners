@@ -28,6 +28,7 @@ import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlist
 import { RoutineMembersPanel } from '@/components/mission-control/RoutineMembersPanel';
 import { TerritoriesPanel } from '@/components/mission-control/TerritoriesPanel';
 import { RepsPanel } from '@/components/mission-control/RepsPanel';
+import { RepPayoutsPanel } from '@/components/mission-control/RepPayoutsPanel';
 import { MessageTestsPanel } from '@/components/mission-control/MessageTestsPanel';
 import { TierDownPanel } from '@/components/mission-control/TierDownPanel';
 
@@ -495,6 +496,7 @@ To send it out anyway, type the reason for the override (it is logged):`);
                   <RoutineMembersPanel />
                   <TerritoriesPanel />
                   <RepsPanel />
+                  <RepPayoutsPanel />
                 </div>
               )}
 

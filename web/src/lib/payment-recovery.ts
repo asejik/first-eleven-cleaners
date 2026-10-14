@@ -1,4 +1,5 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
+import { recordRepConversion } from '@/lib/rep-payouts';
 import { getSquareConfig, chargeCardOnFile, getPayment } from '@/lib/square';
 import { reportError } from '@/lib/error-reporting';
 
@@ -162,6 +163,8 @@ export async function chargeHeldOrder(
     note: `Payment of $${amount.toFixed(2)} captured via Square (Transaction ID: ${paymentId}). Payment Needed cleared.`,
     triggered_by: actorLabel,
   });
+  // Now captured: a rep-coded first order is verified (client 2026-10-14)
+  await recordRepConversion(supabase, order.id);
   return { ok: true, paymentId, amount };
 }
 
@@ -242,5 +245,6 @@ export async function markHeldOrderPaid(
     note: `Payment of $${amount.toFixed(2)} recorded as paid outside the app (Square payment ${paymentId}). Payment Needed cleared.`,
     triggered_by: actorLabel,
   });
+  await recordRepConversion(supabase, order.id);
   return { ok: true, paymentId, amount };
 }
