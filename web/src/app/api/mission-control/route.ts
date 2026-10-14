@@ -19,6 +19,7 @@ import { getClientIp } from '@/lib/rate-limiter';
 import { rewardReferralForDeliveredOrder } from '@/lib/referrals';
 import { checkMatchReadyGate, MATCH_READY_STAGE } from '@/lib/match-ready';
 import { loadMatchReady } from '@/lib/match-ready-store';
+import { rebookLinkForDelivered } from '@/lib/rebook';
 
 /** Intake staff may make these two moves (the Match-Ready Check, client 2026-10-14); the rest is admin only. */
 const INTAKE_MOVES: Array<[string, string]> = [
@@ -375,6 +376,8 @@ export async function POST(request: Request) {
         weightLbs: order.weight_lbs,
         total: order.total,
         trackingUrl: `${origin}/track/${order.id}`,
+        // Delivered: one-tap "Book next week's pickup?" (client 2026-10-14)
+        ...(new_stage === 'delivered' ? { rebookUrl: await rebookLinkForDelivered(supabase, order.id).catch(() => undefined) } : {}),
       };
 
       // No text for the Match-Ready Check itself: it shows on the tracking page
