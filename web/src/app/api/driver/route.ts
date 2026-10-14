@@ -13,6 +13,7 @@ import { runAfterResponse } from '@/lib/after-response';
 import { releaseOrderHold } from '@/lib/payment-capture';
 import { rewardReferralForDeliveredOrder } from '@/lib/referrals';
 import { recordDoorCheck } from '@/lib/match-ready-store';
+import { rebookLinkForDelivered } from '@/lib/rebook';
 import { assessFailedServiceFee, applyLateCancelFee, LATE_CANCEL_ORDER_FIELDS, type LateCancelOutcome } from '@/lib/late-cancel';
 
 
@@ -669,6 +670,8 @@ export async function POST(request: Request) {
       // picture message (client 2026-10-14)
       basePayload.stage = 'delivered';
       basePayload.photoUrl = undefined;
+      // One-tap "Book next week's pickup?" (client 2026-10-14)
+      basePayload.rebookUrl = await rebookLinkForDelivered(supabase, order.id).catch(() => undefined);
       const notifyPayload = { ...basePayload };
       runAfterResponse(() => messagingService.dispatchStageNotification(notifyPayload), `driver ${notifyPayload.stage} notification`);
 

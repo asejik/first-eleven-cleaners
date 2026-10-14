@@ -29,6 +29,8 @@ export interface MessagePayload {
   routeThresholdLine?: string;
   /** Joined the Routine with this booking: the next pickup and where to manage it (client 2026-10-08) */
   routineLine?: string;
+  /** Delivered: the one-tap "Book next week's pickup?" link (client 2026-10-14); not for Routine members */
+  rebookUrl?: string;
   smsConsent?: boolean;
   /** Guest bookings only: account invitation link for the confirmation email (P05 AR-14) */
   signupUrl?: string;
@@ -134,8 +136,8 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
         stage: 'delivered',
         title: '✅ Delivered & Match-Ready',
         // A link to the return photo and the whole Garment Passport, not a picture message (client 2026-10-14)
-        smsBody: `✅ First Eleven Cleaners: Delivered! Order #${orderNum} is fresh, pressed, and waiting at your delivery spot. See your return photo and Garment Passport: ${data.trackingUrl}. Book your next pickup: ${bookUrl(data.trackingUrl)}`,
-        whatsappBody: `✅ *DELIVERED & MATCH-READY*\n\nOrder *#${orderNum}* has been safely delivered to your designated spot.\n\n🛡️ *Backed by our 100% Make It Right Guarantee.*\n\n📸 *Your return photo and Garment Passport:*\n${data.trackingUrl}\n\n🧺 *Book your next pickup:* ${bookUrl(data.trackingUrl)}`,
+        smsBody: `✅ First Eleven Cleaners: Delivered! Order #${orderNum} is fresh, pressed, and waiting at your delivery spot. See your return photo and Garment Passport: ${data.trackingUrl}. ${data.rebookUrl ? `Book next week's pickup? ${data.rebookUrl}` : `Book your next pickup: ${bookUrl(data.trackingUrl)}`}`,
+        whatsappBody: `✅ *DELIVERED & MATCH-READY*\n\nOrder *#${orderNum}* has been safely delivered to your designated spot.\n\n🛡️ *Backed by our 100% Make It Right Guarantee.*\n\n📸 *Your return photo and Garment Passport:*\n${data.trackingUrl}\n\n🧺 ${data.rebookUrl ? `*Book next week's pickup?* ${data.rebookUrl}` : `*Book your next pickup:* ${bookUrl(data.trackingUrl)}`}`,
       };
 
     default:

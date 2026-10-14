@@ -10,6 +10,8 @@ import {
   TX_SALES_TAX_RATE,
   EXPRESS_SURCHARGE_PERCENT,
   EXTENDED_REACH_LABEL,
+  ORDER_TWO_DISCOUNT,
+  ORDER_TWO_WINDOW_DAYS,
   EXTENDED_REACH_BAND_CITIES,
   extendedReachTurnaroundLine,
   ZONE_CONFIG,
@@ -75,6 +77,11 @@ export function plantScheduleLine(lang: 'en' | 'es' = 'en'): string {
 }
 
 /** Give $15 / Get $15 (client 2026-10-10). */
+/** The order-two discount (client 2026-10-14). */
+export function orderTwoLine(): string {
+  return `Order two: a customer's second pickup within ${ORDER_TWO_WINDOW_DAYS} days of their first is $${ORDER_TWO_DISCOUNT} off, automatically, no code (one-time orders; Routine members have member pricing instead; it doesn't combine with a promo code, the bigger one applies). There is no first-order promo code. After a delivery, the text has a one-tap link to book the same pickup next week.`;
+}
+
 export function referralLine(): string {
   return 'Give $15, Get $15: every customer has a referral code and link in their account. A friend gets $15 off their first order (the order minimum still applies), and the customer gets $15 of account credit once that order is delivered. Account credit (referrals, Make It Right) comes off the next order automatically, for Routine members too.';
 }
@@ -153,5 +160,6 @@ export function chatPriceList(lang: 'en' | 'es' = 'en'): string {
     `${feesLine(lang)} ${noLeather}`,
     '',
     referralLine(),
+    orderTwoLine(),
   ].join('\n');
 }

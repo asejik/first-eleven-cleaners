@@ -38,6 +38,8 @@ interface StepReviewProps {
   handleApplyPromo: () => void;
   /** Why a pre-applied code was removed (e.g. a first-order code already used) */
   promoNotice?: string | null;
+  /** Order two's automatic $10 off, when it applies (client 2026-10-14) */
+  orderTwoDiscount?: number;
   /** A field rep's code, optional (client 2026-10-14) */
   repCode?: string;
   setRepCode?: (val: string) => void;
@@ -85,6 +87,7 @@ export function StepReview({
   appliedPromo,
   handleApplyPromo,
   promoNotice = null,
+  orderTwoDiscount = 0,
   repCode = '',
   setRepCode,
   subtotal,
@@ -307,7 +310,11 @@ export function StepReview({
           )}
           {promoDiscount > 0 && (
             <div className={styles.totalRowDiscount}>
-              <span>Promo Code ({appliedPromo?.code || 'Code'} - {appliedPromo ? promoLabel(appliedPromo) : `${discountPercent}%`})</span>
+              <span>
+                {orderTwoDiscount > 0
+                  ? `Order two ($${orderTwoDiscount} off, automatic)`
+                  : `Promo Code (${appliedPromo?.code || 'Code'} - ${appliedPromo ? promoLabel(appliedPromo) : `${discountPercent}%`})`}
+              </span>
               <span>-${promoDiscount.toFixed(2)}</span>
             </div>
           )}

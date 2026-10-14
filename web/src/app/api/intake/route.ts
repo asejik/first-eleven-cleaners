@@ -150,6 +150,7 @@ export async function POST(request: Request) {
         promo_code,
         referral_code,
         referral_discount,
+        order_two_discount,
         customer_id,
         frequency,
         extended_reach_fee,
@@ -313,6 +314,11 @@ export async function POST(request: Request) {
     }
     // A friend's referral code: $15 off this first order, as booked (client 2026-10-10)
     if (Number(order.referral_discount) > 0) promoDiscountAmount = Number(order.referral_discount);
+    // Order two's automatic $10, as booked (client 2026-10-14)
+    if (Number(order.order_two_discount) > 0) {
+      promoDiscountPercent = 0;
+      promoDiscountAmount = Number(order.order_two_discount);
+    }
     // The recurring plan is saved on the order (20261007_zones_extended_reach); older orders
     // have it only in the notes ("Recurring Plan: Weekly | Bi-Weekly")
     const frequency =

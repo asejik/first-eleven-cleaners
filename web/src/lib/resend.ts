@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { escapeHtml, greetingFirstName } from '@/lib/sanitize';
-import { SUPPORT_PHONE } from '@/lib/constants';
+import { SUPPORT_PHONE, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
 
 export interface SendEmailOptions {
@@ -185,15 +185,7 @@ export function buildStatementEmailHtml({
 /**
  * Branded Welcome Email HTML Template for New Account Registrations
  */
-export function buildWelcomeEmailHtml({
-  name,
-  promoCode = 'KICKOFF15',
-  discountPercent = 15,
-}: {
-  name: string;
-  promoCode?: string;
-  discountPercent?: number;
-}): string {
+export function buildWelcomeEmailHtml({ name }: { name: string }): string {
   const firstName = greetingFirstName(name, 'there');
 
   return `
@@ -222,9 +214,9 @@ export function buildWelcomeEmailHtml({
 
       <!-- Promo Box -->
       <div style="background-color: #fef9ee; border: 2px dashed #C9A14A; border-radius: 10px; padding: 20px; text-align: center; margin: 24px 0;">
-        <p style="margin: 0; font-size: 13px; color: #854d0e; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Your New Customer Kickoff Gift</p>
-        <p style="margin: 8px 0 4px; font-size: 24px; font-weight: 800; color: #0B1F3A; letter-spacing: 2px;">${escapeHtml(promoCode)}</p>
-        <p style="margin: 0; font-size: 14px; color: #475569;">Take <strong>${escapeHtml(discountPercent)}% OFF</strong> your first order at checkout.</p>
+        <p style="margin: 0; font-size: 13px; color: #854d0e; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Your Second Pickup</p>
+        <p style="margin: 8px 0 4px; font-size: 24px; font-weight: 800; color: #0B1F3A;">$${ORDER_TWO_DISCOUNT} OFF</p>
+        <p style="margin: 0; font-size: 14px; color: #475569;">Book your second pickup within ${ORDER_TWO_WINDOW_DAYS} days of your first and it's $${ORDER_TWO_DISCOUNT} off, automatically. No code needed.</p>
       </div>
 
       <!-- What to Expect -->

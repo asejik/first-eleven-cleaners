@@ -18,6 +18,8 @@ export type ScheduleTier = 'standard' | 'express_24hr';
 
 const STANDARD_NOTICE_DAYS = 2;
 export const BOOKING_DAYS_AHEAD = 14;
+/** Bookings per pickup window per day (new bookings; a Routine member's standing stop always fits) */
+export const BOOKING_WINDOW_CAPACITY = 25;
 /** Founding 111 (client 2026-10-11): founders book one day further ahead than everyone else */
 export const FOUNDER_HEAD_START_DAYS = 1;
 const EXPRESS_SAME_DAY_CUTOFF_MIN = 7 * 60;

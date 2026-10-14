@@ -142,10 +142,19 @@ describe('Promo codes: fixed amounts, one use per customer, atomic caps (SEC-15)
   it('refuses a code this customer has already used', async () => {
     state.promoRow = { discount_type: 'percentage', discount_value: 15, max_uses: 10000, current_uses: 3, valid_from: null, valid_until: null };
     state.priorPromoUses = 1;
-    const res = await POST(booking('KICKOFF15'));
+    const res = await POST(booking('MATCHREADY'));
     const body = await res.json();
     expect(res.status).toBe(400);
     expect(body.error).toContain('already been used');
     expect(state.rpcCalls).toHaveLength(0);
+  });
+
+  it('client 2026-10-14: KICKOFF15 is retired; a booking with it is priced without any discount', async () => {
+    state.promoRow = { discount_type: 'percentage', discount_value: 15, max_uses: 10000, current_uses: 3, valid_from: null, valid_until: null };
+    const res = await POST(booking('KICKOFF15'));
+    expect(res.status).toBe(200);
+    const p = state.rpcCalls[0].args.p as Row;
+    expect(p.order as Row).toMatchObject({ promo_code: null, discount_amount: 0 });
+    expect(p.reserve_promo).toBe(false);
   });
 });
