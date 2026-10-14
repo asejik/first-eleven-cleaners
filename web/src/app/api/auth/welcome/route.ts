@@ -6,11 +6,14 @@ import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedCustomer } from '@/lib/supabase/auth-helpers';
 import { apiError } from '@/lib/api-errors';
+import { findActiveRep, stampRepCode } from '@/lib/reps';
 
 const WelcomeSchema = z.object({
   // Invalid names fall back to a generic greeting rather than blocking the email (SEC-09)
   name: personNameSchema.catch('Valued Customer'),
   email: z.string().email(),
+  // A field rep's code from the signup form (client 2026-10-14); a wrong one is ignored
+  rep_code: z.string().max(40).optional().nullable(),
 });
 
 // Same response whether or not an email has an account, so this endpoint can't be used
@@ -30,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     const raw = await request.json();
-    const { name, email } = WelcomeSchema.parse(raw);
+    const { name, email, rep_code } = WelcomeSchema.parse(raw);
     const normalizedEmail = email.trim().toLowerCase();
 
     // 1. Anti-Spam Relay: Restrict to registered customers only (SEC-008)
@@ -54,6 +57,13 @@ export async function POST(request: Request) {
 
     if (!isSessionMatch && !isRecentSignup) {
       return ACCEPTED();
+    }
+
+    // The rep code from signup, only on an account made in the last 15 minutes (or the
+    // signed-in owner) and only if it has none yet (client 2026-10-14)
+    if (rep_code) {
+      const rep = await findActiveRep(supabase, rep_code);
+      if (rep) await stampRepCode(supabase, { code: rep.code, customerId: customer.id });
     }
 
     // 3. Per-recipient rate limiting: Maximum 1 welcome email per 24 hours (SEC-008)

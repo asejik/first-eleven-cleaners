@@ -191,6 +191,8 @@ export default function BookingPage() {
             appliedPromo={b.appliedPromo}
             handleApplyPromo={b.handleApplyPromo}
             promoNotice={b.promoNotice}
+            repCode={b.repCode}
+            setRepCode={b.setRepCode}
             subtotal={b.subtotal}
             discountAmount={b.discountAmount}
             discountPercent={b.discountPercent}

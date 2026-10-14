@@ -27,6 +27,7 @@ import styles from './page.module.css';
 import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlists';
 import { RoutineMembersPanel } from '@/components/mission-control/RoutineMembersPanel';
 import { TerritoriesPanel } from '@/components/mission-control/TerritoriesPanel';
+import { RepsPanel } from '@/components/mission-control/RepsPanel';
 import { TierDownPanel } from '@/components/mission-control/TierDownPanel';
 
 const STAGES: OrderStatusKey[] = [
@@ -491,6 +492,7 @@ To send it out anyway, type the reason for the override (it is logged):`);
                 <div style={{ display: 'grid', gap: '20px' }}>
                   <RoutineMembersPanel />
                   <TerritoriesPanel />
+                  <RepsPanel />
                 </div>
               )}
             </>
