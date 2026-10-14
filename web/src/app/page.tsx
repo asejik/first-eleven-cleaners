@@ -1,8 +1,8 @@
 import {
   ROUTES,
   APP_TAGLINE,
-  PROMO_CODE_LAUNCH,
-  PROMO_DISCOUNT_PERCENT,
+  ORDER_TWO_DISCOUNT,
+  ORDER_TWO_WINDOW_DAYS,
 } from '@/lib/constants';
 import { getCoverage } from '@/lib/coverage-settings';
 import { ButtonLink } from '@/components/ui';
@@ -26,9 +26,9 @@ export default async function HomePage() {
     <div className={styles.page}>
       {/* === Promo Banner === */}
       <div className={styles.promoBanner}>
+        {/* "First order: no promo"; the discount is order two's (client 2026-10-14) */}
         <p>
-          🎉 <strong>{PROMO_DISCOUNT_PERCENT}% OFF</strong> your first order — use code{' '}
-          <strong>{PROMO_CODE_LAUNCH}</strong> at checkout!
+          🎉 Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is <strong>${ORDER_TWO_DISCOUNT} off</strong>, automatically. No code needed.
         </p>
       </div>
 
@@ -198,8 +198,7 @@ export default async function HomePage() {
             </ButtonLink>
           </div>
           <p className={styles.ctaPromo}>
-            Use code <strong>{PROMO_CODE_LAUNCH}</strong> for{' '}
-            {PROMO_DISCOUNT_PERCENT}% off your first order
+            Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is ${ORDER_TWO_DISCOUNT} off, automatically.
           </p>
         </div>
       </section>

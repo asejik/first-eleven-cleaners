@@ -1,6 +1,6 @@
 import { pageMetadata } from '@/lib/seo';
 import { ButtonLink } from '@/components/ui';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
 import styles from './page.module.css';
 
 export const metadata = pageMetadata({
@@ -317,7 +317,7 @@ export default function AboutPage() {
             <ButtonLink href={ROUTES.commercial} variant="outlineGold" size="lg">Enquire for Business</ButtonLink>
           </div>
           <p className={styles.ctaPromo}>
-            First order? Use code <strong>KICKOFF15</strong> for 15% off.
+            Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is ${ORDER_TWO_DISCOUNT} off, automatically.
           </p>
         </div>
       </section>

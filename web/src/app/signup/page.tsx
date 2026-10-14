@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button, Input, Card, ButtonLink } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
-import { ROUTES, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
+import { ROUTES, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import { RepCodeField } from '@/components/booking/RepCodeField';
 import styles from './page.module.css';
@@ -94,7 +94,7 @@ export default function SignupPage() {
     addToast({
       type: 'success',
       title: 'Account Created!',
-      message: `Welcome to First Eleven Cleaners! Use code ${PROMO_CODE_LAUNCH} for ${PROMO_DISCOUNT_PERCENT}% off.`,
+      message: `Welcome to First Eleven Cleaners! Your second pickup within ${ORDER_TWO_WINDOW_DAYS} days is $${ORDER_TWO_DISCOUNT} off, automatically.`,
     });
     router.push(ROUTES.dashboard);
   };
@@ -115,7 +115,7 @@ export default function SignupPage() {
           </Link>
           <h1 className={styles.title}>Join the Starting Lineup</h1>
           <p className={styles.subtitle}>
-            Create your account and claim {PROMO_DISCOUNT_PERCENT}% off with code <strong>{PROMO_CODE_LAUNCH}</strong>
+            Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is ${ORDER_TWO_DISCOUNT} off, automatically.
           </p>
         </div>
 
@@ -196,7 +196,7 @@ export default function SignupPage() {
           <RepCodeField id="signup-rep-code" value={repCode} onChange={setRepCode} />
 
           <Button type="submit" variant="primary" fullWidth isLoading={isSubmitting} size="lg">
-            Create Account & Get 15% Off
+            Create Account
           </Button>
         </form>
 

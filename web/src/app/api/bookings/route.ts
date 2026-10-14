@@ -20,7 +20,6 @@ import {
   DRY_CLEAN_PRICES,
   EXPRESS_DAILY_SLOT_CAP,
   PROMO_CODE_LAUNCH,
-  PROMO_DISCOUNT_PERCENT,
   computeBookingFinancials,
 } from '@/lib/constants';
 import { getSquareConfig, saveCardOnFile, createHold, cancelHold, type SavedCard } from '@/lib/square';
@@ -29,7 +28,7 @@ import { checkAlterationLine, buttonsOnlyError, instructionText } from '@/lib/al
 import { resolveAndUploadPhotoUrl } from '@/lib/storage';
 import { apiError } from '@/lib/api-errors';
 import { texasDate } from '@/lib/texas-time';
-import { validateSchedule } from '@/lib/schedule';
+import { validateSchedule, BOOKING_WINDOW_CAPACITY } from '@/lib/schedule';
 import { getCoverage } from '@/lib/coverage-settings';
 import { resolveAddressCoverage } from '@/lib/distance';
 import {
@@ -54,6 +53,7 @@ import { ensureAuthUser } from '@/lib/passwordless';
 import { claimFounding, founderStatus, planDiscountFor, FOUNDER_HEAD_START_DAYS } from '@/lib/founding';
 import { checkReferralForBooking, recordReferral, referrerForCode, REFERRAL_AMOUNT } from '@/lib/referrals';
 import { findActiveRep, stampRepCode } from '@/lib/reps';
+import { orderTwoDiscountFor } from '@/lib/order-two';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -126,7 +126,7 @@ const BookingSchema = z.object({
 });
 
 /** Bookings per pickup window per day. */
-const WINDOW_CAPACITY = 25;
+const WINDOW_CAPACITY = BOOKING_WINDOW_CAPACITY;
 
 type CreateBookingResult =
   | { ok: true; replay: boolean; order: { id: string; order_number: string; total: number; status: string; customer_id: string } }
@@ -256,6 +256,18 @@ export async function POST(request: Request) {
     // money, not a promo, so it also applies with member pricing.
     let referral: { referrerId: string; code: string } | null = null;
     const enteredCode = validated.pricing.promo_code?.trim() || '';
+    // Who this booking is for, for the order-two discount: the signed-in customer, or a guest
+    // already on file with this email (a registered account must sign in) (client 2026-10-14)
+    let pricingCustomerId: string | null = signedInCustomerId;
+    if (!pricingCustomerId && isSupabaseConfigured) {
+      try {
+        const { data: onFile } = await createAdminClient().from('customers').select('id, auth_id').eq('email', validated.customer.email).maybeSingle();
+        pricingCustomerId = onFile && !onFile.auth_id ? onFile.id : null;
+      } catch {
+        // No discount check then; the booking itself handles the customer record
+        pricingCustomerId = null;
+      }
+    }
     if (enteredCode && isSupabaseConfigured && (await referrerForCode(createAdminClient(), enteredCode))) {
       const admin = createAdminClient();
       const { data: byEmail } = await admin.from('customers').select('id, auth_id').eq('email', validated.customer.email).maybeSingle();
@@ -341,7 +353,8 @@ export async function POST(request: Request) {
         valid_until: string | null;
       } | null = null;
 
-      if (isSupabaseConfigured) {
+      // The launch code is retired: "First order: no promo" (client 2026-10-14)
+      if (isSupabaseConfigured && cleanPromo !== PROMO_CODE_LAUNCH) {
         try {
           const adminSupabase = createAdminClient();
           const { data } = await adminSupabase
@@ -371,15 +384,11 @@ export async function POST(request: Request) {
           verifiedPromoCode = cleanPromo;
           promoNeedsReservation = true;
         }
-      } else if (cleanPromo === PROMO_CODE_LAUNCH) {
-        // Built-in launch code when it has no promo_codes row
-        promoDiscountPercent = PROMO_DISCOUNT_PERCENT;
-        verifiedPromoCode = PROMO_CODE_LAUNCH;
       }
     }
 
     // 4. Authoritatively Recompute Financials (F006 & F005 Fix)
-    const computed = computeBookingFinancials({
+    const financialsInput = {
       dryCleanItems: validated.services.dry_clean_items,
       alterationItems: alterationItems.map((line) => ({
         garment_type: line.garment_type,
@@ -394,7 +403,28 @@ export async function POST(request: Request) {
       frequency: planFrequency,
       extendedReachFee: reachFee,
       planDiscountPercent: founderActive && planFrequency !== 'one_time' ? planDiscountFor(planFrequency, founder) : undefined,
-    });
+    };
+    let computed = computeBookingFinancials(financialsInput);
+
+    // Order two (client 2026-10-14): $10 off a one-time second order picked up within 21 days
+    // of the first, automatic. Never with a promo code: whichever is bigger.
+    let orderTwoDiscount = 0;
+    if (!referral && isSupabaseConfigured && pricingCustomerId) {
+      // A lookup that fails never blocks the booking; it's just booked without the $10
+      const amount = await orderTwoDiscountFor(createAdminClient(), pricingCustomerId, { pickupDate: validated.schedule.pickup_date, frequency: planFrequency }).catch((err) => {
+        reportError('api/bookings', err, { details: 'Order-two check failed; booked without it' });
+        return 0;
+      });
+      if (amount > 0) {
+        const withOrderTwo = computeBookingFinancials({ ...financialsInput, promoDiscountPercent: 0, promoDiscountAmount: amount });
+        if (withOrderTwo.financials.finalTotal <= computed.financials.finalTotal) {
+          computed = withOrderTwo;
+          orderTwoDiscount = amount;
+          verifiedPromoCode = null;
+          promoNeedsReservation = false;
+        }
+      }
+    }
 
     // 5. Enforce Zone Minimum (F010 Fix). Zone 5: the minimum is on the garments; the delivery
     // fee is on top. Members: at member prices, and Zone 1's is 15 lb at their rate (2026-10-08).
@@ -827,6 +857,11 @@ export async function POST(request: Request) {
             if (referral) {
               await supabase.from('orders').update({ referral_code: referral.code, referral_discount: REFERRAL_AMOUNT }).eq('id', insertedOrder.id);
               await recordReferral(supabase, { referrerId: referral.referrerId, referredId: customerId, orderId: insertedOrder.id, code: referral.code });
+            }
+
+            // Order two's automatic $10, kept apart from promo codes for the Growth Panel (2026-10-14)
+            if (orderTwoDiscount > 0) {
+              await supabase.from('orders').update({ order_two_discount: orderTwoDiscount }).eq('id', insertedOrder.id);
             }
 
             // A field rep's code (client 2026-10-14): on the order, and on the customer if they

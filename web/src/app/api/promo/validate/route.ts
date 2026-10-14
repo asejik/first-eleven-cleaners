@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
+import { PROMO_CODE_LAUNCH, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
+
+const ORDER_TWO_PROMO_LINE = `That first-order code has ended. Your second pickup within ${ORDER_TWO_WINDOW_DAYS} days is $${ORDER_TWO_DISCOUNT} off, automatically.`;
 import { checkRateLimitAsync, getClientIp } from '@/lib/rate-limiter';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -24,6 +26,11 @@ export async function POST(request: Request) {
     }
 
     const cleanCode = code.trim().toUpperCase();
+
+    // The launch code is retired: "First order: no promo" (client 2026-10-14)
+    if (cleanCode === PROMO_CODE_LAUNCH) {
+      return NextResponse.json({ valid: false, message: ORDER_TWO_PROMO_LINE });
+    }
 
     // 1. Check live Supabase promo_codes table
     const isSupabaseConfigured =
@@ -95,24 +102,6 @@ export async function POST(request: Request) {
       } catch (dbErr) {
         console.warn('Promo database lookup error, falling back to static constants:', dbErr);
       }
-    }
-
-    // 2. Fallback to hardcoded launch promo constants
-    if (cleanCode === PROMO_CODE_LAUNCH) {
-      if (isSupabaseConfigured) {
-        const supabase = createAdminClient();
-        const customerId = await resolveCustomerId(supabase, typeof email === 'string' ? email : null);
-        if (customerId && (await hasUsedPromo(supabase, customerId, cleanCode))) {
-          return NextResponse.json({ valid: false, already_used: true, message: promoUsedMessage(cleanCode) });
-        }
-      }
-      return NextResponse.json({
-        valid: true,
-        code: cleanCode,
-        discount_type: 'percentage',
-        discount_value: PROMO_DISCOUNT_PERCENT,
-        message: `${PROMO_DISCOUNT_PERCENT}% first-order discount applied!`,
-      });
     }
 
     return NextResponse.json({

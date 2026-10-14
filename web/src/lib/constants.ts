@@ -5,8 +5,14 @@
 // --- Brand ---
 export const APP_NAME = 'First Eleven Cleaners';
 export const APP_TAGLINE = 'Every Garment Makes the Lineup.';
+// Retired 2026-10-14 ("First order: no promo"): no longer offered or accepted on new bookings;
+// kept so orders already booked with it keep their discount at intake
 export const PROMO_CODE_LAUNCH = 'KICKOFF15';
 export const PROMO_DISCOUNT_PERCENT = 15;
+// The discount moves to order two (client 2026-10-14): $10 off a customer's second order when
+// its pickup is within 21 days of their first, automatic, no code (lib/order-two.ts)
+export const ORDER_TWO_DISCOUNT = 10;
+export const ORDER_TWO_WINDOW_DAYS = 21;
 
 // --- Support Contacts ---
 export const SUPPORT_PHONE = '(682) 200-0039';

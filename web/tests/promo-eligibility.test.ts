@@ -80,13 +80,17 @@ afterEach(() => {
 });
 
 describe('Promo eligibility is checked before the card step (AR-02)', () => {
-  it('a returning guest who already used KICKOFF15 is told up front', async () => {
+  it('a returning guest who already used a one-use code is told up front', async () => {
     state.customerByEmail = { id: 'guest-1', auth_id: null };
     state.priorUses = 1;
-    const { body } = await validate({ code: 'kickoff15', email: 'pat@example.com' });
+    const { body } = await validate({ code: 'welcome5', email: 'pat@example.com' });
     expect(body.valid).toBe(false);
     expect(body.already_used).toBe(true);
-    expect(body.message).toMatch(/first order/i);
+  });
+
+  it('client 2026-10-14: KICKOFF15 is retired ("First order: no promo"), even with a promo_codes row', async () => {
+    const { body } = await validate({ code: 'kickoff15', email: 'new@example.com' });
+    expect(body).toEqual({ valid: false, message: 'That first-order code has ended. Your second pickup within 21 days is $10 off, automatically.' });
   });
 
   it('a signed-in customer who already used the code is told up front', async () => {
@@ -98,10 +102,10 @@ describe('Promo eligibility is checked before the card step (AR-02)', () => {
     expect(body.already_used).toBe(true);
   });
 
-  it('a first-time customer still gets the code', async () => {
-    const { body } = await validate({ code: 'KICKOFF15', email: 'new@example.com' });
+  it('a first-time customer still gets a code', async () => {
+    const { body } = await validate({ code: 'WELCOME5', email: 'new@example.com' });
     expect(body.valid).toBe(true);
-    expect(body.discount_type).toBe('percentage');
+    expect(body.discount_type).toBe('fixed');
   });
 
   it('MATCHREADY is no longer a built-in code', async () => {

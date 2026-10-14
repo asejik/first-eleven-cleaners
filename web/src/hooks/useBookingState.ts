@@ -7,7 +7,6 @@ import {
   catalogLineTotal,
   WASH_FOLD_PRICE_PER_LB,
   WASH_FOLD_MINIMUM_PRICE,
-  PROMO_CODE_LAUNCH,
   calculateOrderFinancials,
   isExpressExcluded,
   orderMinimumGap,
@@ -179,12 +178,9 @@ export function useBookingState() {
   };
 
   // Step 4: Promo & Payment
-  const [promoCodeInput, setPromoCodeInput] = useState(PROMO_CODE_LAUNCH);
-  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>({
-    code: PROMO_CODE_LAUNCH,
-    discount_type: 'percentage',
-    discount_value: 15,
-  });
+  // No code is filled in: "First order: no promo" (client 2026-10-14); the discount is order two's
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
   // Why a pre-applied code was removed (e.g. a first-order code already used), shown on Review
   const [promoNotice, setPromoNotice] = useState<string | null>(null);
   // A friend's referral link (/r/CODE -> /book?ref=CODE, client 2026-10-10): their code is
@@ -383,8 +379,7 @@ export function useBookingState() {
   // Fixed-dollar codes are dollars off, as the server applies them (SEC-15, P05 AR-02)
   // Promo codes don't combine with member pricing: the code is set aside while it applies. A
   // friend's referral code is money, not a promo, so it stays (client 2026-10-10)
-  const effectivePromo = planFrequency === 'one_time' || appliedPromo?.discount_type === 'referral' ? appliedPromo : null;
-  const { discountPercent, discountAmount: promoDiscountAmount } = promoFinancialInputs(effectivePromo);
+  const promoForPlan = planFrequency === 'one_time' || appliedPromo?.discount_type === 'referral' ? appliedPromo : null;
 
   // Zone 5: the Extended Reach fee line, half off for Routine members (client 8C)
   const extendedReach = detectedZone?.id === 'zone_5' ? addressCoverage.extendedReach : null;
@@ -393,15 +388,26 @@ export function useBookingState() {
   // "Join the Routine": Bi-Weekly matches the Zone 5 route
   const joinRoutine = () => setFrequency('biweekly');
 
-  const financials = calculateOrderFinancials({
-    subtotal,
-    isExpress: isExpressActive,
-    discountPercent,
-    discountAmount: promoDiscountAmount,
-    frequency: planFrequency,
-    extendedReachFee,
-    alterationSubtotal: calculatedAlterations,
+  // Order two (client 2026-10-14): $10 off a signed-in customer's one-time second order within
+  // 21 days, automatic. Never with a promo code: whichever is bigger (the server decides the same)
+  const { data: orderTwo } = useQuery({
+    queryKey: ['order-two', pickupDate],
+    queryFn: async (): Promise<{ discount: number }> => {
+      const res = await fetch(`/api/order-two?pickup_date=${encodeURIComponent(pickupDate)}`);
+      return res.ok ? res.json() : { discount: 0 };
+    },
+    enabled: Boolean(user && (!user.role || user.role === 'customer') && pickupDate),
+    staleTime: 60 * 1000,
   });
+  const pricingBase = { subtotal, isExpress: isExpressActive, frequency: planFrequency, extendedReachFee, alterationSubtotal: calculatedAlterations };
+  const promoInputs = promoFinancialInputs(promoForPlan);
+  const promoFinancials = calculateOrderFinancials({ ...pricingBase, discountPercent: promoInputs.discountPercent, discountAmount: promoInputs.discountAmount });
+  const orderTwoAmount = planFrequency === 'one_time' && promoForPlan?.discount_type !== 'referral' ? orderTwo?.discount ?? 0 : 0;
+  const orderTwoFinancials = orderTwoAmount > 0 ? calculateOrderFinancials({ ...pricingBase, discountPercent: 0, discountAmount: orderTwoAmount }) : null;
+  const orderTwoApplied = Boolean(orderTwoFinancials && orderTwoFinancials.finalTotal <= promoFinancials.finalTotal);
+  const effectivePromo = orderTwoApplied ? null : promoForPlan;
+  const discountPercent = orderTwoApplied ? 0 : promoInputs.discountPercent;
+  const financials = orderTwoApplied && orderTwoFinancials ? orderTwoFinancials : promoFinancials;
 
   // Route-day zones pick from their dates; keep the pickup on one of them (adjusted during
   // render, like the sign-in prefill above)
@@ -448,7 +454,7 @@ export function useBookingState() {
   };
 
   // On reaching Review, re-check the applied code against this customer, so a code they
-  // have already used (e.g. first-order KICKOFF15) is removed before the card step instead
+  // have already used (e.g. a one-use code) is removed before the card step instead
   // of failing at Confirm (P05 AR-02)
   const recheckPromoRef = useRef<string | null>(null);
   useEffect(() => {
@@ -607,7 +613,13 @@ export function useBookingState() {
     appliedPromo: effectivePromo,
     handleApplyPromo,
     // Set aside while member pricing applies (client 2026-10-08)
-    promoNotice: planFrequency !== 'one_time' && appliedPromo && !effectivePromo ? MEMBER_PROMO_NOT_COMBINED : promoNotice,
+    promoNotice:
+      planFrequency !== 'one_time' && appliedPromo && !promoForPlan
+        ? MEMBER_PROMO_NOT_COMBINED
+        : orderTwoApplied && promoForPlan
+          ? `Order two's $${orderTwoAmount} off is bigger than this code, so it applies instead.`
+          : promoNotice,
+    orderTwoDiscount: orderTwoApplied ? orderTwoAmount : 0,
     cardNumber,
     setCardNumber,
     cardExpiry,
