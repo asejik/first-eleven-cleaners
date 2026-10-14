@@ -8,6 +8,8 @@ export interface IntakeQueueResponse {
   queue: Order[];
   intakeHistory?: Order[];
   todayIntakeCount?: number;
+  /** At the plant or back for the Match-Ready Check (client 2026-10-14) */
+  matchReady?: Order[];
 }
 
 export function useIntakeQueue() {

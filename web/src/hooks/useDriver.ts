@@ -62,6 +62,8 @@ export function useDriverAction() {
       order_id: string;
       photo_url?: string;
       notes?: string;
+      /** Delivery: Match-Ready item 11, sealed in the First Eleven bag (client 2026-10-14) */
+      sealed?: boolean;
     }) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       try {

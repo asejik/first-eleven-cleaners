@@ -213,3 +213,38 @@ describe('The referrer earns $15 when the order is delivered, and credit is used
     expect(chatPriceList()).toContain('Give $15, Get $15');
   });
 });
+
+// Client 2026-10-14: a field rep's code is stamped on the customer (the first one stays) and
+// on the order, alongside a friend's referral code; a wrong or switched-off one is ignored.
+describe('Rep codes at booking', () => {
+  beforeEach(() => {
+    db.territories = [{ id: '1D', name: 'Plano', zone_id: 'zone_1' }];
+    db.reps = [
+      { code: '1D-W1-JM', territory_id: '1D', rep_name: 'Jamie M', active: true },
+      { code: '1D-W1-KO', territory_id: '1D', rep_name: 'Kim O', active: false },
+    ];
+  });
+  const newCustomer = () => db.customers.find((c) => c.email === 'nina@example.com');
+
+  it('stamps the rep code on the customer and the order, with a friend\'s referral too', async () => {
+    const res = await book('RILEY7K3Q', { rep_code: ' 1d-w1-jm ' });
+    expect(res.status).toBe(200);
+    expect(db.orders[0]).toMatchObject({ rep_code: '1D-W1-JM', referral_code: 'RILEY7K3Q' });
+    expect(newCustomer()).toMatchObject({ rep_code: '1D-W1-JM' });
+  });
+
+  it('a switched-off or unknown code never blocks the booking and is not stamped', async () => {
+    expect((await book('', { rep_code: '1D-W1-KO' })).status).toBe(200);
+    expect((await book('', { rep_code: 'NOPE' })).status).toBe(200);
+    expect(db.orders.every((o) => !o.rep_code)).toBe(true);
+    expect(newCustomer()?.rep_code ?? null).toBeNull();
+  });
+
+  it('the first code stays on the customer', async () => {
+    await book('', { rep_code: '1D-W1-JM' });
+    db.reps.push({ code: '1D-W2-AB', territory_id: '1D', rep_name: 'Alex B', active: true });
+    await book('', { rep_code: '1D-W2-AB' });
+    expect(newCustomer()).toMatchObject({ rep_code: '1D-W1-JM' });
+    expect(db.orders.map((o) => o.rep_code)).toEqual(['1D-W1-JM', '1D-W2-AB']);
+  });
+});

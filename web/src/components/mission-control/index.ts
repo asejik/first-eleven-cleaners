@@ -10,3 +10,4 @@ export { DeliveredArchive } from './DeliveredArchive';
 export { ExpressGovernance } from './ExpressGovernance';
 export { ZoneGovernance } from './ZoneGovernance';
 export { IntakeTicketWorkspace } from './IntakeTicketWorkspace';
+export { MatchReadyChecklist } from './MatchReadyChecklist';

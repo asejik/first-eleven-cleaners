@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMissionControl, useAdvanceOrderStage, useResolveClaim, usePaymentRecovery } from '@/hooks/useMissionControl';
+import { useMissionControl, useAdvanceOrderStage, useResolveClaim, usePaymentRecovery, overrideMatchReady } from '@/hooks/useMissionControl';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Loader } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -27,6 +27,7 @@ import styles from './page.module.css';
 import { PaymentWatchlists } from '@/components/mission-control/PaymentWatchlists';
 import { RoutineMembersPanel } from '@/components/mission-control/RoutineMembersPanel';
 import { TerritoriesPanel } from '@/components/mission-control/TerritoriesPanel';
+import { RepsPanel } from '@/components/mission-control/RepsPanel';
 import { TierDownPanel } from '@/components/mission-control/TierDownPanel';
 
 const STAGES: OrderStatusKey[] = [
@@ -34,6 +35,7 @@ const STAGES: OrderStatusKey[] = [
   'picked_up',
   'weighed_itemized',
   'in_cleaning',
+  'match_ready_check',
   'out_for_delivery',
   'delivered',
 ];
@@ -92,6 +94,24 @@ export default function MissionControlPage() {
     }
   };
 
+  // A move out of the Match-Ready Check that isn't finished: offer the owner's override (a
+  // reason, logged), then try again (client 2026-10-14). Returns false when not overridden.
+  const advanceWithCheck = async (payload: Parameters<typeof advanceStage.mutateAsync>[0]): Promise<boolean> => {
+    try {
+      await advanceStage.mutateAsync(payload);
+      return true;
+    } catch (err: unknown) {
+      if (!(err as { requiresMatchReadyOverride?: boolean }).requiresMatchReadyOverride) throw err;
+      const reason = window.prompt(`${(err as Error).message}
+
+To send it out anyway, type the reason for the override (it is logged):`);
+      if (!reason || !reason.trim()) return false;
+      await overrideMatchReady(payload.order_id, reason.trim());
+      await advanceStage.mutateAsync(payload);
+      return true;
+    }
+  };
+
   const handleAdvance = async (orderId: string, currentStage: OrderStatusKey) => {
     const currentIndex = STAGES.indexOf(currentStage);
     if (currentIndex < STAGES.length - 1) {
@@ -130,12 +150,13 @@ export default function MissionControlPage() {
         }
 
         try {
-          await advanceStage.mutateAsync({
+          const moved = await advanceWithCheck({
             order_id: orderId,
             new_stage: nextStage,
             manager_override: true,
             override_reason: 'Manager override authorized on Ops Board',
           });
+          if (!moved) return;
           addToast({
             type: 'warning',
             title: 'Manager Override Authorized',
@@ -152,7 +173,8 @@ export default function MissionControlPage() {
       }
 
       try {
-        await advanceStage.mutateAsync({ order_id: orderId, new_stage: nextStage });
+        const moved = await advanceWithCheck({ order_id: orderId, new_stage: nextStage });
+        if (!moved) return;
         addToast({
           type: 'success',
           title: 'Stage Advanced',
@@ -470,6 +492,7 @@ export default function MissionControlPage() {
                 <div style={{ display: 'grid', gap: '20px' }}>
                   <RoutineMembersPanel />
                   <TerritoriesPanel />
+                  <RepsPanel />
                 </div>
               )}
             </>

@@ -76,12 +76,12 @@ export async function GET(request: Request) {
         photos:garment_photos(*)
       `;
     const todayStart = texasDayStartUtc(texasDate()); // Dallas calendar day (PR-13)
-    const [queueRes, historyRes, todayRes] = await Promise.all([
+    const [queueRes, historyRes, todayRes, matchReadyRes] = await Promise.all([
       supabase.from('orders').select(intakeSelect).eq('status', 'picked_up').order('created_at', { ascending: true }),
       supabase
         .from('orders')
         .select(intakeSelect)
-        .in('status', ['weighed_itemized', 'in_cleaning', 'out_for_delivery', 'delivered'])
+        .in('status', ['weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered'])
         .order('updated_at', { ascending: false })
         .limit(50),
       supabase
@@ -89,19 +89,27 @@ export async function GET(request: Request) {
         .select('id', { count: 'exact', head: true })
         .eq('status', 'weighed_itemized')
         .gte('timestamp', todayStart),
+      // At the plant or back for the Match-Ready Check (client 2026-10-14), oldest first
+      supabase
+        .from('orders')
+        .select(intakeSelect)
+        .in('status', ['in_cleaning', 'match_ready_check'])
+        .order('updated_at', { ascending: true })
+        .limit(100),
     ]);
 
     if (queueRes.error || historyRes.error) {
       console.error('Intake GET error:', queueRes.error || historyRes.error);
-      return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 });
+      return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0, matchReady: [] });
     }
 
     // Starch, fold/hang and detergent from the customer's Preferences (P05 AR-03)
     const queue = (queueRes.data || []).map((o) => withStaffPreferences(o, 'intake'));
     const intakeHistory = (historyRes.data || []).map((o) => withStaffPreferences(o, 'intake'));
     const todayIntakeCount = todayRes.count ?? 0;
+    const matchReady = (matchReadyRes.data || []).map((o) => withStaffPreferences(o, 'intake'));
 
-    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount }));
+    return NextResponse.json(await withSignedPhotoUrls({ queue, intakeHistory, todayIntakeCount, matchReady }));
   } catch (err) {
     console.error('Intake API error:', err);
     return NextResponse.json({ queue: [], intakeHistory: [], todayIntakeCount: 0 }, { status: 500 });
@@ -466,7 +474,7 @@ export async function POST(request: Request) {
     });
 
     // 8. Dispatch Notification
-    const wasAlreadyAdvanced = order.status === 'in_cleaning' || order.status === 'out_for_delivery' || order.status === 'delivered';
+    const wasAlreadyAdvanced = order.status === 'in_cleaning' || order.status === 'match_ready_check' || order.status === 'out_for_delivery' || order.status === 'delivered';
 
     if (!wasAlreadyAdvanced) {
       const rawCustomer = order.customer;

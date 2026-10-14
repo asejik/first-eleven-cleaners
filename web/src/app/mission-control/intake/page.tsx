@@ -7,7 +7,7 @@ import { Button, Badge, Loader, Modal, RefreshButton, ButtonLink } from '@/compo
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/lib/constants';
-import { IntakeTicketWorkspace } from '@/components/mission-control';
+import { IntakeTicketWorkspace, MatchReadyChecklist } from '@/components/mission-control';
 import styles from './page.module.css';
 
 export default function CentralIntakePage() {
@@ -17,13 +17,15 @@ export default function CentralIntakePage() {
   const queue = useMemo(() => data?.queue || [], [data?.queue]);
   const intakeHistory = useMemo(() => data?.intakeHistory || [], [data?.intakeHistory]);
   const todayIntakeCount = data?.todayIntakeCount || 0;
-  const [activeQueueTab, setActiveQueueTab] = useState<'queue' | 'history'>('queue');
+  // At the plant or back for the Match-Ready Check (client 2026-10-14)
+  const matchReadyList = useMemo(() => data?.matchReady || [], [data?.matchReady]);
+  const [activeQueueTab, setActiveQueueTab] = useState<'queue' | 'history' | 'match_ready'>('queue');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Expanded Zoom Photo Modal
   const [zoomPhotoUrl, setZoomPhotoUrl] = useState<string | null>(null);
 
-  const displayList = activeQueueTab === 'queue' ? queue : intakeHistory;
+  const displayList = activeQueueTab === 'queue' ? queue : activeQueueTab === 'match_ready' ? matchReadyList : intakeHistory;
   const selectedOrder = displayList.find((o) => o.id === selectedOrderId) || displayList[0] || null;
 
   return (
@@ -113,12 +115,34 @@ export default function CentralIntakePage() {
                   >
                     History ({intakeHistory.length})
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveQueueTab('match_ready'); setSelectedOrderId(null); }}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 'bold',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: activeQueueTab === 'match_ready' ? 'var(--color-gold)' : 'rgba(255,255,255,0.06)',
+                      color: activeQueueTab === 'match_ready' ? '#0f172a' : '#94a3b8',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Match-Ready ({matchReadyList.filter((o) => o.status === 'match_ready_check').length})
+                  </button>
                 </div>
 
                 <div className={styles.queueHeader}>
-                  <span>{activeQueueTab === 'queue' ? 'Awaiting Intake' : 'Processed Intake'}</span>
-                  <Badge variant={activeQueueTab === 'queue' ? 'warning' : 'delivered'}>
-                    {activeQueueTab === 'queue' ? `${queue.length} Ready` : `${todayIntakeCount} Today`}
+                  <span>{activeQueueTab === 'queue' ? 'Awaiting Intake' : activeQueueTab === 'match_ready' ? 'At the Plant / In the Check' : 'Processed Intake'}</span>
+                  <Badge variant={activeQueueTab === 'history' ? 'delivered' : 'warning'}>
+                    {activeQueueTab === 'queue'
+                      ? `${queue.length} Ready`
+                      : activeQueueTab === 'match_ready'
+                        ? `${matchReadyList.filter((o) => o.status === 'match_ready_check').length} In Check`
+                        : `${todayIntakeCount} Today`}
                   </Badge>
                 </div>
 
@@ -143,7 +167,9 @@ export default function CentralIntakePage() {
                     <p style={{ fontSize: 'var(--text-xs)', color: '#cbd5e1', lineHeight: '1.5' }}>
                       {activeQueueTab === 'queue'
                         ? 'No incoming bags awaiting intake. Bags will appear here as soon as drivers confirm pickup.'
-                        : 'No orders processed through intake yet today.'}
+                        : activeQueueTab === 'match_ready'
+                          ? 'No orders at the plant or waiting for their Match-Ready Check.'
+                          : 'No orders processed through intake yet today.'}
                     </p>
                   ) : (
                     displayList.map((order) => {
@@ -181,6 +207,16 @@ export default function CentralIntakePage() {
                   <div style={{ padding: '60px', textAlign: 'center', background: '#1e293b', borderRadius: 'var(--radius-2xl)', color: '#F87171' }}>
                     <strong style={{ display: 'block', fontSize: 'var(--text-base)', marginBottom: '8px' }}>Queue Authorization Blocked</strong>
                     {(error as Error).message}
+                  </div>
+                ) : selectedOrder && activeQueueTab === 'match_ready' ? (
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ color: '#ffffff' }}>
+                      <strong style={{ fontSize: '18px' }}>#{selectedOrder.order_number || selectedOrder.id.slice(0, 8)}</strong>{' '}
+                      <span style={{ color: '#cbd5e1' }}>
+                        {selectedOrder.customer?.full_name || 'Customer'} • {selectedOrder.status === 'match_ready_check' ? 'In the Match-Ready Check' : 'At the plant'}
+                      </span>
+                    </div>
+                    <MatchReadyChecklist key={selectedOrder.id} orderId={selectedOrder.id} phase="return" />
                   </div>
                 ) : selectedOrder ? (
                   <IntakeTicketWorkspace

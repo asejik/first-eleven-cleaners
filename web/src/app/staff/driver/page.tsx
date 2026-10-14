@@ -27,6 +27,9 @@ export default function DriverPage() {
   const [photoNote, setPhotoNote] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  // Match-Ready item 11 at the door (client 2026-10-14)
+  const [sealed, setSealed] = useState(false);
+  const isDelivery = selectedOrder?.type !== 'pickup' && selectedOrder?.type !== 'no_show';
   const [isUploading, setIsUploading] = useState(false);
 
   // Expanded Zoom Photo Modal
@@ -94,6 +97,7 @@ export default function DriverPage() {
         action: actionType,
         order_id: selectedOrder.id,
         photo_url: finalPhotoUrl,
+        ...(actionType === 'delivery_complete' ? { sealed } : {}),
         notes:
           photoNote ||
           (selectedOrder.type === 'pickup' ? 'Contactless porch pickup verified' : selectedOrder.type === 'no_show' ? 'Bag not out at pickup' : 'Delivered to porch'),
@@ -112,6 +116,7 @@ export default function DriverPage() {
       setPhotoNote('');
       setPhotoPreview(null);
       setPhotoFile(null);
+      setSealed(false);
     } catch (err: unknown) {
       addToast({
         type: 'error',
@@ -458,7 +463,7 @@ export default function DriverPage() {
           {/* Photo Proof Confirmation Modal */}
           <Modal
             isOpen={Boolean(selectedOrder)}
-            onClose={() => setSelectedOrder(null)}
+            onClose={() => { setSelectedOrder(null); setSealed(false); }}
             title={selectedOrder?.type === 'pickup' ? '📸 Verify Contactless Pickup' : selectedOrder?.type === 'no_show' ? '🚫 Bag Not Out' : '✅ Verify Drop-Off Proof'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -509,6 +514,13 @@ export default function DriverPage() {
                 />
               </div>
 
+              {isDelivery && (
+                <label style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: 'var(--text-sm)', color: 'var(--color-navy)', fontWeight: 600 }}>
+                  <input type="checkbox" checked={sealed} onChange={(e) => setSealed(e.target.checked)} style={{ marginTop: '3px' }} />
+                  <span>11. Sealed in the First Eleven bag, delivery photo taken</span>
+                </label>
+              )}
+
               {!photoPreview && (
                 <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #f87171', borderRadius: 'var(--radius-md)', color: '#b91c1c', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
                   📸 A photo snapshot is strictly required to verify this stop before you can confirm.
@@ -516,14 +528,14 @@ export default function DriverPage() {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-                <Button variant="ghost" onClick={() => setSelectedOrder(null)}>
+                <Button variant="ghost" onClick={() => { setSelectedOrder(null); setSealed(false); }}>
                   Cancel
                 </Button>
                 <Button
                   variant="primary"
                   onClick={handleExecuteAction}
                   isLoading={driverAction.isPending || isUploading}
-                  disabled={driverAction.isPending || isUploading || !photoPreview}
+                  disabled={driverAction.isPending || isUploading || !photoPreview || (isDelivery && !sealed)}
                 >
                   {isUploading ? 'Uploading & Securing...' : (selectedOrder?.type === 'pickup' ? 'Confirm Pickup & Send SMS' : selectedOrder?.type === 'no_show' ? 'Record No-Show & Tell Customer' : 'Complete Delivery & Send SMS')}
                 </Button>

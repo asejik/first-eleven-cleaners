@@ -45,7 +45,7 @@ vi.mock('@/lib/messaging', () => ({ messagingService: { dispatchStageNotificatio
 
 import { GET } from '@/app/api/mission-control/route';
 
-const ACTIVE = ['booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'out_for_delivery'];
+const ACTIVE = ['booked', 'picked_up', 'weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery'];
 
 beforeEach(() => {
   calls.length = 0;

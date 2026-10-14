@@ -223,7 +223,7 @@ export default function DashboardPage() {
                             )}
                             <Badge
                               variant={
-                                order.status === 'in_cleaning'
+                                order.status === 'in_cleaning' || order.status === 'match_ready_check'
                                   ? 'cleaning'
                                   : order.status === 'out_for_delivery'
                                   ? 'out_for_delivery'

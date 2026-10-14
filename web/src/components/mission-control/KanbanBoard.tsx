@@ -216,6 +216,15 @@ export function KanbanBoard({
 
                         <PaymentStateBadge order={o} />
 
+                        {/* Plant ticket and the owner's Match-Ready override (client 2026-10-14) */}
+                        {(o.plant_ticket_number || o.match_ready_override_reason) && (
+                          <p style={{ fontSize: 'var(--text-2xs)', color: '#cbd5e1', margin: '0 0 6px' }}>
+                            {o.plant_ticket_number && <>🧾 Plant #{o.plant_ticket_number}</>}
+                            {o.plant_ticket_number && o.match_ready_override_reason && ' • '}
+                            {o.match_ready_override_reason && <span title={o.match_ready_override_reason}>⚠️ Check overridden</span>}
+                          </p>
+                        )}
+
                         {o.payment_status === 'failed' && (onRetryCharge || onMarkPaid) && (
                           <div style={{ display: 'flex', gap: '6px', margin: '0 0 6px' }}>
                             {onRetryCharge && (

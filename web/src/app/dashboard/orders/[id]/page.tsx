@@ -138,7 +138,7 @@ export default function OrderDetailPage() {
               variant={
                 order.status === 'delivered'
                   ? 'delivered'
-                  : order.status === 'in_cleaning'
+                  : order.status === 'in_cleaning' || order.status === 'match_ready_check'
                   ? 'cleaning'
                   : order.status === 'out_for_delivery'
                   ? 'out_for_delivery'

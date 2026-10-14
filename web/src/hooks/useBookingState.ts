@@ -198,6 +198,16 @@ export function useBookingState() {
     setAppliedPromo({ code, discount_type: 'referral', discount_value: 15 });
   }, []);
 
+  // A field rep's code (client 2026-10-14): typed on Review, or from a rep's card (/book?rep=CODE)
+  const [repCode, setRepCode] = useState('');
+  useEffect(() => {
+    const rep = new URLSearchParams(window.location.search).get('rep');
+    const code = rep ? rep.toUpperCase().replace(/[^0-9A-Z-]/g, '').slice(0, 20) : '';
+    if (!code) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the URL after hydration
+    setRepCode(code);
+  }, []);
+
   // Step 5: Card Simulator
   const [cardNumber, setCardNumber] = useState('•••• •••• •••• 4242');
   const [cardExpiry, setCardExpiry] = useState('12/28');
@@ -470,6 +480,7 @@ export function useBookingState() {
       }
       const payload = {
         idempotency_key: checkoutKeyRef.current ?? undefined,
+        rep_code: repCode.trim() || null,
         customer: { full_name: fullName, email, phone },
         address: { street, unit, city, state: 'TX', zip, delivery_notes: deliveryNotes },
         services: {
@@ -630,6 +641,8 @@ export function useBookingState() {
     setRoutineTermsAccepted,
     isRoutineMember,
     maxPickupDate,
+    repCode,
+    setRepCode,
     handleCompleteBooking,
   };
 }

@@ -9,6 +9,7 @@ import { priceIntakeLine, quoteBandMaxCents } from '@/lib/intake-quote';
 import type { Order } from '@/types';
 import styles from '@/app/mission-control/intake/page.module.css';
 import { prepareImageForUpload } from '@/lib/image-upload';
+import { MatchReadyChecklist } from './MatchReadyChecklist';
 
 export interface IntakeTicketWorkspaceProps {
   order: Order;
@@ -184,6 +185,7 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
 
   const isAlreadyFinalized =
     order.status === 'in_cleaning' ||
+    order.status === 'match_ready_check' ||
     order.status === 'out_for_delivery' ||
     order.status === 'delivered';
 
@@ -433,6 +435,9 @@ export function IntakeTicketWorkspace({ order, onIntakeCompleted, onZoomPhoto }:
           )}
         </div>
       )}
+
+      {/* Match-Ready Check items 1-5, when the bag comes in (client 2026-10-14) */}
+      <MatchReadyChecklist orderId={order.id} phase="intake" />
 
       {/* Garment Passport Multi-Angle Photos */}
       <div className={styles.sectionCard}>

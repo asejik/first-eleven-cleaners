@@ -270,6 +270,8 @@ export type Database = {
           sms_consent_at: string | null;
           square_customer_id: string | null;
           phone_verified_at: string | null;
+          rep_code: string | null;
+          rep_code_at: string | null;
         };
         Insert: {
           id?: string;
@@ -285,6 +287,8 @@ export type Database = {
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
           phone_verified_at?: string | null;
+          rep_code?: string | null;
+          rep_code_at?: string | null;
         };
         Update: {
           id?: string;
@@ -300,6 +304,8 @@ export type Database = {
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
           phone_verified_at?: string | null;
+          rep_code?: string | null;
+          rep_code_at?: string | null;
         };
         Relationships: [];
       };
@@ -964,6 +970,71 @@ export type Database = {
         };
         Relationships: [];
       };
+      match_ready_checks: {
+        Row: {
+          id: string;
+          order_id: string;
+          item: number;
+          note: string | null;
+          done_by: string | null;
+          done_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          item: number;
+          note?: string | null;
+          done_by?: string | null;
+          done_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          item?: number;
+          note?: string | null;
+          done_by?: string | null;
+          done_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'match_ready_checks_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      reps: {
+        Row: {
+          code: string;
+          territory_id: string;
+          rep_name: string;
+          active: boolean;
+          created_by: string | null;
+          created_at: string;
+          deactivated_at: string | null;
+        };
+        Insert: {
+          code: string;
+          territory_id: string;
+          rep_name: string;
+          active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          deactivated_at?: string | null;
+        };
+        Update: {
+          code?: string;
+          territory_id?: string;
+          rep_name?: string;
+          active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          deactivated_at?: string | null;
+        };
+        Relationships: [];
+      };
       waitlist: {
         Row: {
           id: string;
@@ -1139,6 +1210,12 @@ export type Database = {
           referral_code: string | null;
           referral_discount: number;
           credit_applied: number;
+          match_ready_intake_exempt: boolean;
+          match_ready_override_reason: string | null;
+          match_ready_override_by: string | null;
+          match_ready_override_at: string | null;
+          plant_ticket_number: string | null;
+          rep_code: string | null;
         };
         Insert: {
           id?: string;
@@ -1195,6 +1272,12 @@ export type Database = {
           referral_code?: string | null;
           referral_discount?: number;
           credit_applied?: number;
+          match_ready_intake_exempt?: boolean;
+          match_ready_override_reason?: string | null;
+          match_ready_override_by?: string | null;
+          match_ready_override_at?: string | null;
+          plant_ticket_number?: string | null;
+          rep_code?: string | null;
         };
         Update: {
           id?: string;
@@ -1251,6 +1334,12 @@ export type Database = {
           referral_code?: string | null;
           referral_discount?: number;
           credit_applied?: number;
+          match_ready_intake_exempt?: boolean;
+          match_ready_override_reason?: string | null;
+          match_ready_override_by?: string | null;
+          match_ready_override_at?: string | null;
+          plant_ticket_number?: string | null;
+          rep_code?: string | null;
         };
         Relationships: [
           {

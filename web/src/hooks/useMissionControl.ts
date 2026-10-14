@@ -86,7 +86,12 @@ export function useAdvanceOrderStage() {
         body: JSON.stringify({ action: 'advance_stage', ...payload }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to advance order stage');
+      if (!res.ok) {
+        // The Match-Ready Check isn't finished: the owner may override it with a reason (2026-10-14)
+        throw Object.assign(new Error(data.error || 'Failed to advance order stage'), {
+          requiresMatchReadyOverride: Boolean(data.requires_match_ready_override),
+        });
+      }
       return data;
     },
     onSuccess: () => {
@@ -95,6 +100,17 @@ export function useAdvanceOrderStage() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
+}
+
+/** The owner sends an order out without a finished Match-Ready Check: a reason, logged (client 2026-10-14). */
+export async function overrideMatchReady(orderId: string, reason: string): Promise<void> {
+  const res = await fetch('/api/mission-control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'match_ready_override', order_id: orderId, override_reason: reason }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'The override was not saved.');
 }
 
 /** Payment Hold recovery (PR-04): retry the saved card, or record a Square Dashboard payment. */

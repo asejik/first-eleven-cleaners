@@ -1,18 +1,19 @@
 import { test, expect, skipCookieBanner } from './fixtures';
 
 // Journey 3: tracking link (P05 AR-04, AR-10, AR-13). Mock order ord-001 is In Cleaning.
-const STAGES = ['Booked', 'Picked Up', 'Weighed & Itemized', 'In Cleaning', 'Out for Delivery', 'Delivered'];
+// The Match-Ready Check is a stage of its own (client 2026-10-14)
+const STAGES = ['Booked', 'Picked Up', 'Weighed & Itemized', 'In Cleaning', 'Match-Ready Check', 'Out for Delivery', 'Delivered'];
 
 test.describe('Order tracking', () => {
   test.beforeEach(async ({ page }) => {
     await skipCookieBanner(page);
   });
 
-  test('an active order shows the six stages and no Cancelled step', async ({ page }) => {
+  test('an active order shows the seven stages and no Cancelled step', async ({ page }) => {
     await page.goto('/track/ord-001');
     await expect(page.getByRole('heading', { name: 'Live Garment Tracker' })).toBeVisible();
     for (const stage of STAGES) await expect(page.getByText(stage, { exact: true }).first()).toBeVisible();
-    await expect(page.locator('[class*="stageTitle"]')).toHaveCount(6);
+    await expect(page.locator('[class*="stageTitle"]')).toHaveCount(7);
     await expect(page.locator('[class*="stageTitle"]', { hasText: 'Cancelled' })).toHaveCount(0);
   });
 

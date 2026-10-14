@@ -12,7 +12,9 @@ import type { OrderStatusKey } from '@/lib/constants';
 const MISSION_CONTROL_TRANSITIONS: Partial<Record<OrderStatusKey, OrderStatusKey[]>> = {
   booked: ['picked_up', 'cancelled'],
   weighed_itemized: ['in_cleaning'],
-  in_cleaning: ['out_for_delivery'],
+  // Back from the plant, every order gets the Match-Ready Check (client 2026-10-14)
+  in_cleaning: ['match_ready_check'],
+  match_ready_check: ['out_for_delivery'],
   out_for_delivery: ['delivered'],
 };
 
@@ -24,6 +26,7 @@ export const ORDER_STATUS_KEYS = [
   'picked_up',
   'weighed_itemized',
   'in_cleaning',
+  'match_ready_check',
   'out_for_delivery',
   'delivered',
   'cancelled',

@@ -10,15 +10,21 @@ import { Button, Input, Card, ButtonLink } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { ROUTES, PROMO_CODE_LAUNCH, PROMO_DISCOUNT_PERCENT } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
+import { RepCodeField } from '@/components/booking/RepCodeField';
 import styles from './page.module.css';
 
 // The account link in a guest's confirmation email carries their email (P05 AR-14)
-function EmailFromLink({ onEmail }: { onEmail: (email: string) => void }) {
+// A rep's card can link here with their code (/signup?rep=1D-W1-JM, client 2026-10-14)
+function EmailFromLink({ onEmail, onRep }: { onEmail: (email: string) => void; onRep: (code: string) => void }) {
   const searchParams = useSearchParams();
   const linkedEmail = searchParams.get('email');
+  const linkedRep = searchParams.get('rep');
   useEffect(() => {
     if (linkedEmail) onEmail(linkedEmail);
   }, [linkedEmail, onEmail]);
+  useEffect(() => {
+    if (linkedRep) onRep(linkedRep.toUpperCase().replace(/[^0-9A-Z-]/g, '').slice(0, 20));
+  }, [linkedRep, onRep]);
   return null;
 }
 
@@ -30,6 +36,8 @@ export default function SignupPage() {
   const [smsConsent, setSmsConsent] = useState(false);
   const [smsPromotionsConsent, setSmsPromotionsConsent] = useState(false);
   const [password, setPassword] = useState('');
+  const [repCode, setRepCode] = useState('');
+  const prefillRep = useCallback((code: string) => setRepCode((current) => current || code), []);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
@@ -68,7 +76,7 @@ export default function SignupPage() {
       await fetch('/api/auth/welcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: fullName, email }),
+        body: JSON.stringify({ name: fullName, email, rep_code: repCode.trim() || null }),
         keepalive: true,
       });
     } catch (triggerErr) {
@@ -132,7 +140,7 @@ export default function SignupPage() {
         )}
 
         <Suspense fallback={null}>
-          <EmailFromLink onEmail={prefillEmail} />
+          <EmailFromLink onEmail={prefillEmail} onRep={prefillRep} />
         </Suspense>
 
         <form onSubmit={handleSubmit} className={styles.form}>
@@ -184,6 +192,8 @@ export default function SignupPage() {
             required
             autoComplete="new-password"
           />
+
+          <RepCodeField id="signup-rep-code" value={repCode} onChange={setRepCode} />
 
           <Button type="submit" variant="primary" fullWidth isLoading={isSubmitting} size="lg">
             Create Account & Get 15% Off

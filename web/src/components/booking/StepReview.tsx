@@ -6,6 +6,7 @@ import { isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
 import { draftToLine, instructionText, type AlterationDraft } from '@/lib/alterations';
 import styles from '@/app/book/page.module.css';
 import type { AppliedPromo } from '@/lib/promo';
+import { RepCodeField } from './RepCodeField';
 
 /** "15%" for percentage codes, "$5.00" for fixed-dollar codes (P05 AR-02) */
 function promoLabel(promo: AppliedPromo): string {
@@ -37,6 +38,9 @@ interface StepReviewProps {
   handleApplyPromo: () => void;
   /** Why a pre-applied code was removed (e.g. a first-order code already used) */
   promoNotice?: string | null;
+  /** A field rep's code, optional (client 2026-10-14) */
+  repCode?: string;
+  setRepCode?: (val: string) => void;
   subtotal: number;
   discountAmount: number;
   discountPercent: number;
@@ -81,6 +85,8 @@ export function StepReview({
   appliedPromo,
   handleApplyPromo,
   promoNotice = null,
+  repCode = '',
+  setRepCode,
   subtotal,
   discountAmount,
   discountPercent,
@@ -254,6 +260,11 @@ export function StepReview({
             <p className={styles.promoNotice} role="status">
               {promoNotice}
             </p>
+          )}
+          {setRepCode && (
+            <div style={{ marginTop: 'var(--space-3)' }}>
+              <RepCodeField id="rep-code-input" value={repCode} onChange={setRepCode} />
+            </div>
           )}
         </div>
 
