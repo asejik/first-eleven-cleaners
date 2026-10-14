@@ -1038,6 +1038,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      message_sends: {
+        Row: {
+          id: string;
+          message_key: string;
+          variant: string;
+          customer_id: string | null;
+          order_id: string | null;
+          channel: string | null;
+          target_url: string | null;
+          sent_at: string;
+          tapped_at: string | null;
+          tap_count: number;
+          booked_order_id: string | null;
+          booked_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          message_key: string;
+          variant: string;
+          customer_id?: string | null;
+          order_id?: string | null;
+          channel?: string | null;
+          target_url?: string | null;
+          sent_at?: string;
+          tapped_at?: string | null;
+          tap_count?: number;
+          booked_order_id?: string | null;
+          booked_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          message_key?: string;
+          variant?: string;
+          customer_id?: string | null;
+          order_id?: string | null;
+          channel?: string | null;
+          target_url?: string | null;
+          sent_at?: string;
+          tapped_at?: string | null;
+          tap_count?: number;
+          booked_order_id?: string | null;
+          booked_at?: string | null;
+        };
+        Relationships: [];
+      };
       waitlist: {
         Row: {
           id: string;

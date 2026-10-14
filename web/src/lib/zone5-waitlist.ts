@@ -5,6 +5,7 @@ import { earliestExtendedReachRun, nextExtendedReachRun, type Coverage } from '@
 import { sendContactMessage, type ContactResult } from '@/lib/messaging/contact';
 import { reportError } from '@/lib/error-reporting';
 import { getZone5Messages } from '@/lib/zone5-message-settings';
+import { pickMessage, recordSendChannel } from '@/lib/message-tests-store';
 import { fillZone5Template, shortRunDate, templateCity, templateFirstName } from '@/lib/zone5-messages';
 
 /**
@@ -22,19 +23,30 @@ interface WaitlistContact {
   sms_consent?: boolean | null;
 }
 
-export async function sendWaitlistJoined(entry: WaitlistContact): Promise<ContactResult> {
+/** Version A, or a version B being A/B tested (client 2026-10-14), for someone on the waitlist. */
+async function pickWaitlistMessage(supabase: AdminClient | undefined, key: 'waitlistJoined' | 'zone5Open', entry: WaitlistContact, zone5A: string) {
+  const bookUrl = `${getAppBaseUrl()}/book`;
+  const recipient = (entry.email || entry.phone || '').trim().toLowerCase();
+  if (!supabase || !recipient) return { text: zone5A, link: bookUrl, sendId: null };
+  return pickMessage(supabase, { key, recipient, targetUrl: bookUrl, zone5A });
+}
+
+export async function sendWaitlistJoined(entry: WaitlistContact, supabase?: AdminClient): Promise<ContactResult> {
   const messages = await getZone5Messages();
-  return sendContactMessage({
+  const picked = await pickWaitlistMessage(supabase, 'waitlistJoined', entry, messages.waitlistJoined);
+  const result = await sendContactMessage({
     phone: entry.phone,
     email: entry.email,
     smsConsent: Boolean(entry.sms_consent),
     title: "You're on the First Eleven waitlist",
-    body: fillZone5Template(messages.waitlistJoined, {
+    body: fillZone5Template(picked.text, {
       'First name': templateFirstName(entry.full_name),
       City: templateCity(entry.city),
-      link: `${getAppBaseUrl()}/book`,
+      link: picked.link,
     }),
   });
+  if (supabase) await recordSendChannel(supabase, picked.sendId, result.ok ? result.channel : 'none');
+  return result;
 }
 
 /**
@@ -65,19 +77,21 @@ export async function announceZone5Open(supabase: AdminClient, coverage: Coverag
       .is('notified_at', null)
       .select('id');
     if (!claimed || claimed.length === 0) continue;
+    const picked = await pickWaitlistMessage(supabase, 'zone5Open', entry, messages.zone5Open);
     const result = await sendContactMessage({
       phone: entry.phone,
       email: entry.email,
       smsConsent: entry.sms_consent,
       title: 'Extended Reach now serves your area',
-      body: fillZone5Template(messages.zone5Open, {
+      body: fillZone5Template(picked.text, {
         'First name': templateFirstName(entry.full_name),
         City: templateCity(entry.city),
         date: shortRunDate(firstRun),
         'date+7': shortRunDate(nextExtendedReachRun(firstRun, reach)),
-        link: `${getAppBaseUrl()}/book`,
+        link: picked.link,
       }),
     });
+    await recordSendChannel(supabase, picked.sendId, result.ok ? result.channel : 'none');
     if (result.ok) told += 1;
     else reportError('zone5-waitlist/open', result.error, { details: `Waitlist ${entry.id}: "Zone 5 now open" not sent` });
   }

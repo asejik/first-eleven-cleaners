@@ -54,6 +54,7 @@ import { claimFounding, founderStatus, planDiscountFor, FOUNDER_HEAD_START_DAYS 
 import { checkReferralForBooking, recordReferral, referrerForCode, REFERRAL_AMOUNT } from '@/lib/referrals';
 import { findActiveRep, stampRepCode } from '@/lib/reps';
 import { orderTwoDiscountFor } from '@/lib/order-two';
+import { recordBookingForMessages } from '@/lib/message-tests-store';
 
 const BookingSchema = z.object({
   customer: z.object({
@@ -858,6 +859,9 @@ export async function POST(request: Request) {
               await supabase.from('orders').update({ referral_code: referral.code, referral_discount: REFERRAL_AMOUNT }).eq('id', insertedOrder.id);
               await recordReferral(supabase, { referrerId: referral.referrerId, referredId: customerId, orderId: insertedOrder.id, code: referral.code });
             }
+
+            // A booking within 7 days of a tested message counts for its version (client 2026-10-14)
+            await recordBookingForMessages(supabase, customerId, insertedOrder.id);
 
             // Order two's automatic $10, kept apart from promo codes for the Growth Panel (2026-10-14)
             if (orderTwoDiscount > 0) {

@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       const { error } = await createAdminClient().from('waitlist').insert(row);
       if (error) throw error;
       runAfterResponse(async () => {
-        const sent = await sendWaitlistJoined(row);
+        const sent = await sendWaitlistJoined(row, createAdminClient());
         if (!sent.ok) console.warn(`[waitlist] Welcome message not sent (${sent.channel}): ${sent.error}`);
       }, 'waitlist message');
     }
