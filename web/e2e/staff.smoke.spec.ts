@@ -15,7 +15,7 @@ test.describe('Staff tools', () => {
     await expect(page.getByRole('heading', { name: 'Central Intake Station' })).toBeVisible();
   });
 
-  test('Mission Control board, with no test-SMS control or Growth tab', async ({ page }) => {
+  test('Mission Control board, with no test-SMS control or B2B Accounts tab', async ({ page }) => {
     await signInAs(page, 'admin');
     await page.goto('/mission-control');
     await expect(page.getByRole('heading', { name: 'Mission Control Ops' })).toBeVisible();
@@ -23,5 +23,9 @@ test.describe('Staff tools', () => {
     await page.getByRole('button', { name: /Messaging Dispatch/ }).click();
     await expect(page.getByRole('heading', { name: /Message Log/ })).toBeVisible();
     await expect(page.getByText('Test SMS/WhatsApp')).toHaveCount(0);
+    // The order-two rate (client 2026-10-14)
+    await page.getByRole('button', { name: /Growth/ }).click();
+    await expect(page.getByRole('heading', { name: /Order two in 21 days/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /By week/ })).toBeVisible();
   });
 });

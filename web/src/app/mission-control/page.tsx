@@ -30,6 +30,7 @@ import { TerritoriesPanel } from '@/components/mission-control/TerritoriesPanel'
 import { RepsPanel } from '@/components/mission-control/RepsPanel';
 import { RepPayoutsPanel } from '@/components/mission-control/RepPayoutsPanel';
 import { MessageTestsPanel } from '@/components/mission-control/MessageTestsPanel';
+import { OrderTwoPanel } from '@/components/mission-control/OrderTwoPanel';
 import { TierDownPanel } from '@/components/mission-control/TierDownPanel';
 
 const STAGES: OrderStatusKey[] = [
@@ -43,7 +44,7 @@ const STAGES: OrderStatusKey[] = [
 ];
 
 export default function MissionControlPage() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'dispatch' | 'express' | 'zones' | 'routine' | 'messages'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'financials' | 'roster' | 'claims' | 'dispatch' | 'express' | 'zones' | 'routine' | 'messages' | 'order_two'>('pipeline');
   const [pipelineSubView, setPipelineSubView] = useState<'board' | 'archive'>('board');
   const { data, isLoading, refetch } = useMissionControl();
   const advanceStage = useAdvanceOrderStage();
@@ -302,6 +303,7 @@ To send it out anyway, type the reason for the override (it is logged):`);
                   { id: 'claims', label: '🛡️ Claims Queue', count: claims.length },
                   { id: 'dispatch', label: '📡 Messaging Dispatch' },
                   { id: 'messages', label: '🧪 Message Tests' },
+                  { id: 'order_two', label: '📈 Growth' },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -502,6 +504,9 @@ To send it out anyway, type the reason for the override (it is logged):`);
 
               {/* A/B message tests (client 2026-10-14) */}
               {activeTab === 'messages' && <MessageTestsPanel />}
+
+              {/* The order-two rate (client 2026-10-14) */}
+              {activeTab === 'order_two' && <OrderTwoPanel />}
             </>
           )}
 
