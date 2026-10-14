@@ -270,6 +270,7 @@ export type Database = {
           sms_consent_at: string | null;
           square_customer_id: string | null;
           phone_verified_at: string | null;
+          order_two_nudged_at: string | null;
           rep_code: string | null;
           rep_code_at: string | null;
         };
@@ -287,6 +288,7 @@ export type Database = {
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
           phone_verified_at?: string | null;
+          order_two_nudged_at?: string | null;
           rep_code?: string | null;
           rep_code_at?: string | null;
         };
@@ -304,6 +306,7 @@ export type Database = {
           sms_consent_at?: string | null;
           square_customer_id?: string | null;
           phone_verified_at?: string | null;
+          order_two_nudged_at?: string | null;
           rep_code?: string | null;
           rep_code_at?: string | null;
         };
@@ -1215,6 +1218,7 @@ export type Database = {
           match_ready_override_by: string | null;
           match_ready_override_at: string | null;
           plant_ticket_number: string | null;
+          order_two_discount: number;
           rep_code: string | null;
         };
         Insert: {
@@ -1277,6 +1281,7 @@ export type Database = {
           match_ready_override_by?: string | null;
           match_ready_override_at?: string | null;
           plant_ticket_number?: string | null;
+          order_two_discount?: number;
           rep_code?: string | null;
         };
         Update: {
@@ -1339,6 +1344,7 @@ export type Database = {
           match_ready_override_by?: string | null;
           match_ready_override_at?: string | null;
           plant_ticket_number?: string | null;
+          order_two_discount?: number;
           rep_code?: string | null;
         };
         Relationships: [

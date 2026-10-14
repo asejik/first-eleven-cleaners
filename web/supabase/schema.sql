@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS customers (
   sms_consent_at TIMESTAMPTZ,
   square_customer_id VARCHAR(255), -- Square customer holding saved cards (SEC-06)
   phone_verified_at TIMESTAMPTZ, -- the owner proved the phone with a texted code (20261008_routine_and_passwordless)
+  order_two_nudged_at TIMESTAMPTZ, -- the Day 6 "order two" nudge went out (20261015)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -156,6 +157,7 @@ CREATE TABLE IF NOT EXISTS orders (
   match_ready_override_by VARCHAR(255),
   match_ready_override_at TIMESTAMPTZ,
   plant_ticket_number VARCHAR(40), -- the plant's own ticket (20261014)
+  order_two_discount NUMERIC(10, 2) NOT NULL DEFAULT 0, -- automatic $10 off order two (20261015)
   -- rep_code (FK to reps) is added after reps (20261014)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
