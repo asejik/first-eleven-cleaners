@@ -10,6 +10,8 @@ import { notifyOrderCustomer } from '@/lib/daily-jobs';
 import { windowText } from '@/lib/routine';
 import { getOpenMembership, zoneForTemplate } from '@/lib/routine-store';
 import { isOrderTwo, earlierPickups, ORDER_TWO_DISCOUNT } from '@/lib/order-two';
+import { fillMessage } from '@/lib/message-tests';
+import { pickMessage, recordBookingForMessages } from '@/lib/message-tests-store';
 
 /**
  * One-tap rebook (client 2026-10-14): "Delivered text gets a one-tap rebook: 'Book next week's
@@ -259,6 +261,8 @@ export async function bookRebook(supabase: AdminClient, orderId: string, coverag
   if (error || !result?.ok || !result.order) throw error || new Error(result?.error || 'create_booking refused the rebook');
 
   if (!result.replay) {
+    // A booking within 7 days of a tested message counts for its version (client 2026-10-14)
+    await recordBookingForMessages(supabase, last.customer_id, result.order.id, now);
     if (plan.orderTwoDiscount > 0) await supabase.from('orders').update({ order_two_discount: plan.orderTwoDiscount }).eq('id', result.order.id);
     const { data: customer } = await supabase.from('customers').select('full_name, phone, email').eq('id', last.customer_id).maybeSingle();
     await notifyOrderCustomer(
@@ -271,10 +275,14 @@ export async function bookRebook(supabase: AdminClient, orderId: string, coverag
   return { ok: true, order: result.order, replay: Boolean(result.replay), plan };
 }
 
-/** The delivered text's one-tap link, or nothing for a Routine member (their pickups are automatic). */
-export async function rebookLinkForDelivered(supabase: AdminClient, orderId: string, now: Date = new Date()): Promise<string | undefined> {
+/**
+ * The delivered text's "Book next week's pickup? [link]" line (A/B tested in Mission Control >
+ * Messaging), or nothing for a Routine member (their pickups are automatic).
+ */
+export async function rebookLineForDelivered(supabase: AdminClient, orderId: string, now: Date = new Date()): Promise<string | undefined> {
   const { data: order } = await supabase.from('orders').select('id, customer_id, routine_membership_id').eq('id', orderId).maybeSingle();
   if (!order || order.routine_membership_id) return undefined;
   if (await getOpenMembership(supabase, order.customer_id)) return undefined;
-  return rebookUrl(order.id, now);
+  const picked = await pickMessage(supabase, { key: 'delivered_rebook', recipient: order.customer_id, customerId: order.customer_id, orderId: order.id, targetUrl: rebookUrl(order.id, now) });
+  return fillMessage(picked.text, { link: picked.link });
 }

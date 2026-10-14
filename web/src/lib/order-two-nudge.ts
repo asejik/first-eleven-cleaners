@@ -1,12 +1,13 @@
 import type { createAdminClient } from '@/lib/supabase/admin';
 import { addDaysToDate, texasDate, texasDayStartUtc } from '@/lib/texas-time';
-import { ORDER_TWO_DISCOUNT } from '@/lib/constants';
 import { sendContactMessage } from '@/lib/messaging/contact';
 import { greetingFirstName } from '@/lib/sanitize';
 import { reportError } from '@/lib/error-reporting';
 import { earlierPickups } from '@/lib/order-two';
 import { rebookUrl } from '@/lib/rebook';
 import { getOpenMembership } from '@/lib/routine-store';
+import { fillMessage } from '@/lib/message-tests';
+import { pickMessage, recordSendChannel } from '@/lib/message-tests-store';
 
 /**
  * The Day 6 nudge (client 2026-10-14): "Day 6 after first delivery, if no second order: Eleven
@@ -20,9 +21,6 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 export const NUDGE_AFTER_DAYS = 6;
 const CATCH_UP_DAYS = 3;
 
-export function orderTwoNudgeText(fullName: string | null | undefined, link: string): string {
-  return `Eleven at First Eleven Cleaners: Hi ${greetingFirstName(fullName, 'there')}, ready for round two? Your next pickup is one tap away, and it's $${ORDER_TWO_DISCOUNT} off: ${link}. Reply STOP to opt out.`;
-}
 
 type Customer = { id: string; full_name: string | null; phone: string | null; email: string | null; sms_promotions_consent: boolean; order_two_nudged_at: string | null };
 type One<T> = T | T[] | null | undefined;
@@ -62,13 +60,16 @@ export async function sendOrderTwoNudges(supabase: AdminClient, now: Date = new 
         .is('order_two_nudged_at', null)
         .select('id');
       if (!claimed || claimed.length === 0) continue;
+      // The text can be A/B tested in Mission Control > Messaging (client 2026-10-14)
+      const picked = await pickMessage(supabase, { key: 'order_two_nudge', recipient: customer.id, customerId: customer.id, orderId: order.id, targetUrl: rebookUrl(order.id, now) });
       const result = await sendContactMessage({
         phone: customer.phone,
         email: customer.email,
         smsConsent: Boolean(customer.sms_promotions_consent),
         title: 'Ready for round two?',
-        body: orderTwoNudgeText(customer.full_name, rebookUrl(order.id, now)),
+        body: fillMessage(picked.text, { 'First name': greetingFirstName(customer.full_name, 'there'), link: picked.link }),
       });
+      await recordSendChannel(supabase, picked.sendId, result.ok ? result.channel : 'none');
       if (result.ok) sent += 1;
     } catch (err) {
       reportError('order-two/nudge', err, { details: `Order ${orderId}: Day 6 nudge not sent` });

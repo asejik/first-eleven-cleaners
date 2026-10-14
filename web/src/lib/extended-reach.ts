@@ -6,6 +6,7 @@ import { reportError } from '@/lib/error-reporting';
 import { getAppBaseUrl, extendedReachTurnaroundLine, type ExtendedReachConfig } from '@/lib/constants';
 import { getZone5Messages } from '@/lib/zone5-message-settings';
 import { getOrCreateReferralCode, referralLink } from '@/lib/referrals';
+import { pickMessage } from '@/lib/message-tests-store';
 import { fillZone5Template, shortRunDate, windowLabel, templateCity, templateFirstName, type Zone5MessageKey } from '@/lib/zone5-messages';
 import {
   extendedReachRunDates,
@@ -63,23 +64,29 @@ export async function sendRunMessage(
   supabase?: AdminClient
 ): Promise<void> {
   const messages = await getZone5Messages();
+  // Version A is Mission Control's wording; a version B can be A/B tested (client 2026-10-14)
+  const bookUrl = `${getAppBaseUrl()}/book`;
+  const picked =
+    supabase && order.customer_id
+      ? await pickMessage(supabase, { key, recipient: order.customer_id, customerId: order.customer_id, orderId: order.id, targetUrl: bookUrl, zone5A: messages[key] })
+      : { text: messages[key], link: bookUrl };
   // The customer's own Give $15 link, made only when the template asks for it (client 2026-10-11)
   let referral = '';
-  if (supabase && order.customer_id && messages[key].includes('[Referral link]')) {
+  if (supabase && order.customer_id && picked.text.includes('[Referral link]')) {
     try {
       referral = referralLink(await getOrCreateReferralCode(supabase, { id: order.customer_id, full_name: firstOf(order.customer)?.full_name }));
     } catch (err) {
       reportError('extended-reach/referral-link', err, { details: `Order ${order.id}: sent without the referral link` });
     }
   }
-  const text = fillZone5Template(messages[key], {
+  const text = fillZone5Template(picked.text, {
     'First name': templateFirstName(firstOf(order.customer)?.full_name),
     City: templateCity(firstOf(order.address)?.city),
     date: shortRunDate(runDate),
     'date+7': shortRunDate(nextRun),
     window: windowLabel(order.pickup_window),
     threshold: String(threshold),
-    link: `${getAppBaseUrl()}/book`,
+    link: picked.link,
     'Referral link': referral,
   });
   await notifyOrderCustomer(order, MESSAGE_TITLES[key], text, 'booked');

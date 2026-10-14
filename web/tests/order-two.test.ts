@@ -261,7 +261,7 @@ describe('One-tap rebook', () => {
 
   it("the delivered text asks \"Book next week's pickup?\" with the link", () => {
     const base = { orderId: 'o1', orderNumber: 'F11-1', customerName: 'Dana', customerPhone: '+12145550100', stage: 'delivered', trackingUrl: 'https://x.test/track/o1' };
-    expect(formatStageMessage({ ...base, rebookUrl: 'https://x.test/rebook/abc' } as never).smsBody).toContain("Book next week's pickup? https://x.test/rebook/abc");
+    expect(formatStageMessage({ ...base, rebookLine: "Book next week's pickup? https://x.test/m/abc" } as never).smsBody).toContain("Book next week's pickup? https://x.test/m/abc");
     expect(formatStageMessage(base as never).smsBody).toContain('Book your next pickup: https://x.test/book');
   });
 });
@@ -279,9 +279,11 @@ describe('The Day 6 nudge', () => {
     expect(contact).toHaveBeenCalledWith(
       expect.objectContaining({
         smsConsent: false,
-        body: expect.stringMatching(/^Eleven at First Eleven Cleaners: Hi Dana, ready for round two\? Your next pickup is one tap away, and it's \$10 off: \S+\/rebook\/\S+\. Reply STOP to opt out\.$/),
+        body: expect.stringMatching(/^Eleven at First Eleven Cleaners: Hi Dana, ready for round two\? Your next pickup is one tap away, and it's \$10 off: \S+\/m\/[0-9a-f-]{36}\. Reply STOP to opt out\.$/),
       })
     );
+    // The link is tracked (client 2026-10-14: sends, taps, bookings) and leads to the one-tap page
+    expect(db.message_sends).toEqual([expect.objectContaining({ message_key: 'order_two_nudge', variant: 'A', customer_id: 'cust-1', target_url: expect.stringContaining('/rebook/') })]);
     expect(db.customers[0].order_two_nudged_at).toBeTruthy();
     contact.mockClear();
     db.orders[0].customer = db.customers[0];
