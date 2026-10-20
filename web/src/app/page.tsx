@@ -7,6 +7,7 @@ import {
 import { getCoverage } from '@/lib/coverage-settings';
 import { FIFA_STATEMENT } from '@/lib/legal';
 import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
+import Link from 'next/link';
 import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
@@ -89,7 +90,7 @@ export default async function HomePage() {
               <div className={styles.stepIcon}>✨</div>
               <h3 className={styles.stepTitle}>We Clean With Care</h3>
               <p className={styles.stepDescription}>
-                Every garment photographed, tagged, and tracked. Dry cleaning,
+                Every garment photographed and tracked by order number in your Garment Passport. Dry cleaning,
                 wash & fold, pressing, stain treatment — handled by professionals.
               </p>
             </div>
@@ -120,6 +121,9 @@ export default async function HomePage() {
                 remediation at published per-garment rates.
               </p>
               <span className={styles.servicePrice}>{shirtPricesLine()}</span>
+              <Link href={ROUTES.pricing} className={styles.serviceLink}>
+                See the full price list →
+              </Link>
             </div>
 
             <div className={styles.serviceCard}>

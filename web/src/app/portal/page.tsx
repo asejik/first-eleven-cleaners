@@ -211,7 +211,7 @@ export default function CommercialPortalPage() {
           <div className={styles.kpiCard}>
             <span className={styles.kpiLabel}>Active Hampers</span>
             <h2 className={styles.kpiValue}>{stats?.active_hampers} Carts</h2>
-            <span className={styles.kpiSub}>RFID Geo-Tracked</span>
+            <span className={styles.kpiSub}>Tracked by order number</span>
           </div>
 
           <div className={styles.kpiCard}>

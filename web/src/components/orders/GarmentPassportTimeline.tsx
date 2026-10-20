@@ -124,7 +124,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
             <div className={styles.captionBox}>
               <span className={styles.captionTitle}>Condition Recorded at Central Scale</span>
               <p className={styles.captionNote}>
-                {primaryIntake?.condition_notes || 'Intake tags verified and pre-treated according to fabric care labels.'}
+                {primaryIntake?.condition_notes || 'Photographed at intake and pre-treated according to fabric care labels.'}
               </p>
               {primaryIntake?.captured_at && (
                 <span className={styles.timestamp}>

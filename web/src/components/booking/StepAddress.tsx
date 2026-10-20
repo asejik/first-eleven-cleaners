@@ -301,7 +301,7 @@ export function StepAddress({
                 </div>
               )}
               <p className={styles.extendedReachNote}>
-                ${extendedReach.minimumOrder.toFixed(0)} order minimum, plus the delivery fee. Tax and the environmental fee apply to the delivery fee like any line.
+                ${extendedReach.minimumOrder.toFixed(0)} order minimum, plus the delivery fee. The Environmental Service Fee and sales tax apply to the delivery fee like any line.
                 {' '}{extendedReach.turnaround}
                 {nextRun && (
                   <>

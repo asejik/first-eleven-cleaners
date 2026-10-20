@@ -276,7 +276,7 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
           parts.push(`${qty} Dress Shirts ($${cost.toFixed(2)})`);
         }
 
-        calcNote = `\n\n💡 **Instant Estimate for your items:**\n${parts.join(' + ')} = **$${estTotal.toFixed(2)}** before the environmental fee and tax *(pickup & delivery are free)*.`;
+        calcNote = `\n\n💡 **Instant Estimate for your items:**\n${parts.join(' + ')} = **$${estTotal.toFixed(2)}** before the Environmental Service Fee and tax *(pickup & delivery are free)*.`;
       }
 
       if (isSpanish) {

@@ -16,9 +16,9 @@ const money = (n: number) => `$${n.toFixed(2)}`;
 export const DRY_CLEANED_SHIRT_PRICE = DRY_CLEAN_PRICES.shirt_blouse.price;
 export const LAUNDERED_SHIRT_PRICE = DRY_CLEAN_PRICES.laundered_shirt.price;
 
-/** "Dry-cleaned shirts $8.99 · Laundered shirts $4.99" */
+/** The homepage shows shirts only, in the client's words (client 2026-10-20): "Shirts laundered $4.99 / dry-cleaned $8.99" */
 export function shirtPricesLine(): string {
-  return `Dry-cleaned shirts ${money(DRY_CLEANED_SHIRT_PRICE)} · Laundered shirts ${money(LAUNDERED_SHIRT_PRICE)}`;
+  return `Shirts laundered ${money(LAUNDERED_SHIRT_PRICE)} / dry-cleaned ${money(DRY_CLEANED_SHIRT_PRICE)}`;
 }
 
 /** The lowest order minimum across the Metroplex zones (Zone 1 today). */
@@ -48,7 +48,7 @@ const pct = (rate: number) => `${Number((rate * 100).toFixed(2))}%`;
 export const ENV_FEE_LABEL = `Environmental Service Fee (${pct(ENVIRONMENTAL_FEE_RATE)})`;
 export const SALES_TAX_LABEL = `Texas Sales Tax (${pct(TX_SALES_TAX_RATE)})`;
 export const ENV_FEE_NOTE =
-  'The Environmental Service Fee is a First Eleven Cleaners charge, not a government tax. It supports solvent recycling, water reclamation, and sustainable packaging.';
+  'The Environmental Service Fee is a First Eleven Cleaners charge, not a government tax. It supports solvent recycling, water reclamation, and sustainable packaging. Texas sales tax applies to it, as part of the sale.';
 
 /**
  * The failed pickup policy in one sentence, shown at booking (client review 2026-10-20, #11):

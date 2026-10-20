@@ -437,7 +437,7 @@ export function orderMinimumGap(
 
 // --- Taxes & Environmental Fees ---
 export const TX_SALES_TAX_RATE = 0.0825; // 8.25% Texas State & Local Sales Tax
-export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Sustainability Fee
+export const ENVIRONMENTAL_FEE_RATE = 0.03; // 3% Environmental Service Fee (a company fee; sales tax applies to it)
 export const FAILED_PICKUP_FEE = 15.00; // $15 Failed service attempt fee
 /** Cancelling or rescheduling under this many hours before the pickup window costs the failed-service fee (client 2026-10-08) */
 export const LATE_CANCEL_CUTOFF_HOURS = 2;
