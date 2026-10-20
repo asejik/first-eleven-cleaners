@@ -90,7 +90,7 @@ export function StepConfirmation({
           ))}
         </div>
         <p className={styles.trackerNote}>
-          📱 We will send SMS and WhatsApp updates with driver ETA and photo receipts at each milestone.
+          📱 We will send text and email updates with photo receipts at each milestone.
         </p>
       </div>
 

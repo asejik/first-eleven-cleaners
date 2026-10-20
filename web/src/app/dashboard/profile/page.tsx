@@ -99,7 +99,8 @@ function ProfileEditorForm({
           <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-bold)', color: 'var(--color-navy)' }}>
             Notification Channel
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          {/* Text or email only; the third channel isn't switched on (client review 2026-10-20, #10) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
             <button
               type="button"
               onClick={() => setPreferredChannel('sms')}
@@ -115,22 +116,6 @@ function ProfileEditorForm({
               }}
             >
               💬 SMS
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreferredChannel('whatsapp')}
-              aria-pressed={preferredChannel === 'whatsapp'}
-              style={{
-                padding: '8px',
-                borderRadius: 'var(--radius-md)',
-                border: preferredChannel === 'whatsapp' ? '2px solid var(--color-gold)' : '1px solid var(--color-gray-300)',
-                background: preferredChannel === 'whatsapp' ? 'var(--color-cream)' : 'var(--color-white)',
-                fontSize: 'var(--text-xs)',
-                fontWeight: preferredChannel === 'whatsapp' ? 'bold' : 'normal',
-                cursor: 'pointer',
-              }}
-            >
-              🟢 WhatsApp
             </button>
             <button
               type="button"

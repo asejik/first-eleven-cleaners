@@ -48,7 +48,7 @@ function PreferencesForm({ initial }: PreferencesFormProps) {
       addToast({
         type: 'success',
         title: "Eleven's Memory Updated",
-        message: 'Your garment preferences have been saved and synced across web, SMS, and WhatsApp.',
+        message: 'Your garment preferences have been saved and saved to your account.',
       });
     } catch (err: unknown) {
       addToast({
