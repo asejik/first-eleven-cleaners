@@ -11,7 +11,8 @@ import { getCoverage } from '@/lib/coverage-settings';
 import { FIFA_STATEMENT } from '@/lib/legal';
 import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import Link from 'next/link';
-import { ButtonLink } from '@/components/ui';
+import { ButtonLink, Icon } from '@/components/ui';
+import { BadgeCheck, CalendarCheck, Camera, Gift, Receipt, Shirt, Smartphone, Sparkles, Trophy, Truck, WashingMachine, Zap } from 'lucide-react';
 import { RoutineSection } from '@/components/marketing/RoutineSection';
 import { GoogleReviewsSection } from '@/components/marketing/GoogleReviewsSection';
 import { getGoogleReviews } from '@/lib/google-reviews';
@@ -38,7 +39,7 @@ export default async function HomePage() {
       <div className={styles.promoBanner}>
         {/* "First order: no promo"; the discount is order two's (client 2026-10-14) */}
         <p>
-          🎉 Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is <strong>${ORDER_TWO_DISCOUNT} off</strong>, automatically. No code needed.
+          <Icon icon={Gift} /> Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is <strong>${ORDER_TWO_DISCOUNT} off</strong>, automatically. No code needed.
         </p>
       </div>
 
@@ -46,7 +47,7 @@ export default async function HomePage() {
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
-            ⚽ Proudly served the 2026 FIFA World Cup International Broadcast Centre — Dallas
+            <Icon icon={Trophy} /> Proudly served the 2026 FIFA World Cup International Broadcast Centre — Dallas
           </div>
           <h1 className={styles.heroTitle}>
             Fresh. Pressed.{' '}
@@ -83,7 +84,7 @@ export default async function HomePage() {
           <div className={styles.stepsGrid}>
             <div className={styles.step}>
               <div className={styles.stepNumber}>1</div>
-              <div className={styles.stepIcon}>📅</div>
+              <div className={styles.stepIcon}><Icon icon={CalendarCheck} size={40} strokeWidth={1.5} /></div>
               <h3 className={styles.stepTitle}>Schedule Your Pickup</h3>
               <p className={styles.stepDescription}>
                 Book online in under 60 seconds. Choose morning or evening,
@@ -93,7 +94,7 @@ export default async function HomePage() {
 
             <div className={styles.step}>
               <div className={styles.stepNumber}>2</div>
-              <div className={styles.stepIcon}>✨</div>
+              <div className={styles.stepIcon}><Icon icon={Sparkles} size={40} strokeWidth={1.5} /></div>
               <h3 className={styles.stepTitle}>We Clean With Care</h3>
               <p className={styles.stepDescription}>
                 Every garment photographed and tracked by order number in your Garment Passport. Dry cleaning,
@@ -103,7 +104,7 @@ export default async function HomePage() {
 
             <div className={styles.step}>
               <div className={styles.stepNumber}>3</div>
-              <div className={styles.stepIcon}>🚚</div>
+              <div className={styles.stepIcon}><Icon icon={Truck} size={40} strokeWidth={1.5} /></div>
               <h3 className={styles.stepTitle}>Delivered to Your Door</h3>
               <p className={styles.stepDescription}>
                 Clean, folded, pressed & game-ready in 2 business days. Delivered
@@ -120,7 +121,7 @@ export default async function HomePage() {
           <h2 className={styles.sectionTitle}>Our Services</h2>
           <div className={styles.servicesGrid}>
             <div className={styles.serviceCard}>
-              <span className={styles.serviceIcon}>👔</span>
+              <span className={styles.serviceIcon}><Icon icon={Shirt} size={32} strokeWidth={1.5} /></span>
               <h3>Dry Cleaning</h3>
               <p>
                 Suits, dresses, formalwear, specialty fabrics, and stain
@@ -133,7 +134,7 @@ export default async function HomePage() {
             </div>
 
             <div className={styles.serviceCard}>
-              <span className={styles.serviceIcon}>🧺</span>
+              <span className={styles.serviceIcon}><Icon icon={WashingMachine} size={32} strokeWidth={1.5} /></span>
               <h3>Wash &amp; Fold</h3>
               <p>
                 Everyday laundry, washed, dried, and neatly folded. {washFoldLine(minimumFrom)} Your exact minimum shows once you enter your address.
@@ -142,7 +143,7 @@ export default async function HomePage() {
             </div>
 
             <div className={styles.serviceCard}>
-              <span className={styles.serviceIcon}>🚐</span>
+              <span className={styles.serviceIcon}><Icon icon={Truck} size={32} strokeWidth={1.5} /></span>
               <h3>Pickup &amp; Delivery</h3>
               <p>
                 Door-to-door across the entire DFW Metroplex. Morning and
@@ -152,7 +153,7 @@ export default async function HomePage() {
             </div>
 
             <div className={styles.serviceCard}>
-              <span className={styles.serviceIcon}>⚡</span>
+              <span className={styles.serviceIcon}><Icon icon={Zap} size={32} strokeWidth={1.5} /></span>
               <h3>24-Hour Express</h3>
               <p>
                 {expressEnabled
@@ -183,10 +184,10 @@ export default async function HomePage() {
                 Every step tracked. No surprises — ever.
               </p>
               <div className={styles.trustBadges}>
-                <span className={styles.trustBadge}>✅ FIFA World Cup 2026 IBC</span>
-                <span className={styles.trustBadge}>📸 Photo-Documented Intake</span>
-                <span className={styles.trustBadge}>💰 Transparent Pricing</span>
-                <span className={styles.trustBadge}>📱 Real-Time Tracking</span>
+                <span className={styles.trustBadge}><Icon icon={BadgeCheck} /> FIFA World Cup 2026 IBC</span>
+                <span className={styles.trustBadge}><Icon icon={Camera} /> Photo-Documented Intake</span>
+                <span className={styles.trustBadge}><Icon icon={Receipt} /> Transparent Pricing</span>
+                <span className={styles.trustBadge}><Icon icon={Smartphone} /> Real-Time Tracking</span>
               </div>
             </div>
           </div>

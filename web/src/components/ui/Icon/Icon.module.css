@@ -1,0 +1,6 @@
+/* Sits on the text's baseline like the emoji it replaces */
+.icon {
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}

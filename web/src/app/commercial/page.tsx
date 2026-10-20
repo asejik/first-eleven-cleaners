@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Button, Input, Card } from '@/components/ui';
+import { Award, Building2, CircleCheck, Dumbbell, FileText, Handshake, Hotel, Medal, Scissors, Star, Tag, TrendingDown, Truck, Zap } from 'lucide-react';
+import { Button, Input, Card, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import styles from './page.module.css';
 
@@ -58,7 +59,7 @@ export default function CommercialPage() {
 
           <div className={styles.industryGrid}>
             <Card variant="bordered" padding="lg" className={styles.industryCard}>
-              <span className={styles.indIcon}>💆‍♀️</span>
+              <span className={styles.indIcon}><Icon icon={Scissors} size={32} strokeWidth={1.5} /></span>
               <h3>Salons & Med-Spas</h3>
               <p>
                 Plush towel and robe programs, sanitization treatment, and crisp presentation for boutique wellness brands.
@@ -66,7 +67,7 @@ export default function CommercialPage() {
             </Card>
 
             <Card variant="bordered" padding="lg" className={styles.industryCard}>
-              <span className={styles.indIcon}>🏋️</span>
+              <span className={styles.indIcon}><Icon icon={Dumbbell} size={32} strokeWidth={1.5} /></span>
               <h3>Athletic Clubs & Gyms</h3>
               <p>
                 Heavy-duty towel turnaround, antimicrobial washing, and automated pickup schedules matched to peak hours.
@@ -74,7 +75,7 @@ export default function CommercialPage() {
             </Card>
 
             <Card variant="bordered" padding="lg" className={styles.industryCard}>
-              <span className={styles.indIcon}>🏨</span>
+              <span className={styles.indIcon}><Icon icon={Hotel} size={32} strokeWidth={1.5} /></span>
               <h3>Boutique Hotels & Airbnbs</h3>
               <p>
                 Linen turnover, premium duvet pressing, guest dry cleaning with door-to-door concierge delivery.
@@ -82,7 +83,7 @@ export default function CommercialPage() {
             </Card>
 
             <Card variant="bordered" padding="lg" className={styles.industryCard}>
-              <span className={styles.indIcon}>🏢</span>
+              <span className={styles.indIcon}><Icon icon={Building2} size={32} strokeWidth={1.5} /></span>
               <h3>Corporate & Uniforms</h3>
               <p>
                 Team garment accounts with per-employee item tagging, executive dry cleaning, and consolidated invoicing.
@@ -105,17 +106,17 @@ export default function CommercialPage() {
 
           <div className={styles.outcomesGrid}>
             <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}>🚐</span>
+              <span className={styles.outcomeIcon}><Icon icon={Truck} size={28} strokeWidth={1.5} /></span>
               <h4>Dedicated Route Schedules</h4>
               <p>Reliable recurring pickup and delivery windows tuned to your business shift changes and peak hours.</p>
             </div>
             <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}>📄</span>
+              <span className={styles.outcomeIcon}><Icon icon={FileText} size={28} strokeWidth={1.5} /></span>
               <h4>Itemized Billing</h4>
               <p>Every order itemized, with billing terms agreed in your service agreement.</p>
             </div>
             <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}>🏷️</span>
+              <span className={styles.outcomeIcon}><Icon icon={Tag} size={28} strokeWidth={1.5} /></span>
               <h4>Photo-Documented Intake &amp; Tracking</h4>
               <p>Intake photos, condition notes, and live order tracking from pickup to delivery.</p>
             </div>
@@ -125,12 +126,12 @@ export default function CommercialPage() {
               <p>Your turnaround time is set out in your service agreement, so everyone works to the same commitment.</p>
             </div>
             <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}>🤝</span>
+              <span className={styles.outcomeIcon}><Icon icon={Handshake} size={28} strokeWidth={1.5} /></span>
               <h4>Dedicated Commercial Support</h4>
               <p>A direct contact for your account by phone and email.</p>
             </div>
             <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}>📉</span>
+              <span className={styles.outcomeIcon}><Icon icon={TrendingDown} size={28} strokeWidth={1.5} /></span>
               <h4>Volume Rate Cards</h4>
               <p>Rates quoted for your volume, agreed before your first pickup.</p>
             </div>
@@ -155,7 +156,7 @@ export default function CommercialPage() {
             <div className={styles.certGrid}>
               <div className={styles.certBox}>
                 <div className={styles.certHeader}>
-                  <span className={styles.certIcon}>🎖️</span>
+                  <span className={styles.certIcon}><Icon icon={Medal} size={22} /></span>
                   <span className={styles.certTag}>Federal</span>
                 </div>
                 <strong>SDVOSB</strong>
@@ -163,7 +164,7 @@ export default function CommercialPage() {
               </div>
               <div className={styles.certBox}>
                 <div className={styles.certHeader}>
-                  <span className={styles.certIcon}>⭐</span>
+                  <span className={styles.certIcon}><Icon icon={Star} size={22} /></span>
                   <span className={styles.certTag}>State</span>
                 </div>
                 <strong>Texas Veteran-HUB</strong>
@@ -171,7 +172,7 @@ export default function CommercialPage() {
               </div>
               <div className={styles.certBox}>
                 <div className={styles.certHeader}>
-                  <span className={styles.certIcon}>🏅</span>
+                  <span className={styles.certIcon}><Icon icon={Award} size={22} /></span>
                   <span className={styles.certTag}>Corporate</span>
                 </div>
                 <strong>MBE / NMSDC</strong>
@@ -179,7 +180,7 @@ export default function CommercialPage() {
               </div>
               <div className={styles.certBox}>
                 <div className={styles.certHeader}>
-                  <span className={styles.certIcon}>🌟</span>
+                  <span className={styles.certIcon}><Icon icon={Award} size={22} /></span>
                   <span className={styles.certTag}>Regional</span>
                 </div>
                 <strong>DBE / NCTRCA</strong>
@@ -188,7 +189,7 @@ export default function CommercialPage() {
             </div>
 
             <div className={styles.procurementPill}>
-              <span className={styles.procurementPillIcon}>⚡</span>
+              <span className={styles.procurementPillIcon}><Icon icon={Zap} size={20} /></span>
               <span>
                 <strong>Institutional Advantage:</strong> Eligible for VA Vets First priority procurement, SDVOSB sole-source contracts, Texas state HUB set-asides, and corporate Tier-1 diversity supplier spend credits.
               </span>
@@ -209,7 +210,7 @@ export default function CommercialPage() {
 
               {submitted ? (
                 <div className={styles.successState}>
-                  <span className={styles.successIcon}>🎉</span>
+                  <span className={styles.successIcon}><Icon icon={CircleCheck} size={48} strokeWidth={1.5} /></span>
                   <h3>Thank You for Reaching Out</h3>
                   <p>
                     Your commercial inquiry for <strong>{businessName}</strong> has been logged. Our corporate accounts team will contact you at <strong>{email}</strong> with a customized proposal and rate card.

@@ -7,13 +7,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useConcierge } from '@/hooks/useConcierge';
 import { useAuth } from '@/hooks/useAuth';
+import { RotateCcw, SendHorizontal, X } from 'lucide-react';
+import { Icon } from '@/components/ui';
 import styles from './ConciergeWidget.module.css';
 
 const QUICK_CHIPS = [
-  '⚡ Book my usual order',
-  '📦 Where is my active order?',
-  '🧺 Check my saved preferences',
-  '💵 How much for 20 lbs + 2 suits?',
+  'Book my usual order',
+  'Where is my active order?',
+  'Check my saved preferences',
+  'How much for 20 lbs + 2 suits?',
   '🇪🇸 ¿Hablas español?',
 ];
 
@@ -98,7 +100,7 @@ export function ConciergeWidget() {
                 title="Reset conversation"
                 aria-label="Reset conversation"
               >
-                🔄
+                <Icon icon={RotateCcw} size={16} />
               </button>
               <button
                 type="button"
@@ -107,7 +109,7 @@ export function ConciergeWidget() {
                 title="Close drawer"
                 aria-label="Close concierge drawer"
               >
-                ✕
+                <Icon icon={X} size={16} />
               </button>
             </div>
           </div>
@@ -203,7 +205,7 @@ export function ConciergeWidget() {
               title="Send message"
               aria-label="Send message"
             >
-              ➤
+              <Icon icon={SendHorizontal} size={18} />
             </button>
           </form>
         </div>

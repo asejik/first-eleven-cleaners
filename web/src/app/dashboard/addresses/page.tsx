@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { Button, Input, Card, Badge, Loader, Modal } from '@/components/ui';
+import { Building2, ConciergeBell, House, MapPin, RotateCw, Trash2, TriangleAlert } from 'lucide-react';
+import { Button, Input, Card, Badge, Loader, Modal, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import { useCustomerAddresses, useAddAddress, useSetDefaultAddress, useDeleteAddress } from '@/hooks/useAddresses';
@@ -145,7 +146,7 @@ export default function AddressesPage() {
                         className={`${styles.tagBtn} ${labelTag === tag ? styles.tagBtnActive : ''}`}
                         onClick={() => setLabelTag(tag)}
                       >
-                        {tag === 'Home' ? '🏠 Home' : tag === 'Office' ? '🏢 Office' : tag === 'Concierge' ? '🛎️ Concierge' : '📍 Other'}
+                        <Icon icon={tag === 'Home' ? House : tag === 'Office' ? Building2 : tag === 'Concierge' ? ConciergeBell : MapPin} /> {tag}
                       </button>
                     ))}
                   </div>
@@ -225,13 +226,13 @@ export default function AddressesPage() {
             <Loader text="Loading your saved addresses..." />
           ) : isError ? (
             <Card variant="surface" padding="lg" className={styles.emptyCard}>
-              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '8px' }}>⚠️</span>
+              <span style={{ display: 'block', marginBottom: '8px' }}><Icon icon={TriangleAlert} size={32} /></span>
               <h3>Unable to Load Addresses</h3>
               <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px', marginBottom: '16px' }}>
                 We could not retrieve your address book. Please check your connection and try again.
               </p>
               <Button variant="outline" onClick={() => refetch()}>
-                🔄 Retry Loading Addresses
+                <Icon icon={RotateCw} /> Retry Loading Addresses
               </Button>
             </Card>
           ) : addresses.length === 0 ? (
@@ -283,7 +284,7 @@ export default function AddressesPage() {
                       aria-label="Delete this address"
                       disabled={deleteAddressMutation.isPending}
                     >
-                      🗑️
+                      <Icon icon={Trash2} size={16} />
                     </button>
                   </div>
                 </Card>

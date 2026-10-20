@@ -224,7 +224,8 @@
 }
 
 .calloutIcon {
-  font-size: 40px;
+  color: #92400e;
+  line-height: 0;
   flex-shrink: 0;
 }
 
@@ -273,7 +274,8 @@
 }
 
 .stdIcon {
-  font-size: 32px;
+  color: var(--color-gold-text);
+  line-height: 0;
   display: block;
   margin-bottom: var(--space-3);
 }

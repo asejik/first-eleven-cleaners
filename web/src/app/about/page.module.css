@@ -272,9 +272,8 @@
 }
 
 .founderBadge {
-  font-size: 4rem;
   flex-shrink: 0;
-  line-height: 1;
+  line-height: 0;
   margin-top: 0.25rem;
 }
 
@@ -346,8 +345,8 @@
 }
 
 .principleIcon {
-  font-size: 2rem;
-  line-height: 1;
+  color: var(--color-gold-text);
+  line-height: 0;
   margin-bottom: 1rem;
 }
 
@@ -390,7 +389,8 @@
 }
 
 .certIcon {
-  font-size: 1.4rem;
+  color: var(--color-gold, #C9A14A);
+  line-height: 0;
   flex-shrink: 0;
   margin-top: 0.05rem;
 }
@@ -440,17 +440,15 @@
 }
 
 .nameBall {
-  font-size: 4rem;
   flex-shrink: 0;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-  animation: spin 12s linear infinite;
-  line-height: 1;
+  line-height: 0;
   margin-top: 0.25rem;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.dontIcon {
+  color: var(--color-gold-text);
+  margin-right: 0.35rem;
 }
 
 .nameTitle {

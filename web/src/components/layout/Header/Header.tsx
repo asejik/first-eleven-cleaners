@@ -4,10 +4,10 @@ import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Mail, Phone } from 'lucide-react';
+import { Building2, Mail, MapPin, Phone, Scale, Settings, Truck, User, Zap, type LucideIcon } from 'lucide-react';
 import { ROUTES, SUPPORT_EMAIL, SUPPORT_PHONE } from '@/lib/constants';
 import { SUPPORT_EMAIL_HREF, SUPPORT_PHONE_HREF } from '@/lib/contact';
-import { Button, Badge, ButtonLink } from '@/components/ui';
+import { Button, Badge, ButtonLink, Icon } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import type { UserRole } from '@/types';
 import styles from './Header.module.css';
@@ -33,26 +33,26 @@ export function Header() {
 
   // Role-specific home destination and navigation menus
   let homeHref: string = ROUTES.home;
-  let navLinks: Array<{ href: string; label: string }> = [];
+  let navLinks: Array<{ href: string; label: string; icon?: LucideIcon }> = [];
 
   if (isAuth && role === 'driver') {
     homeHref = ROUTES.staffDriver;
     navLinks = [
-      { href: ROUTES.staffDriver, label: '🚐 Fleet Route Manifest' },
+      { href: ROUTES.staffDriver, label: 'Fleet Route Manifest', icon: Truck },
     ];
   } else if (isAuth && role === 'intake_staff') {
     homeHref = ROUTES.intake;
     navLinks = [
-      { href: ROUTES.intake, label: '⚖️ Central Intake Station' },
+      { href: ROUTES.intake, label: 'Central Intake Station', icon: Scale },
     ];
   } else if (isAuth && role === 'admin') {
     homeHref = ROUTES.missionControl;
     navLinks = [
-      { href: ROUTES.missionControl, label: '⚡ Mission Control' },
-      { href: ROUTES.intake, label: '⚖️ Intake' },
-      { href: ROUTES.staffDriver, label: '🚐 Driver' },
-      ...(COMMERCIAL_PORTAL_ENABLED ? [{ href: ROUTES.portal, label: '🏢 B2B Portal' }] : []),
-      { href: `${ROUTES.dashboard}?view=customer`, label: '👤 Customer Preview' },
+      { href: ROUTES.missionControl, label: 'Mission Control', icon: Zap },
+      { href: ROUTES.intake, label: 'Intake', icon: Scale },
+      { href: ROUTES.staffDriver, label: 'Driver', icon: Truck },
+      ...(COMMERCIAL_PORTAL_ENABLED ? [{ href: ROUTES.portal, label: 'B2B Portal', icon: Building2 }] : []),
+      { href: `${ROUTES.dashboard}?view=customer`, label: 'Customer Preview', icon: User },
     ];
   } else {
     // Customer or Guest
@@ -95,7 +95,7 @@ export function Header() {
               href={link.href}
               className={`${styles.navLink} ${pathname === link.href ? styles.active : ''}`}
             >
-              {link.label}
+              {link.icon && <Icon icon={link.icon} />} {link.label}
             </Link>
           ))}
         </nav>
@@ -113,23 +113,23 @@ export function Header() {
             <div className={styles.userActions}>
               {role === 'driver' ? (
                 <Badge variant="warning" size="md">
-                  🚐 {user?.full_name || 'Driver'}
+                  <Icon icon={Truck} /> {user?.full_name || 'Driver'}
                 </Badge>
               ) : role === 'intake_staff' ? (
                 <Badge variant="info" size="md">
-                  ⚖️ {user?.full_name || 'Intake Specialist'}
+                  <Icon icon={Scale} /> {user?.full_name || 'Intake Specialist'}
                 </Badge>
               ) : role === 'admin' ? (
                 // The name links to Profile, where it can be changed (client review 2026-10-20)
                 <Link href={ROUTES.profile} title="Edit your name and contact details" style={{ textDecoration: 'none' }}>
                   <Badge variant="delivered" size="md">
-                    ⚡ {user?.full_name || 'Plant Director'}
+                    <Icon icon={Zap} /> {user?.full_name || 'Plant Director'}
                   </Badge>
                 </Link>
               ) : (
                 <>
                   <ButtonLink href={ROUTES.profile} variant="ghostLight" size="sm">
-                    👤 {firstName}
+                    <Icon icon={User} /> {firstName}
                   </ButtonLink>
                   <ButtonLink href={ROUTES.book} variant="primary" size="sm">
                     + Schedule Pickup
@@ -186,13 +186,13 @@ export function Header() {
               className={`${styles.mobileNavLink} ${pathname === link.href ? styles.active : ''}`}
               onClick={() => setIsMobileOpen(false)}
             >
-              {link.label}
+              {link.icon && <Icon icon={link.icon} />} {link.label}
             </Link>
           ))}
 
           {isAuth && role === 'admin' && (
             <Link href={ROUTES.profile} className={styles.mobileNavLink} onClick={() => setIsMobileOpen(false)}>
-              👤 My Profile
+              <Icon icon={User} /> My Profile
             </Link>
           )}
 
@@ -203,21 +203,21 @@ export function Header() {
                 className={styles.mobileNavLink}
                 onClick={() => setIsMobileOpen(false)}
               >
-                👤 Profile Settings
+                <Icon icon={User} /> Profile Settings
               </Link>
               <Link
                 href={ROUTES.addresses}
                 className={styles.mobileNavLink}
                 onClick={() => setIsMobileOpen(false)}
               >
-                📍 Saved Addresses
+                <Icon icon={MapPin} /> Saved Addresses
               </Link>
               <Link
                 href={ROUTES.preferences}
                 className={styles.mobileNavLink}
                 onClick={() => setIsMobileOpen(false)}
               >
-                ⚙️ Eleven&apos;s Memory Preferences
+                <Icon icon={Settings} /> Eleven&apos;s Memory Preferences
               </Link>
             </>
           )}

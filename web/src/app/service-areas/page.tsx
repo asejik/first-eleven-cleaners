@@ -1,5 +1,6 @@
 import { pageMetadata } from '@/lib/seo';
-import { Card, ButtonLink } from '@/components/ui';
+import { CalendarDays, Camera, MapPin, Map as MapIcon, ShieldCheck, Truck, Wallet } from 'lucide-react';
+import { Card, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES, EXPRESS_BADGE, EXTENDED_REACH_BAND_CITIES, extendedReachTurnaroundLine } from '@/lib/constants';
 import { extendedReachStartLine, resolveCoverage } from '@/lib/coverage';
 import { getCoverage } from '@/lib/coverage-settings';
@@ -63,7 +64,7 @@ export default async function ServiceAreasPage() {
                 <div className={styles.cityList}>
                   {pages.map((c) => (
                     <Link key={c.slug} href={cityPagePath(c.slug)} className={styles.cityTag}>
-                      📍 {c.name}
+                      <Icon icon={MapPin} /> {c.name}
                     </Link>
                   ))}
                 </div>
@@ -93,13 +94,13 @@ export default async function ServiceAreasPage() {
 
                 <div className={styles.zoneSpecRow}>
                   <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}>
-                    💰 ${zone.minimumOrder.toFixed(0)} min
+                    <Icon icon={Wallet} /> ${zone.minimumOrder.toFixed(0)} min
                   </span>
                   <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}>
-                    🚐 $0 Free Delivery
+                    <Icon icon={Truck} /> $0 Free Delivery
                   </span>
                   <span className={styles.zonePill}>
-                    📅 {zone.routeScheduleLabel}
+                    <Icon icon={CalendarDays} /> {zone.routeScheduleLabel}
                   </span>
                   <span
                     className={`${styles.zonePill} ${
@@ -115,7 +116,7 @@ export default async function ServiceAreasPage() {
                 <div className={styles.cityList}>
                   {zone.cities.map((city) => (
                     <span key={city} className={styles.cityTag}>
-                      📍 {city}
+                      <Icon icon={MapPin} /> {city}
                     </span>
                   ))}
                 </div>
@@ -131,13 +132,13 @@ export default async function ServiceAreasPage() {
 
               <div className={styles.zoneSpecRow}>
                 <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}>
-                  💰 ${reach.minimumOrder.toFixed(0)} min
+                  <Icon icon={Wallet} /> ${reach.minimumOrder.toFixed(0)} min
                 </span>
                 <span className={styles.zonePill}>
-                  🚐 Delivery fee shown at booking (${bandA.fee} / ${bandB.fee} by distance; {reach.routineDiscountPercent}% off for Routine members)
+                  <Icon icon={Truck} /> Delivery fee shown at booking (${bandA.fee} / ${bandB.fee} by distance; {reach.routineDiscountPercent}% off for Routine members)
                 </span>
                 <span className={styles.zonePill}>
-                  📅 {extendedReachTurnaroundLine(reach)}
+                  <Icon icon={CalendarDays} /> {extendedReachTurnaroundLine(reach)}
                 </span>
                 <span className={`${styles.zonePill} ${styles.zonePillMuted}`}>
                   ⏱ No Express
@@ -152,7 +153,7 @@ export default async function ServiceAreasPage() {
               <div className={styles.cityList}>
                 {reachZone.cities.map((city) => (
                   <span key={city} className={styles.cityTag}>
-                    📍 {city}
+                    <Icon icon={MapPin} /> {city}
                   </span>
                 ))}
               </div>
@@ -161,7 +162,7 @@ export default async function ServiceAreasPage() {
 
           {/* No Zip Fence Callout */}
           <div className={styles.coverageCallout}>
-            <div className={styles.calloutIcon}>🗺️</div>
+            <div className={styles.calloutIcon}><Icon icon={MapIcon} size={40} strokeWidth={1.5} /></div>
             <div>
               <h3 className={styles.calloutTitle}>Don&apos;t see your specific neighborhood listed?</h3>
               <p className={styles.calloutText}>
@@ -183,17 +184,17 @@ export default async function ServiceAreasPage() {
               <p>Returned clean, pressed, and game-ready 2 business days after pickup (Zones 3 and 4: on your next route day after that). Your delivery date is shown when you book.</p>
             </div>
             <div className={styles.standardBox}>
-              <span className={styles.stdIcon}>🚐</span>
+              <span className={styles.stdIcon}><Icon icon={Truck} size={32} strokeWidth={1.5} /></span>
               <h4>Morning &amp; Evening Windows</h4>
               <p>Convenient 7:30–10:00 AM and 5:00–8:00 PM slots aligned with when you are actually home.</p>
             </div>
             <div className={styles.standardBox}>
-              <span className={styles.stdIcon}>📸</span>
+              <span className={styles.stdIcon}><Icon icon={Camera} size={32} strokeWidth={1.5} /></span>
               <h4>Contactless Photo Verification</h4>
               <p>Every pickup and delivery is documented with photo timestamps in your Garment Passport.</p>
             </div>
             <div className={styles.standardBox}>
-              <span className={styles.stdIcon}>🛡️</span>
+              <span className={styles.stdIcon}><Icon icon={ShieldCheck} size={32} strokeWidth={1.5} /></span>
               <h4>100% Make It Right</h4>
               <p>Refund-first culture backed by an instant one-tap claim button on every receipt.</p>
             </div>

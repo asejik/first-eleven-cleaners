@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Modal, Button } from '@/components/ui';
+import { Camera, ClipboardList, Images, Repeat, Scale, Search, ShieldCheck, Sparkles } from 'lucide-react';
+import { Badge, Modal, Button, Icon } from '@/components/ui';
 import type { Order, GarmentPhoto } from '@/types';
 import { photoLabel } from '@/lib/match-ready';
 import styles from './GarmentPassportTimeline.module.css';
@@ -28,7 +29,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
       <div className={styles.headerRow}>
         <div>
           <span className={styles.badgeTag}>Carvana-Standard Transparency</span>
-          <h2 className={styles.title}>📸 Garment Passport™ Visual Inspection</h2>
+          <h2 className={styles.title}><Icon icon={Camera} /> Garment Passport™ Visual Inspection</h2>
           <p className={styles.subtitle}>
             &ldquo;You see what we see.&rdquo; High-resolution timestamped visual records from intake weighing to pristine return delivery.
           </p>
@@ -40,14 +41,14 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
             className={`${styles.switchBtn} ${viewMode === 'comparison' ? styles.switchBtnActive : ''}`}
             onClick={() => setViewMode('comparison')}
           >
-            ✨ Side-by-Side Split View
+            <Icon icon={Sparkles} /> Side-by-Side Split View
           </button>
           <button
             type="button"
             className={`${styles.switchBtn} ${viewMode === 'gallery' ? styles.switchBtnActive : ''}`}
             onClick={() => setViewMode('gallery')}
           >
-            🖼️ All Records ({photos.length})
+            <Icon icon={Images} /> All Records ({photos.length})
           </button>
         </div>
       </div>
@@ -55,7 +56,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
       {/* Metric Pills Bar */}
       <div className={styles.metricsBar}>
         <div className={styles.metricCard}>
-          <span className={styles.metricIcon} role="img" aria-label="Security shield">🛡️</span>
+          <span className={styles.metricIcon}><Icon icon={ShieldCheck} size={22} /></span>
           <div>
             <span className={styles.metricLabel}>Inspection Integrity</span>
             <p className={styles.metricValue}>100% Match-Ready</p>
@@ -63,7 +64,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
         </div>
 
         <div className={styles.metricCard}>
-          <span className={styles.metricIcon} role="img" aria-label="Cycle count">🔄</span>
+          <span className={styles.metricIcon}><Icon icon={Repeat} size={22} /></span>
           <div>
             <span className={styles.metricLabel}>Garment Passport Cycle</span>
             <p className={styles.metricValue}>Cycle #1 at First Eleven</p>
@@ -71,7 +72,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
         </div>
 
         <div className={styles.metricCard}>
-          <span className={styles.metricIcon} role="img" aria-label="Digital scale">⚖️</span>
+          <span className={styles.metricIcon}><Icon icon={Scale} size={22} /></span>
           <div>
             <span className={styles.metricLabel}>Digital Scale Verification</span>
             <p className={styles.metricValue}>{order.weight_lbs ? `${order.weight_lbs} lbs Verified` : 'Itemized Menu'}</p>
@@ -82,7 +83,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
       {/* Pre-Existing Flaw Protection Alert */}
       {order.notes && (
         <div className={styles.flawBanner}>
-          <strong><span role="img" aria-label="Condition log">📋</span> Pre-Treatment &amp; Condition Log:</strong> {order.notes}
+          <strong><Icon icon={ClipboardList} /> Pre-Treatment &amp; Condition Log:</strong> {order.notes}
         </div>
       )}
 
@@ -92,7 +93,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
           {/* Left: Intake Inspection Record */}
           <div className={styles.comparisonCard}>
             <div className={`${styles.cardBanner} ${styles.intakeBanner}`}>
-              <span>🔍 1. Intake Digital Check</span>
+              <span><Icon icon={Search} /> 1. Intake Digital Check</span>
               <Badge variant="warning">Initial Intake</Badge>
             </div>
 
@@ -108,7 +109,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
               }
               title="Click to view full uncropped photo"
             >
-              <span className={styles.zoomBadge}>🔍 Click to Expand</span>
+              <span className={styles.zoomBadge}><Icon icon={Search} /> Click to Expand</span>
               {primaryIntake ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -137,7 +138,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
           {/* Right: Pristine Return / Delivery Record */}
           <div className={styles.comparisonCard}>
             <div className={`${styles.cardBanner} ${styles.returnBanner}`}>
-              <span>✨ 2. Pressed & Delivered Return</span>
+              <span><Icon icon={Sparkles} /> 2. Pressed & Delivered Return</span>
               <Badge variant="delivered">Match-Ready Return</Badge>
             </div>
 
@@ -153,7 +154,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
               }
               title="Click to view full uncropped photo"
             >
-              <span className={styles.zoomBadge}>🔍 Click to Expand</span>
+              <span className={styles.zoomBadge}><Icon icon={Search} /> Click to Expand</span>
               {primaryReturn ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -197,7 +198,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
                   })
                 }
               >
-                <span className={styles.zoomBadge}>🔍 Expand</span>
+                <span className={styles.zoomBadge}><Icon icon={Search} /> Expand</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photo.photo_url} alt="Passport Record" className={styles.garmentImg} />
               </div>
@@ -219,7 +220,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
       <Modal
         isOpen={Boolean(zoomPhoto)}
         onClose={() => setZoomPhoto(null)}
-        title={`📸 ${zoomPhoto?.title || 'Garment Passport Photo Record'}`}
+        title={`${zoomPhoto?.title || 'Garment Passport Photo Record'}`}
         size="lg"
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>

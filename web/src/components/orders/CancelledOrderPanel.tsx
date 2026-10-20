@@ -1,4 +1,5 @@
-import { ButtonLink } from '@/components/ui';
+import { CircleX } from 'lucide-react';
+import { ButtonLink, Icon } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './CancelledOrderPanel.module.css';
 
@@ -17,8 +18,8 @@ export function CancelledOrderPanel({ pickupDate }: { pickupDate?: string | null
   const date = formatPickupDate(pickupDate);
   return (
     <div className={styles.panel} role="status">
-      <span className={styles.icon} aria-hidden="true">
-        ❌
+      <span className={styles.icon}>
+        <Icon icon={CircleX} size={24} />
       </span>
       <div className={styles.body}>
         <strong className={styles.title}>This pickup was cancelled</strong>

@@ -3,7 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { Button, Input, Card, Loader } from '@/components/ui';
+import { Bot, Save, Shirt, WashingMachine } from 'lucide-react';
+import { Button, Input, Card, Loader, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { useCustomerPreferences, useUpdatePreferences } from '@/hooks/usePreferences';
 import { ROUTES } from '@/lib/constants';
@@ -98,7 +99,7 @@ function PreferencesForm({ initial }: PreferencesFormProps) {
             onClick={() => setFoldVsHang('hang')}
             aria-pressed={foldVsHang === 'hang'}
           >
-            <span className={styles.optionCapital}>👔 ON HANGERS</span>
+            <span className={styles.optionCapital}><Icon icon={Shirt} /> ON HANGERS</span>
             <span className={styles.optionDesc}>Suits, button-downs, and dresses hung with tissue</span>
           </button>
           <button
@@ -107,7 +108,7 @@ function PreferencesForm({ initial }: PreferencesFormProps) {
             onClick={() => setFoldVsHang('fold')}
             aria-pressed={foldVsHang === 'fold'}
           >
-            <span className={styles.optionCapital}>🧺 NEATLY FOLDED</span>
+            <span className={styles.optionCapital}><Icon icon={WashingMachine} /> NEATLY FOLDED</span>
             <span className={styles.optionDesc}>Stacked and wrapped in protective weatherproof wrap</span>
           </button>
         </div>
@@ -163,7 +164,7 @@ function PreferencesForm({ initial }: PreferencesFormProps) {
           type="submit"
           isLoading={updatePreferencesMutation.isPending}
         >
-          Save Preferences to Eleven&apos;s Memory 💾
+          <Icon icon={Save} /> Save Preferences to Eleven&apos;s Memory
         </Button>
       </div>
     </form>
@@ -186,7 +187,7 @@ export default function PreferencesPage() {
           <Card variant="bordered" padding="lg" className={styles.card}>
             <div className={styles.header}>
               <div className={styles.badgeRow}>
-                <span className={styles.elevenBadge}>🤖 Eleven AI Memory</span>
+                <span className={styles.elevenBadge}><Icon icon={Bot} /> Eleven AI Memory</span>
               </div>
               <h1 className={styles.title}>Garment Care Preferences</h1>
               <p className={styles.subtitle}>

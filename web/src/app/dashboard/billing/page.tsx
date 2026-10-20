@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { Button, Badge, Loader, Modal } from '@/components/ui';
+import { CreditCard, Lock, Receipt, RotateCw, TriangleAlert } from 'lucide-react';
+import { Button, Badge, Loader, Modal, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES, SUPPORT_PHONE } from '@/lib/constants';
 import styles from './page.module.css';
@@ -113,7 +114,7 @@ export default function BillingPage() {
                 ← Return to Dashboard
               </Link>
               <h1 className={styles.pageTitle}>
-                <span>💳</span> Billing &amp; Payment Methods
+                <Icon icon={CreditCard} /> Billing &amp; Payment Methods
               </h1>
               <p className={styles.pageSub}>
                 View the cards saved with Square when you booked, your receipts, and itemized orders.
@@ -126,10 +127,10 @@ export default function BillingPage() {
           ) : error ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
               <p style={{ color: '#f87171', marginBottom: '16px', fontWeight: '500' }}>
-                ⚠️ {(error as Error).message}
+                <Icon icon={TriangleAlert} /> {(error as Error).message}
               </p>
               <Button variant="outlineLight" size="sm" onClick={() => refetch()}>
-                🔄 Retry Loading Billing Info
+                <Icon icon={RotateCw} /> Retry Loading Billing Info
               </Button>
             </div>
           ) : (
@@ -139,7 +140,7 @@ export default function BillingPage() {
                 <div className={styles.sectionHeader}>
                   <div>
                     <h2 className={styles.sectionTitle}>
-                      <span>🔒</span> Saved Cards
+                      <Icon icon={Lock} /> Saved Cards
                     </h2>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                       Saved securely with Square when you book. We never see or store your full card number.
@@ -186,7 +187,7 @@ export default function BillingPage() {
 
                   {/* Cards are only added through Square's secure form at checkout (SEC-21) */}
                   <Link href={ROUTES.book} className={styles.addCardDashedBox}>
-                    <span style={{ fontSize: 'var(--text-2xl)' }}>💳</span>
+                    <Icon icon={CreditCard} size={28} />
                     <strong style={{ fontSize: 'var(--text-xs)' }}>
                       {paymentMethods.length === 0 ? 'No saved cards yet' : 'Need a different card?'}
                     </strong>
@@ -200,7 +201,7 @@ export default function BillingPage() {
                 <div className={styles.sectionHeader}>
                   <div>
                     <h2 className={styles.sectionTitle}>
-                      <span>🧾</span> Transaction Invoices &amp; Receipts
+                      <Icon icon={Receipt} /> Transaction Invoices &amp; Receipts
                     </h2>
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                       Itemized receipts for all completed pickups, laundry weighing, and dry clean treatments.
@@ -285,7 +286,7 @@ export default function BillingPage() {
                                   className={styles.receiptBtn}
                                   onClick={() => setSelectedReceipt(inv)}
                                 >
-                                  🧾 View Receipt
+                                  <Icon icon={Receipt} /> View Receipt
                                 </button>
                                 {inv.payment_status === 'failed' && (
                                   <a

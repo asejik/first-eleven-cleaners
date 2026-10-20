@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Card, Input, Button } from '@/components/ui';
+import { MapPin, TriangleAlert, WashingMachine, Zap } from 'lucide-react';
+import { Card, Input, Button, Icon } from '@/components/ui';
 import { DRY_CLEAN_PRICES, ROUTES, catalogLineTotal, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
 import type { ExtendedReachQuote } from '@/lib/coverage';
 import { isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
@@ -139,7 +140,7 @@ export function StepReview({
       <div className={styles.reviewSummary}>
         {/* Pickup info */}
         <div className={styles.summarySection}>
-          <h2><span aria-hidden="true">📍</span> Pickup &amp; Delivery Schedule</h2>
+          <h2><Icon icon={MapPin} /> Pickup &amp; Delivery Schedule</h2>
           <p>
             <strong>Address:</strong> {street} {unit && `(${unit})`}, {city}, TX {zip}
           </p>
@@ -155,12 +156,12 @@ export function StepReview({
           )}
           {isExpress24 && (
             <p style={{ color: 'var(--color-gold-text)', fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>
-              ⚡ 24-Hour Guarantee: Delivered by 10:00 AM or your Express surcharge is refunded automatically.
+              <Icon icon={Zap} /> 24-Hour Guarantee: Delivered by 10:00 AM or your Express surcharge is refunded automatically.
             </p>
           )}
           {frequency && frequency !== 'one_time' && (
             <p style={{ color: 'var(--color-green)' }}>
-              <strong>Recurring Plan:</strong> {frequency === 'weekly' ? '⚡ Weekly Recurring (10% Off Applied)' : '📅 Bi-Weekly Recurring (5% Off Applied)'}
+              <strong>Recurring Plan:</strong> {frequency === 'weekly' ? 'Weekly Recurring (10% Off Applied)' : 'Bi-Weekly Recurring (5% Off Applied)'}
             </p>
           )}
           <p>
@@ -170,7 +171,7 @@ export function StepReview({
 
         {/* Itemized breakdown */}
         <div className={styles.summarySection}>
-          <h2><span aria-hidden="true">🧺</span> Garment Breakdown</h2>
+          <h2><Icon icon={WashingMachine} /> Garment Breakdown</h2>
           {serviceType !== 'dry_clean' && (
             <div className={styles.summaryLine}>
               <span>Wash & Fold (~{washFoldWeight} lbs)</span>
@@ -204,7 +205,7 @@ export function StepReview({
             <span>Turnaround Speed</span>
             <span style={{ fontWeight: 'var(--font-semibold)', color: isExpress24 ? 'var(--color-gold-dark)' : 'var(--color-navy)' }}>
               {isExpress24
-                ? '⚡ 24-Hour Express (Match-Ready Tomorrow)'
+                ? '24-Hour Express (Match-Ready Tomorrow)'
                 : 'Standard, 2 Business Days (Included)'}
             </span>
           </div>
@@ -275,7 +276,7 @@ export function StepReview({
         {/* Zone Minimum Gap Notice */}
         {zoneMinimumGap > 0 && detectedZone && (
           <div className={styles.gapNotice}>
-            <span style={{ fontSize: '20px' }}>⚠️</span>
+            <Icon icon={TriangleAlert} size={20} />
             <div>
               <div className={styles.gapNoticeTitle}>
                 Add ${zoneMinimumGap.toFixed(2)} to reach your area&apos;s ${detectedZone.minimumOrder.toFixed(0)} minimum
@@ -304,7 +305,7 @@ export function StepReview({
           {frequencyDiscount > 0 && (
             <div className={styles.totalRowDiscount}>
               <span>
-                {frequency === 'weekly' ? '⚡ Weekly Recurring Plan (10% Off)' : '📅 Bi-Weekly Recurring Plan (5% Off)'}
+                {frequency === 'weekly' ? 'Weekly Recurring Plan (10% Off)' : 'Bi-Weekly Recurring Plan (5% Off)'}
               </span>
               <span>-${frequencyDiscount.toFixed(2)}</span>
             </div>

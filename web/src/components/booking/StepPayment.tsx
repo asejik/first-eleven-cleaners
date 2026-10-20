@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Script from 'next/script';
-import { Card, Input, Button } from '@/components/ui';
+import { Camera, Lock, RotateCw, TriangleAlert } from 'lucide-react';
+import { Card, Input, Button, Icon } from '@/components/ui';
 import { SUPPORT_PHONE } from '@/lib/constants';
 import { LEGAL_NAME } from '@/lib/legal';
 import styles from './StepPayment.module.css';
@@ -211,7 +212,7 @@ export function StepPayment({
       </p>
 
       <div className={styles.seeItPayItCallout}>
-        <span className={styles.calloutIcon} aria-hidden="true">📸</span>
+        <span className={styles.calloutIcon}><Icon icon={Camera} size={22} /></span>
         <div>
           <strong>&quot;See It as You Pay It&quot;:</strong>
           <p className={styles.calloutText}>
@@ -225,7 +226,7 @@ export function StepPayment({
 
       <div className={styles.cardVaultBox}>
         <div className={styles.cardHeaderSmall}>
-          <span>🔒 Powered by Square Web Payments</span>
+          <span><Icon icon={Lock} /> Powered by Square Web Payments</span>
           <span className={styles.badgeSecure}>256-Bit Encrypted (PCI-DSS)</span>
         </div>
 
@@ -263,7 +264,7 @@ export function StepPayment({
                 }}
               >
                 <div>
-                  ⚠️ <strong>Payment Form Notice:</strong>{' '}
+                  <Icon icon={TriangleAlert} /> <strong>Payment Form Notice:</strong>{' '}
                   {squareError.includes('unable to be initialized in time') || squareError.includes('Failed to load')
                     ? 'The secure payment form was blocked or timed out by your browser. If you are using an AdBlocker, Brave Shields, or privacy blocker, please pause it for this site and click Retry.'
                     : squareError}
@@ -285,7 +286,7 @@ export function StepPayment({
                     gap: '6px',
                   }}
                 >
-                  <span>🔄</span>
+                  <Icon icon={RotateCw} />
                   <span>Retry Loading Card Form</span>
                 </button>
               </div>

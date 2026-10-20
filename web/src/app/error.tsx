@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui';
+import { RotateCw, TriangleAlert } from 'lucide-react';
+import { Button, Icon } from '@/components/ui';
 import styles from './error.module.css';
 
 export default function GlobalError({
@@ -22,14 +23,14 @@ export default function GlobalError({
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <span className={styles.icon}>⚠️</span>
+        <span className={styles.icon}><Icon icon={TriangleAlert} size={48} strokeWidth={1.5} /></span>
         <h1 className={styles.title}>Temporary Stoppage in Play</h1>
         <p className={styles.description}>
           An unexpected error occurred while loading this experience. Our technical team has been notified.
         </p>
         <div className={styles.actions}>
           <Button variant="primary" size="lg" onClick={() => reset()}>
-            🔄 Try Again
+            <Icon icon={RotateCw} /> Try Again
           </Button>
           <Button
             variant="outline"

@@ -9,3 +9,4 @@ export { Loader } from './Loader';
 export { Skeleton } from './Skeleton';
 export { Modal } from './Modal';
 export { RefreshButton } from './RefreshButton';
+export { Icon } from './Icon';

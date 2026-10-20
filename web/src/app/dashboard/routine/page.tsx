@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { Badge, Button, ButtonLink, Card, Loader } from '@/components/ui';
+import { Award } from 'lucide-react';
+import { Badge, Button, ButtonLink, Card, Loader, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import { formatLongDate } from '@/lib/coverage';
@@ -115,7 +116,7 @@ export default function RoutinePage() {
                 </h2>
                 {data?.founder && (
                   <p className={styles.note} style={{ marginTop: 0, marginBottom: 'var(--space-3)' }}>
-                    <Badge variant="gold">🏅 {data.founder.badge}</Badge> Your plan rate is locked for life, and you can book each route day a day before everyone else.
+                    <Badge variant="gold"><Icon icon={Award} /> {data.founder.badge}</Badge> Your plan rate is locked for life, and you can book each route day a day before everyone else.
                   </p>
                 )}
                 <dl className={styles.facts}>

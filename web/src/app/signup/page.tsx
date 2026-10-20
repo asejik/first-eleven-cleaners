@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Input, Card, ButtonLink } from '@/components/ui';
+import { MailCheck } from 'lucide-react';
+import { Button, Input, Card, ButtonLink, Icon } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { ROUTES, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
@@ -121,7 +122,7 @@ export default function SignupPage() {
 
         {awaitingConfirmation ? (
           <div className={styles.successState}>
-            <div className={styles.successIcon}>✉️</div>
+            <div className={styles.successIcon}><Icon icon={MailCheck} size={48} strokeWidth={1.5} /></div>
             <h3>Confirm Your Email</h3>
             <p>
               We&apos;ve sent a confirmation link to <strong>{email}</strong>. Click it to activate your account,

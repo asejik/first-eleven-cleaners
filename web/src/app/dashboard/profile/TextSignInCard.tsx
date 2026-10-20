@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Card, Input } from '@/components/ui';
+import { Smartphone } from 'lucide-react';
+import { Badge, Button, Card, Input, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import styles from './page.module.css';
 
@@ -63,7 +64,7 @@ export function TextSignInCard() {
   return (
     <Card variant="bordered" padding="lg" className={styles.card}>
       <div className={styles.cardHeader}>
-        <h2 className={styles.cardTitle}>📱 Text Sign-In</h2>
+        <h2 className={styles.cardTitle}><Icon icon={Smartphone} /> Text Sign-In</h2>
         {data?.verified && <Badge variant="success">On</Badge>}
       </div>
       <div className={styles.cardBody} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -1,5 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
-import { ButtonLink } from '@/components/ui';
+import Image from 'next/image';
+import { Award, BadgeCheck, Camera, CircleX, Handshake, Map as MapIcon, MapPin, Medal, Receipt, Star, Timer, Trophy, Zap } from 'lucide-react';
+import { ButtonLink, Icon } from '@/components/ui';
 import { FIFA_STATEMENT } from '@/lib/legal';
 import { ROUTES, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
 import styles from './page.module.css';
@@ -13,12 +15,12 @@ export const metadata = pageMetadata({
 });
 
 const CERTIFICATIONS = [
-  { code: 'MBE', label: 'Minority Business Enterprise', icon: '🏅' },
-  { code: 'SDVOSB', label: 'Service-Disabled Veteran-Owned Small Business', icon: '🎖️' },
-  { code: 'Veteran-HUB', label: 'Texas Veteran Historically Underutilized Business', icon: '⭐' },
-  { code: 'DBE', label: 'Disadvantaged Business Enterprise', icon: '🌟' },
-  { code: 'NCTRCA', label: 'North Central Texas Regional Certification Agency', icon: '✅' },
-  { code: 'NMSDC', label: 'National Minority Supplier Development Council', icon: '✅' },
+  { code: 'MBE', label: 'Minority Business Enterprise', icon: Award },
+  { code: 'SDVOSB', label: 'Service-Disabled Veteran-Owned Small Business', icon: Medal },
+  { code: 'Veteran-HUB', label: 'Texas Veteran Historically Underutilized Business', icon: Star },
+  { code: 'DBE', label: 'Disadvantaged Business Enterprise', icon: Award },
+  { code: 'NCTRCA', label: 'North Central Texas Regional Certification Agency', icon: BadgeCheck },
+  { code: 'NMSDC', label: 'National Minority Supplier Development Council', icon: BadgeCheck },
 ];
 
 const TIMELINE = [
@@ -46,32 +48,32 @@ const TIMELINE = [
 
 const PRINCIPLES = [
   {
-    icon: '📸',
+    icon: Camera,
     title: 'Documentation is Destiny',
     body: 'Every garment is photographed at intake and return. At the IBC we learned that a clear photo at intake answers questions quickly and fairly. That protocol is now your Garment Passport — a visual record of every item, every cleaning, every handoff.',
   },
   {
-    icon: '💰',
+    icon: Receipt,
     title: 'No Hidden Fees. Ever.',
     body: 'Every price is published before checkout, always. We watched competitors surprise customers with fees they never saw coming. First Eleven\'s founding contract with you is simple: you see the total before we charge it. If you weigh more than estimated — you see the new ticket and photos before we touch your card.',
   },
   {
-    icon: '⏱️',
+    icon: Timer,
     title: 'The 2-Business-Day Match-Ready Standard',
     body: 'Our operations run with precision timing. From the moment our courier secures your bag to return delivery at your door, every stage is timed and tracked to meet our 2-business-day turnaround.',
   },
   {
-    icon: '⚡',
+    icon: Zap,
     title: 'Responsiveness is the Product',
     body: 'At the IBC, international media crews needed confirmation in minutes, not hours. We delivered that manually. Eleven — our AI concierge — delivers it automatically, around the clock, in your language. Six status messages from booking to delivery: every stage, every time.',
   },
   {
-    icon: '🤝',
+    icon: Handshake,
     title: 'Make It Right, Guaranteed',
     body: 'Our "Make It Right" promise is wired into every receipt — one tap opens a claim with your garment\'s photos already attached. We don\'t make you argue. We make it right.',
   },
   {
-    icon: '🗺️',
+    icon: MapIcon,
     title: 'No ZIP Walls',
     body: 'We never reject a customer based on ZIP code. Any address in the Dallas-Fort Worth Metroplex can book on Day One. Dense zones earn daily service. Emerging zones get scheduled service days. Every accepted booking gets a committed window — never a rejection.',
   },
@@ -84,7 +86,7 @@ export default function AboutPage() {
       {/* ── Hero ── */}
       <section className={styles.hero}>
         <div className={styles.heroBadge}>
-          ⚽ FIFA World Cup 2026™ · International Broadcast Centre · Dallas, Texas
+          <Icon icon={Trophy} /> FIFA World Cup 2026™ · International Broadcast Centre · Dallas, Texas
         </div>
         <h1 className={styles.heroTitle}>
           Born on the World&apos;s{' '}
@@ -156,7 +158,9 @@ export default function AboutPage() {
       <section className={`${styles.section} ${styles.sectionAlt}`}>
         <div className={styles.container}>
           <div className={styles.founderCard}>
-            <div className={styles.founderBadge}>⚽</div>
+            <div className={styles.founderBadge}>
+              <Image src="/icon-192.png" alt="" width={64} height={64} />
+            </div>
             <div className={styles.founderContent}>
               <span className={styles.founderEyebrow}>Leadership</span>
               <h2 className={styles.founderName}>Idowu Itiola, Ph.D., PMP&reg;, LEED AP BD+C</h2>
@@ -175,7 +179,7 @@ export default function AboutPage() {
                 that our customers now receive.
               </p>
               <div className={styles.founderLocation}>
-                📍 Farmers Branch, Texas &nbsp;·&nbsp; Dallas–Fort Worth Metroplex
+                <Icon icon={MapPin} /> Farmers Branch, Texas &nbsp;·&nbsp; Dallas–Fort Worth Metroplex
               </div>
             </div>
           </div>
@@ -196,7 +200,7 @@ export default function AboutPage() {
           <div className={styles.principlesGrid}>
             {PRINCIPLES.map((p, i) => (
               <div key={i} className={styles.principleCard}>
-                <div className={styles.principleIcon}>{p.icon}</div>
+                <div className={styles.principleIcon}><Icon icon={p.icon} size={32} strokeWidth={1.5} /></div>
                 <h3 className={styles.principleTitle}>{p.title}</h3>
                 <p className={styles.principleBody}>{p.body}</p>
               </div>
@@ -217,7 +221,7 @@ export default function AboutPage() {
           <div className={styles.certsGrid}>
             {CERTIFICATIONS.map((cert) => (
               <div key={cert.code} className={styles.certCard}>
-                <span className={styles.certIcon}>{cert.icon}</span>
+                <span className={styles.certIcon}><Icon icon={cert.icon} size={22} /></span>
                 <span className={styles.certCode}>{cert.code}</span>
                 <span className={styles.certLabel}>{cert.label}</span>
               </div>
@@ -235,7 +239,9 @@ export default function AboutPage() {
       <section className={styles.nameBanner}>
         <div className={styles.container}>
           <div className={styles.nameContent}>
-            <div className={styles.nameBall}>⚽</div>
+            <div className={styles.nameBall}>
+              <Image src="/icon-192.png" alt="" width={64} height={64} />
+            </div>
             <div>
               <h2 className={styles.nameTitle}>Why &ldquo;First Eleven&rdquo;?</h2>
               <p className={styles.nameBody}>
@@ -265,12 +271,12 @@ export default function AboutPage() {
               </h2>
               <p className={styles.sectionSubtitle}>Boundaries are how trust is built.</p>
               <ul className={styles.dontList}>
-                <li>❌ We don&apos;t hide fees — every price is published before checkout, always</li>
-                <li>❌ We don&apos;t reject DFW addresses — any address can book, Day One</li>
-                <li>❌ We don&apos;t charge before you see your itemized receipt and photos</li>
-                <li>❌ We don&apos;t make you argue about damage — photos are the evidence, claim is one tap</li>
-                <li>❌ We don&apos;t go quiet — six status messages from booking to delivered, every order</li>
-                <li>❌ We don&apos;t guess at your preferences — Eleven remembers them for you</li>
+                <li><Icon icon={CircleX} className={styles.dontIcon} /> We don&apos;t hide fees — every price is published before checkout, always</li>
+                <li><Icon icon={CircleX} className={styles.dontIcon} /> We don&apos;t reject DFW addresses — any address can book, Day One</li>
+                <li><Icon icon={CircleX} className={styles.dontIcon} /> We don&apos;t charge before you see your itemized receipt and photos</li>
+                <li><Icon icon={CircleX} className={styles.dontIcon} /> We don&apos;t make you argue about damage — photos are the evidence, claim is one tap</li>
+                <li><Icon icon={CircleX} className={styles.dontIcon} /> We don&apos;t go quiet — six status messages from booking to delivered, every order</li>
+                <li><Icon icon={CircleX} className={styles.dontIcon} /> We don&apos;t guess at your preferences — Eleven remembers them for you</li>
               </ul>
             </div>
             <div className={styles.dualColStats}>

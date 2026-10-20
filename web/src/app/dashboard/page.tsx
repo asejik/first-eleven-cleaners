@@ -6,8 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCustomerOrders } from '@/hooks/useOrders';
 import { useCustomerClaims } from '@/hooks/useClaims';
-import { Button, Card, Badge, Skeleton, RefreshButton, ButtonLink } from '@/components/ui';
-import { CreditCard, MapPin, User as UserIcon, Plus, Repeat } from 'lucide-react';
+import { Button, Card, Badge, Skeleton, RefreshButton, ButtonLink, Icon } from '@/components/ui';
+import { CircleCheck, CreditCard, MapPin, User as UserIcon, Plus, Repeat, RotateCw, Settings, ShieldCheck, Sparkles, TriangleAlert, Truck, WashingMachine, Zap } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
 import { ROUTINE_PATH } from '@/lib/routine';
@@ -68,7 +68,7 @@ export default function DashboardPage() {
                 fontSize: 'var(--text-xs)',
               }}
             >
-              <span>⚡ <strong>Administrator Mode:</strong> You are viewing the customer portal preview.</span>
+              <span><Icon icon={Zap} /> <strong>Administrator Mode:</strong> You are viewing the customer portal preview.</span>
               <ButtonLink href={ROUTES.missionControl} variant="outline" size="sm" style={{ borderColor: 'var(--color-gold)', color: 'var(--color-gold)' }}>
                 Return to Mission Control →
               </ButtonLink>
@@ -80,7 +80,7 @@ export default function DashboardPage() {
             <div>
               <span className={styles.welcomeSubtitle}>Customer Portal</span>
               <h1 className={styles.welcomeTitle}>
-                Welcome back, {user?.full_name?.split(' ')[0] || 'Friend'} ⚽
+                Welcome back, {user?.full_name?.split(' ')[0] || 'Friend'}
               </h1>
             </div>
             <div className={styles.topActions}>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
           {/* Quick Stats Grid */}
           <div className={styles.statsGrid}>
             <Card variant="bordered" padding="md" className={styles.statCard}>
-              <span className={styles.statIcon}>🚐</span>
+              <span className={styles.statIcon}><Icon icon={Truck} size={24} /></span>
               <div>
                 <p className={styles.statLabel}>Active Orders</p>
                 <p className={styles.statNumber}>{isLoading ? '...' : activeOrders.length}</p>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             </Card>
 
             <Card variant="bordered" padding="md" className={styles.statCard}>
-              <span className={styles.statIcon}>✨</span>
+              <span className={styles.statIcon}><Icon icon={Sparkles} size={24} /></span>
               <div>
                 <p className={styles.statLabel}>Total Orders</p>
                 <p className={styles.statNumber}>{isLoading ? '...' : orders.length}</p>
@@ -139,7 +139,7 @@ export default function DashboardPage() {
             </Card>
 
             <Card variant="bordered" padding="md" className={styles.statCard}>
-              <span className={styles.statIcon}>⚙️</span>
+              <span className={styles.statIcon}><Icon icon={Settings} size={24} /></span>
               <div>
                 <p className={styles.statLabel}>Eleven&apos;s Memory</p>
                 <Link href={ROUTES.preferences} className={styles.statLink}>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
             </Card>
 
             <Card variant="bordered" padding="md" className={styles.statCard}>
-              <span className={styles.statIcon}>🛡️</span>
+              <span className={styles.statIcon}><Icon icon={ShieldCheck} size={24} /></span>
               <div>
                 <p className={styles.statLabel}>Make It Right</p>
                 {activeClaims.length > 0 ? (
@@ -166,7 +166,7 @@ export default function DashboardPage() {
                     className={styles.statLink}
                     style={{ color: 'var(--color-green)', fontWeight: '600' }}
                   >
-                    {resolvedClaims.length} {resolvedClaims.length === 1 ? 'Claim' : 'Claims'} Resolved ✅
+                    {resolvedClaims.length} {resolvedClaims.length === 1 ? 'Claim' : 'Claims'} Resolved <Icon icon={CircleCheck} />
                   </Link>
                 ) : (
                   <p className={styles.statNumber} style={{ fontSize: 'var(--text-base)', color: 'var(--color-gray-500)', marginTop: '2px' }}>
@@ -191,16 +191,16 @@ export default function DashboardPage() {
               </div>
             ) : isError ? (
               <Card variant="surface" padding="lg" className={styles.emptyState}>
-                <span className={styles.emptyIcon}>⚠️</span>
+                <span className={styles.emptyIcon}><Icon icon={TriangleAlert} size={36} strokeWidth={1.5} /></span>
                 <h3>Unable to Load Active Orders</h3>
                 <p>We encountered a connection issue fetching your orders. Your data is safe.</p>
                 <Button variant="outline" onClick={handleRefresh} style={{ marginTop: 'var(--space-3)' }}>
-                  🔄 Retry Loading Orders
+                  <Icon icon={RotateCw} /> Retry Loading Orders
                 </Button>
               </Card>
             ) : activeOrders.length === 0 ? (
               <Card variant="surface" padding="lg" className={styles.emptyState}>
-                <span className={styles.emptyIcon}>🧺</span>
+                <span className={styles.emptyIcon}><Icon icon={WashingMachine} size={36} strokeWidth={1.5} /></span>
                 <h3>No Active Pickups Right Now</h3>
                 <p>Your laundry basket looking full? Schedule a pickup in under 60 seconds.</p>
                 <ButtonLink href={ROUTES.book} variant="primary" style={{ marginTop: 'var(--space-3)' }}>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
                           </div>
                           <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                             {order.notes?.includes('Recurring Plan') && (
-                              <Badge variant="success">🔄 Subscription</Badge>
+                              <Badge variant="success"><Icon icon={Repeat} /> Subscription</Badge>
                             )}
                             <Badge
                               variant={
@@ -245,10 +245,10 @@ export default function DashboardPage() {
                         <div className={styles.orderSummaryText}>
                           <span>
                             {order.order_type === 'mixed'
-                              ? '🧺 Wash & Fold + 👔 Dry Cleaning'
+                              ? 'Wash & Fold + Dry Cleaning'
                               : order.order_type === 'dry_clean'
-                              ? '👔 Dry Cleaning'
-                              : '🧺 Wash & Fold'}
+                              ? 'Dry Cleaning'
+                              : 'Wash & Fold'}
                           </span>
                           <span>•</span>
                           <span>{order.status === 'weighed_itemized' ? 'Itemized Total:' : 'Est. Total:'} ${order.total.toFixed(2)}</span>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                             }}
                           >
                             <span style={{ fontSize: 'var(--text-xs)', color: '#f87171', fontWeight: 600 }}>
-                              ⚠️ Card authorization declined (${order.total.toFixed(2)}). Update payment card so cleaning can commence.
+                              <Icon icon={TriangleAlert} /> Card authorization declined (${order.total.toFixed(2)}). Update payment card so cleaning can commence.
                             </span>
                             <Link href={ROUTES.billing}>
                               <button
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                           <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>Total Paid: ${order.total.toFixed(2)}</span>
                         ) : order.payment_status === 'failed' ? (
                           <span style={{ color: '#f87171', fontWeight: 700 }}>
-                            ⚠️ Payment Due: ${order.total.toFixed(2)}
+                            <Icon icon={TriangleAlert} /> Payment Due: ${order.total.toFixed(2)}
                           </span>
                         ) : (
                           <span>Total: ${order.total.toFixed(2)}</span>

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { pageMetadata, SITE_URL } from '@/lib/seo';
-import { Card, ButtonLink } from '@/components/ui';
+import { CalendarDays, MapPin, Truck, Wallet } from 'lucide-react';
+import { Card, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES, EXPRESS_BADGE, PICKUP_WINDOWS, WASH_FOLD_PRICE_PER_LB } from '@/lib/constants';
 import { resolveCoverage } from '@/lib/coverage';
 import { getCoverage } from '@/lib/coverage-settings';
@@ -108,8 +109,8 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
                 <h2 className={styles.regionTitle}>What it costs</h2>
               </div>
               <div className={styles.zoneSpecRow}>
-                <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}>💰 {minimumLabel}</span>
-                <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}>🚐 $0 Pickup &amp; Delivery</span>
+                <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}><Icon icon={Wallet} /> {minimumLabel}</span>
+                <span className={`${styles.zonePill} ${styles.zonePillHighlight}`}><Icon icon={Truck} /> $0 Pickup &amp; Delivery</span>
                 <span className={`${styles.zonePill} ${express ? styles.zonePillHighlight : styles.zonePillMuted}`}>
                   {express ? EXPRESS_BADGE : `24-Hr Express: ${EXPRESS_COMING_SOON_BADGE}`}
                 </span>
@@ -126,7 +127,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
                 <h2 className={styles.regionTitle}>How it works</h2>
               </div>
               <div className={styles.zoneSpecRow}>
-                <span className={styles.zonePill}>📅 {zone.routeScheduleLabel}</span>
+                <span className={styles.zonePill}><Icon icon={CalendarDays} /> {zone.routeScheduleLabel}</span>
               </div>
               <p className={styles.regionDesc}>
                 Choose a {morning.label.toLowerCase()} ({morning.start} to {morning.end}) or {evening.label.toLowerCase()} (
@@ -142,7 +143,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
               <div className={styles.cityList}>
                 {served.map(({ zip }) => (
                   <span key={zip} className={styles.cityTag}>
-                    📍 {zip}
+                    <Icon icon={MapPin} /> {zip}
                   </span>
                 ))}
               </div>
@@ -162,7 +163,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
           <div className={styles.cityList}>
             {others.map((c) => (
               <Link key={c.slug} href={cityPagePath(c.slug)} className={styles.cityTag}>
-                📍 {c.name}
+                <Icon icon={MapPin} /> {c.name}
               </Link>
             ))}
             <Link href={ROUTES.serviceAreas} className={styles.cityTag}>
