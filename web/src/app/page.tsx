@@ -5,6 +5,8 @@ import {
   ORDER_TWO_WINDOW_DAYS,
 } from '@/lib/constants';
 import { getCoverage } from '@/lib/coverage-settings';
+import { FIFA_STATEMENT } from '@/lib/legal';
+import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
@@ -21,7 +23,8 @@ export const metadata = pageMetadata({
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const { expressEnabled } = await getCoverage();
+  const { expressEnabled, zonesList } = await getCoverage();
+  const minimumFrom = lowestMinimum(zonesList);
   return (
     <div className={styles.page}>
       {/* === Promo Banner === */}
@@ -116,16 +119,16 @@ export default async function HomePage() {
                 Suits, dresses, formalwear, specialty fabrics, and stain
                 remediation at published per-garment rates.
               </p>
-              <span className={styles.servicePrice}>From $5.99/garment (shirts from $4.99)</span>
+              <span className={styles.servicePrice}>{shirtPricesLine()}</span>
             </div>
 
             <div className={styles.serviceCard}>
               <span className={styles.serviceIcon}>🧺</span>
               <h3>Wash &amp; Fold</h3>
               <p>
-                Everyday laundry, washed, dried, and neatly folded. $45 minimum order — includes up to 15 lbs ($3.00/lb).
+                Everyday laundry, washed, dried, and neatly folded. {washFoldLine(minimumFrom)} Your exact minimum shows once you enter your address.
               </p>
-              <span className={styles.servicePrice}>$3.00/lb ($45 min)</span>
+              <span className={styles.servicePrice}>From $3.00/lb</span>
             </div>
 
             <div className={styles.serviceCard}>
@@ -144,9 +147,9 @@ export default async function HomePage() {
               <p>
                 {expressEnabled
                   ? 'Need it fast? 24-Hour Express turnaround, Monday to Thursday pickups, with a +50% surcharge. Picked up morning, delivered next morning.'
-                  : 'Available soon — plant capacity confirming. Built for mission-critical fast turnaround.'}
+                  : EXPRESS_COMING_SOON}
               </p>
-              <span className={styles.servicePrice}>{expressEnabled ? 'From +50%' : 'Available Soon'}</span>
+              <span className={styles.servicePrice}>{expressEnabled ? 'From +50%' : EXPRESS_COMING_SOON_BADGE}</span>
             </div>
           </div>
         </div>
@@ -160,20 +163,14 @@ export default async function HomePage() {
               <h2 className={styles.sectionTitle}>
                 Trusted by International Media Crews
               </h2>
-              <p className={styles.trustText}>
-                We served 3,500 accredited international media professionals at
-                the FIFA World Cup 2026™ International Broadcast Centre in
-                Dallas. Twelve weeks of daily garment-care operations under
-                live-event pressure — completed with a signed Vendor Performance
-                Confirmation.
-              </p>
+              <p className={styles.trustText}>{FIFA_STATEMENT}</p>
               <p className={styles.trustText}>
                 That same standard of excellence is now available at your
                 doorstep. Every garment photographed. Every price published.
                 Every step tracked. No surprises — ever.
               </p>
               <div className={styles.trustBadges}>
-                <span className={styles.trustBadge}>✅ World Cup Proven</span>
+                <span className={styles.trustBadge}>✅ FIFA World Cup 2026 IBC</span>
                 <span className={styles.trustBadge}>📸 Photo-Documented Intake</span>
                 <span className={styles.trustBadge}>💰 Transparent Pricing</span>
                 <span className={styles.trustBadge}>📱 Real-Time Tracking</span>

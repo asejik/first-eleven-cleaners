@@ -1,6 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
-import { ROUTES, APP_NAME } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 import styles from './page.module.css';
 
 export const metadata = pageMetadata({
@@ -19,7 +20,7 @@ export default function TermsOfServicePage() {
           <span className={styles.badge}>Legal &amp; Trust</span>
           <h1 className={styles.title}>Terms of Service</h1>
           <p className={styles.subtitle}>
-            Effective Date: September 2, 2026 • First Eleven Cleaners
+            Effective Date: September 2, 2026 • {LEGAL_NAME}
           </p>
         </div>
 
@@ -28,7 +29,7 @@ export default function TermsOfServicePage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>1. Acceptance of Terms</h2>
             <p className={styles.paragraph}>
-              By accessing our website, creating an account, or scheduling dry cleaning or laundry pickup through First Eleven Cleaners (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), you agree to be bound by these Terms of Service.
+              By accessing our website, creating an account, or scheduling dry cleaning or laundry pickup through {LEGAL_NAME} (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), you agree to be bound by these Terms of Service.
             </p>
             <p className={styles.paragraph}>
               If you do not agree to these Terms, please do not use our services.
@@ -70,10 +71,10 @@ export default function TermsOfServicePage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>4. Pricing, Fees &amp; Invisible Checkout</h2>
             <p className={styles.paragraph}>
-              All core prices are published transparently on our website prior to booking. Wash-and-fold is priced at $3.00/lb subject to a 15-lb minimum floor ($45.00 minimum charge). Dry cleaning is priced per garment according to our published item catalog.
+              All core prices are published transparently on our website prior to booking. Wash-and-fold is priced at $3.00/lb subject to a 15-lb minimum ($45.00). Order minimums start at $45 and depend on your service area; your minimum is shown when you enter your address, before you book. Dry cleaning is priced per garment according to our published item catalog.
             </p>
             <p className={styles.paragraph}>
-              <strong>Taxes &amp; Environmental Fees:</strong> All orders are subject to Texas state and local sales tax (currently 8.25%) and an Environmental Fee (3.0%) dedicated to closed-loop solvent recycling, water reclamation systems, and sustainable packaging. All taxes and surcharges are itemized transparently on booking review screens and final digital receipts.
+              <strong>Environmental Service Fee &amp; Sales Tax:</strong> Every order carries an Environmental Service Fee (3%), a First Eleven Cleaners charge (not a government tax) that supports solvent recycling, water reclamation, and sustainable packaging. Texas sales tax (currently 8.25%) is charged on the service price, including the Environmental Service Fee. Both are itemized on the booking review screen before you pay and on your final receipt.
             </p>
             <p className={styles.paragraph}>
               <strong>Invisible Checkout Protocol:</strong> When you book a pickup, your card on file is pre-authorized. We do not finalize or settle charges until your garments arrive at our central facility, are weighed on certified scales, itemized, and photographed into your Garment Passport.
@@ -108,7 +109,7 @@ export default function TermsOfServicePage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>6. Garment Inspection &amp; Garment Passport</h2>
             <p className={styles.paragraph}>
-              Every garment entering our facility is barcoded, cataloged, and photographed under studio lighting. Condition notes, missing buttons, fabric wear, and pre-existing tears are recorded in your digital Garment Passport.
+              Every order is itemized and photographed at intake. Condition notes, missing buttons, fabric wear, and pre-existing tears are recorded in your digital Garment Passport.
             </p>
             <p className={styles.paragraph}>
               Customers are urged to disclose known vulnerabilities, stains, or delicate trims in their booking notes. Failure to disclose known defects may affect warranty and claim eligibility.
@@ -215,7 +216,7 @@ export default function TermsOfServicePage() {
           <div className={styles.contactBox}>
             <h3 className={styles.contactTitle}>14. Contact Our Legal Department</h3>
             <p className={styles.contactText}>
-              <strong>{APP_NAME}</strong><br />
+              <strong>{LEGAL_NAME}</strong><br />
               Dallas-Fort Worth Metroplex, Texas<br />
               Direct Legal Inquiries: <a href="mailto:legal@firstelevencleaners.com" className={styles.contactLink}>legal@firstelevencleaners.com</a>
             </p>

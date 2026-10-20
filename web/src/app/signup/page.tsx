@@ -105,7 +105,7 @@ export default function SignupPage() {
         <div className={styles.header}>
           <Link href={ROUTES.home} style={{ display: 'inline-block', marginBottom: 'var(--space-3)' }}>
             <Image
-              src="/logo.png"
+              src="/logo-on-light.png"
               alt="First Eleven Cleaners"
               width={200}
               height={50}

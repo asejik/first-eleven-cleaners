@@ -7,6 +7,7 @@ import { draftToLine, instructionText, type AlterationDraft } from '@/lib/altera
 import styles from '@/app/book/page.module.css';
 import type { AppliedPromo } from '@/lib/promo';
 import { RepCodeField } from './RepCodeField';
+import { ENV_FEE_LABEL, ENV_FEE_NOTE, FAILED_PICKUP_POLICY, SALES_TAX_LABEL } from '@/lib/published-prices';
 
 /** "15%" for percentage codes, "$5.00" for fixed-dollar codes (P05 AR-02) */
 function promoLabel(promo: AppliedPromo): string {
@@ -327,13 +328,13 @@ export function StepReview({
           {deliveryLine(styles.totalRow)}
           {environmentalFee !== undefined && environmentalFee > 0 && (
             <div className={styles.totalRow}>
-              <span>Environmental Fee (3%)</span>
+              <span>{ENV_FEE_LABEL}</span>
               <span>+${environmentalFee.toFixed(2)}</span>
             </div>
           )}
           {salesTax !== undefined && salesTax > 0 && (
             <div className={styles.totalRow}>
-              <span>Texas Sales Tax (8.25%)</span>
+              <span>{SALES_TAX_LABEL}</span>
               <span>+${salesTax.toFixed(2)}</span>
             </div>
           )}
@@ -341,6 +342,9 @@ export function StepReview({
             <span>Authorized Total</span>
             <span className={styles.finalAmount}>${(finalTotal ?? total).toFixed(2)}</span>
           </div>
+          {environmentalFee !== undefined && environmentalFee > 0 && (
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)', marginTop: 'var(--space-2)' }}>{ENV_FEE_NOTE}</p>
+          )}
         </div>
       </div>
 
@@ -353,7 +357,11 @@ export function StepReview({
         <Link href={ROUTES.privacy} target="_blank" style={{ color: 'var(--color-navy)', fontWeight: 'bold', textDecoration: 'underline' }}>
           Privacy Policy
         </Link>
-        . Card on file is verified and only settled once garments are weighed and inspected at intake.
+        . Card on file is verified and only settled once garments are weighed and inspected at intake.{' '}
+        {FAILED_PICKUP_POLICY}{' '}
+        <Link href={ROUTES.pricing} target="_blank" style={{ color: 'var(--color-navy)', textDecoration: 'underline' }}>
+          Full policy
+        </Link>
       </p>
 
       <div className={styles.buttonSplit}>

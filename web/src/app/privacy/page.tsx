@@ -1,6 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
-import { ROUTES, APP_NAME } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 import styles from './page.module.css';
 
 export const metadata = pageMetadata({
@@ -19,7 +20,7 @@ export default function PrivacyPolicyPage() {
           <span className={styles.badge}>Legal &amp; Trust</span>
           <h1 className={styles.title}>Privacy Policy</h1>
           <p className={styles.subtitle}>
-            Effective Date: September 2, 2026 • First Eleven Cleaners
+            Effective Date: September 2, 2026 • {LEGAL_NAME}
           </p>
         </div>
 
@@ -28,10 +29,10 @@ export default function PrivacyPolicyPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>1. Introduction</h2>
             <p className={styles.paragraph}>
-              First Eleven Cleaners (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) respects your privacy and is committed to protecting your personal information.
+              {LEGAL_NAME} (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) respects your privacy and is committed to protecting your personal information.
             </p>
             <p className={styles.paragraph}>
-              This Privacy Policy explains how we collect, use, disclose, store, and protect information when you use our website, mobile applications, booking platform, AI Concierge (&quot;Eleven&quot;), customer portal, SMS services, WhatsApp services, and laundry, dry-cleaning, pickup, and delivery services across the Dallas-Fort Worth Metroplex.
+              This Privacy Policy explains how we collect, use, disclose, store, and protect information when you use our website, booking platform, AI Concierge (&quot;Eleven&quot;), customer account, text message (SMS) and email updates, and laundry, dry-cleaning, pickup, and delivery services across the Dallas-Fort Worth Metroplex.
             </p>
             <p className={styles.paragraph}>
               By using our services, you agree to the practices described in this Privacy Policy.
@@ -68,7 +69,7 @@ export default function PrivacyPolicyPage() {
 
             <h3 className={styles.subheading}>AI Concierge Interactions (&quot;Eleven&quot;)</h3>
             <p className={styles.paragraph}>
-              When you communicate with Eleven through website chat, SMS, WhatsApp, or email, we may collect conversation history, voice notes, and specific service requests to maintain customer preferences and elevate service quality.
+              When you chat with Eleven on our website or by text message, we keep the conversation and your service requests so we can answer you and remember your preferences.
             </p>
 
             <h3 className={styles.subheading}>Automatically Collected Information</h3>
@@ -93,17 +94,17 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          {/* Section 4: Text Messages, SMS, and WhatsApp */}
+          {/* Section 4: Text Messages (SMS) */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>4. Text Messages, SMS, and WhatsApp Communications</h2>
+            <h2 className={styles.sectionTitle}>4. Text Messages (SMS)</h2>
             <p className={styles.paragraph}>
               By providing your mobile phone number and opting in during booking or account registration, you authorize First Eleven Cleaners to transmit automated and human messages, including:
             </p>
             <ul className={styles.list}>
               <li className={styles.listItem}>Booking and payment confirmations</li>
-              <li className={styles.listItem}>Driver arrival ETAs and live pickup/delivery notifications</li>
+              <li className={styles.listItem}>Pickup and delivery notifications</li>
               <li className={styles.listItem}>Garment passport inspection photos and itemized summaries</li>
-              <li className={styles.listItem}>Customer service responses from Eleven and plant managers</li>
+              <li className={styles.listItem}>Customer service responses from Eleven and our team</li>
               <li className={styles.listItem}>Promotional specials, referral credits, and seasonal care tips</li>
             </ul>
             <div className={styles.callout}>
@@ -136,8 +137,10 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className={styles.list}>
               <li className={styles.listItem}>Certified payment processors (Square)</li>
-              <li className={styles.listItem}>Secure hosting and cloud database providers (Supabase, Vercel, AWS)</li>
-              <li className={styles.listItem}>Logistics mapping and messaging infrastructure (Twilio, Resend)</li>
+              <li className={styles.listItem}>Secure hosting and database providers (Vercel, Supabase)</li>
+              <li className={styles.listItem}>Text messaging (Twilio) and email (Resend)</li>
+              <li className={styles.listItem}>Address distance and service-area lookup (Google Maps Platform)</li>
+              <li className={styles.listItem}>Security rate limiting, which processes IP addresses (Upstash)</li>
               <li className={styles.listItem}>AI infrastructure providers (Anthropic Claude API for Eleven)</li>
               <li className={styles.listItem}>Legal authorities when strictly required by enforceable subpoena or court order</li>
             </ul>
@@ -147,7 +150,7 @@ export default function PrivacyPolicyPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>7. AI Services (&quot;Eleven&quot;)</h2>
             <p className={styles.paragraph}>
-              Our concierge services utilize artificial intelligence to support customer communications, summarize care instructions, analyze garment condition reports, and streamline scheduling.
+              Eleven, our concierge, uses artificial intelligence (Anthropic&apos;s Claude) to answer questions about our services, prices, and your orders, and to help with booking. Your messages to Eleven are sent to Anthropic to generate replies.
             </p>
             <p className={styles.paragraph}>
               AI-generated responses are informational. Critical care decisions, claims determinations, and luxury garment inspections are always verified by human dry-cleaning professionals.
@@ -198,7 +201,7 @@ export default function PrivacyPolicyPage() {
           <div className={styles.contactBox}>
             <h3 className={styles.contactTitle}>11. Contact Our Privacy Office</h3>
             <p className={styles.contactText}>
-              <strong>{APP_NAME}</strong><br />
+              <strong>{LEGAL_NAME}</strong><br />
               Dallas-Fort Worth Metroplex, Texas<br />
               Direct Privacy Inquiries: <a href="mailto:privacy@firstelevencleaners.com" className={styles.contactLink}>privacy@firstelevencleaners.com</a>
             </p>

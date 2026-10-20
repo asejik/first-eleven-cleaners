@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { ENV_FEE_LABEL, SALES_TAX_LABEL } from '@/lib/published-prices';
 import Link from 'next/link';
 import { useOrderDetail, useCancelOrder, isNotFoundError } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
@@ -332,11 +333,11 @@ export default function OrderDetailPage() {
                 </div>
               )}
               <div className={styles.totalRow}>
-                <span>Environmental Fee (3%)</span>
+                <span>{ENV_FEE_LABEL}</span>
                 <span>${financials.environmentalFee.toFixed(2)}</span>
               </div>
               <div className={styles.totalRow}>
-                <span>Texas Sales Tax (8.25%)</span>
+                <span>{SALES_TAX_LABEL}</span>
                 <span>${financials.salesTax.toFixed(2)}</span>
               </div>
               <div className={styles.finalRow}>
