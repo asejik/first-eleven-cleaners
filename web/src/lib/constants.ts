@@ -64,7 +64,7 @@ export interface ZoneConfig {
 export const COVERAGE_HUB = { name: 'Dry Clean City', address: '18217 Midway Rd, Dallas, TX 75287' } as const;
 
 export const EXPRESS_BADGE = '⚡ 24-Hr Express (Mon–Thu)';
-export const STANDARD_BADGE = '⏱ Standard 48-Hour (Express Unavailable)';
+export const STANDARD_BADGE = '⏱ Standard 2 Business Days (Express Unavailable)';
 
 export const ALL_ROUTE_DAYS: RouteDayName[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SHORT_DAY: Record<RouteDayName, string> = {
@@ -561,7 +561,7 @@ export const PICKUP_WINDOWS = [
 
 export const OPERATING_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 export const DAY_OFF = 'Sunday';
-export const PROCESSING_HOURS = 48; // 48-Hour Match-Ready Guarantee
+export const PROCESSING_HOURS = 48; // 2 plant days; customers are promised "2 business days"
 
 // --- Order Statuses (The 6 Messages) ---
 export const ORDER_STATUSES = [
