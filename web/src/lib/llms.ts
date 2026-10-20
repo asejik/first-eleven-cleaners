@@ -82,7 +82,7 @@ export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
     '- Pickup and delivery: free across the DFW Metroplex, Zones 1-4 (each zone has an order minimum instead).',
     `- ${EXTENDED_REACH_LABEL} (Zone 5, beyond the Metroplex): ${reach.bands.map((b) => `${feeLabel(b.fee)} at ${b.minMiles}-${b.maxMiles} miles`).join(', ')} by driving distance, ${reach.routineDiscountPercent}% off for Routine members (Weekly or Bi-Weekly plan). Taxed like any line.`,
     `- ${percent(ENVIRONMENTAL_FEE_RATE)} Environmental Service Fee (a First Eleven charge, not a government tax).`,
-    `- ${percent(TX_SALES_TAX_RATE, 2)} Texas sales tax.`,
+    `- ${percent(TX_SALES_TAX_RATE, 2)} Texas sales tax, charged on the service price including the Environmental Service Fee.`,
     `- ${money(FAILED_PICKUP_FEE)} failed pickup or delivery fee may apply if the driver can't complete a pickup or delivery in the confirmed window (first occurrence waived).`,
     `- ${lateCancelLine()}`,
     `- ${referralLine()}`,

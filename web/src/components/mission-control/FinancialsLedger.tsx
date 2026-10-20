@@ -153,7 +153,7 @@ export function FinancialsLedger() {
             ✓ {summary.charged_count + summary.refunded_count} paid orders · refunds ${(summary.refunded_total ?? 0).toFixed(2)} · net ${(summary.net_revenue ?? summary.gross_revenue).toFixed(2)}
           </span>
           <span className={styles.kpiSubtext}>
-            Sales tax collected ${(summary.sales_tax_collected ?? 0).toFixed(2)} · environmental fees ${(summary.environmental_fees_collected ?? 0).toFixed(2)}
+            Sales tax collected ${(summary.sales_tax_collected ?? 0).toFixed(2)} · Environmental Service Fees ${(summary.environmental_fees_collected ?? 0).toFixed(2)}
           </span>
         </div>
 

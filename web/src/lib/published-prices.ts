@@ -48,7 +48,7 @@ const pct = (rate: number) => `${Number((rate * 100).toFixed(2))}%`;
 export const ENV_FEE_LABEL = `Environmental Service Fee (${pct(ENVIRONMENTAL_FEE_RATE)})`;
 export const SALES_TAX_LABEL = `Texas Sales Tax (${pct(TX_SALES_TAX_RATE)})`;
 export const ENV_FEE_NOTE =
-  'The Environmental Service Fee is a First Eleven Cleaners charge, not a government tax. It supports solvent recycling, water reclamation, and sustainable packaging.';
+  'The Environmental Service Fee is a First Eleven Cleaners charge, not a government tax. It supports solvent recycling, water reclamation, and sustainable packaging. Texas sales tax applies to it, as part of the sale.';
 
 /**
  * The failed pickup policy in one sentence, shown at booking (client review 2026-10-20, #11):
