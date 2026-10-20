@@ -90,7 +90,7 @@ export default async function HomePage() {
               <div className={styles.stepIcon}>✨</div>
               <h3 className={styles.stepTitle}>We Clean With Care</h3>
               <p className={styles.stepDescription}>
-                Every garment photographed, tagged, and tracked. Dry cleaning,
+                Every garment photographed and tracked by order number in your Garment Passport. Dry cleaning,
                 wash & fold, pressing, stain treatment — handled by professionals.
               </p>
             </div>
