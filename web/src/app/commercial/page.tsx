@@ -40,10 +40,10 @@ export default function CommercialPage() {
       <section className={styles.heroSection}>
         <div className={styles.container}>
           <span className={styles.badge}>B2B & Institutional Garment Programs</span>
-          <h1 className={styles.heroTitle}>SLA-Backed Commercial Laundry & Dry Cleaning</h1>
+          <h1 className={styles.heroTitle}>Commercial Laundry & Dry Cleaning for DFW Businesses</h1>
           <p className={styles.heroSubtitle}>
-            Contracted rate cards, consolidated monthly invoicing, photo-documented chain of custody, and
-            guaranteed turnaround times for Dallas-Fort Worth businesses.
+            Agreed rate cards, recurring pickup schedules, photo-documented intake, and turnaround times
+            agreed in writing for Dallas-Fort Worth businesses.
           </p>
         </div>
       </section>
@@ -53,7 +53,7 @@ export default function CommercialPage() {
         <div className={styles.container}>
           <h2 className={styles.sectionHeading}>Designed for Demanding Operations</h2>
           <p className={styles.sectionSubheading}>
-            From luxury spas to corporate uniforms, we maintain the exact standards we proved at the FIFA World Cup IBC.
+            From luxury spas to corporate uniforms, we bring the same discipline we brought to the FIFA World Cup 2026 International Broadcast Centre.
           </p>
 
           <div className={styles.industryGrid}>
@@ -96,10 +96,10 @@ export default function CommercialPage() {
       <section className={styles.section}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <span className={styles.badgeGold}>Contracted Delivery</span>
-            <h2 className={styles.sectionHeading}>Six Concrete Enterprise Deliverables</h2>
+            <span className={styles.badgeGold}>Business Accounts</span>
+            <h2 className={styles.sectionHeading}>What Every Business Account Includes</h2>
             <p className={styles.sectionSubheading}>
-              Every commercial contract is backed by measurable deliverables designed for procurement and operations leads.
+              Your schedule, rates, and turnaround are set out in writing before the first pickup.
             </p>
           </div>
 
@@ -111,28 +111,28 @@ export default function CommercialPage() {
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}>📄</span>
-              <h4>Consolidated Monthly Invoicing</h4>
-              <p>One itemized monthly statement categorized by location, department, or team member with Net-30 terms.</p>
+              <h4>Itemized Billing</h4>
+              <p>Every order itemized, with billing terms agreed in your service agreement.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}>🏷️</span>
-              <h4>Garment-Level Barcoding &amp; Tracking</h4>
-              <p>Full chain of custody: barcode tracking, high-resolution intake photography, and digital condition logging.</p>
+              <h4>Photo-Documented Intake &amp; Tracking</h4>
+              <p>Intake photos, condition notes, and live order tracking from pickup to delivery.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}>⏱️</span>
-              <h4>Guaranteed Turnaround SLA</h4>
-              <p>Contractually committed 24-hour, 48-hour, or same-day turnaround backed by service credit penalty guarantees.</p>
+              <h4>Turnaround Agreed in Writing</h4>
+              <p>Your turnaround time is set out in your service agreement, so everyone works to the same commitment.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}>🤝</span>
               <h4>Dedicated Commercial Support</h4>
-              <p>A named commercial account manager with direct telephone and WhatsApp escalation lines.</p>
+              <p>A direct contact for your account by phone and email.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}>📉</span>
-              <h4>Volume-Tiered Rate Cards</h4>
-              <p>Predictable tiered pricing that scales down your per-pound and per-garment costs as volume grows.</p>
+              <h4>Volume Rate Cards</h4>
+              <p>Rates quoted for your volume, agreed before your first pickup.</p>
             </div>
           </div>
         </div>

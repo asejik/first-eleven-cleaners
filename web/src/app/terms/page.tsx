@@ -109,7 +109,7 @@ export default function TermsOfServicePage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>6. Garment Inspection &amp; Garment Passport</h2>
             <p className={styles.paragraph}>
-              Every garment entering our facility is barcoded, cataloged, and photographed under studio lighting. Condition notes, missing buttons, fabric wear, and pre-existing tears are recorded in your digital Garment Passport.
+              Every order is itemized and photographed at intake. Condition notes, missing buttons, fabric wear, and pre-existing tears are recorded in your digital Garment Passport.
             </p>
             <p className={styles.paragraph}>
               Customers are urged to disclose known vulnerabilities, stains, or delicate trims in their booking notes. Failure to disclose known defects may affect warranty and claim eligibility.
