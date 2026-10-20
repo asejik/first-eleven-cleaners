@@ -105,6 +105,8 @@ export default function BookingPage() {
             setZip={b.setZip}
             deliveryNotes={b.deliveryNotes}
             setDeliveryNotes={b.setDeliveryNotes}
+            savedAddresses={b.savedAddresses}
+            onUseSavedAddress={b.applySavedAddress}
             detectedZone={b.detectedZone}
             addressCoverage={b.addressCoverage}
             extendedReach={b.extendedReach}
