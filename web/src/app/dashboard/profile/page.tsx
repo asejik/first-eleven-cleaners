@@ -10,7 +10,8 @@ import { useCustomerPreferences } from '@/hooks/usePreferences';
 import { useCustomerClaims } from '@/hooks/useClaims';
 import { useCustomerProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Card, Badge, Input, Modal, ButtonLink } from '@/components/ui';
+import { Bot, Download, Lock, Mail, MapPin, MessageSquare, ShieldCheck, Sparkles, StickyNote, Trash2, TriangleAlert, User } from 'lucide-react';
+import { Button, Card, Badge, Input, Modal, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES, SUPPORT_EMAIL } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import { TextSignInCard } from './TextSignInCard';
@@ -115,7 +116,7 @@ function ProfileEditorForm({
                 cursor: 'pointer',
               }}
             >
-              💬 SMS
+              <Icon icon={MessageSquare} /> SMS
             </button>
             <button
               type="button"
@@ -131,7 +132,7 @@ function ProfileEditorForm({
                 cursor: 'pointer',
               }}
             >
-              ✉️ Email
+              <Icon icon={Mail} /> Email
             </button>
           </div>
         </div>
@@ -191,7 +192,7 @@ function ProfilePersonalDetailsEditor({
   return (
     <Card variant="bordered" padding="lg" className={styles.card}>
       <div className={styles.cardHeader}>
-        <h2 className={styles.cardTitle}>👤 Personal Details &amp; Alerts</h2>
+        <h2 className={styles.cardTitle}><Icon icon={User} /> Personal Details &amp; Alerts</h2>
       </div>
       <ProfileEditorForm
         key={`${userId}-${currentFullName}-${currentPhone}-${currentChannel}`}
@@ -332,7 +333,7 @@ function SecurityAndPrivacySection() {
     <>
       <Card variant="bordered" padding="lg" className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>🔒 Security &amp; Data Privacy</h2>
+          <h2 className={styles.cardTitle}><Icon icon={Lock} /> Security &amp; Data Privacy</h2>
           <Badge variant="info">TDPSA Protected</Badge>
         </div>
         <div className={styles.cardBody}>
@@ -386,7 +387,7 @@ function SecurityAndPrivacySection() {
                 onClick={handleExportData}
                 isLoading={isExportingData}
               >
-                📥 Export My Data
+                <Icon icon={Download} /> Export My Data
               </Button>
               <Button
                 type="button"
@@ -395,7 +396,7 @@ function SecurityAndPrivacySection() {
                 style={{ color: '#dc2626' }}
                 onClick={() => setIsDeleteModalOpen(true)}
               >
-                🗑️ Request Data Deletion
+                <Icon icon={Trash2} /> Request Data Deletion
               </Button>
             </div>
           </div>
@@ -429,7 +430,7 @@ function SecurityAndPrivacySection() {
             You are exercising your right to deletion under the <strong>Texas Data Privacy and Security Act (TDPSA)</strong>.
           </p>
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: '#991b1b' }}>
-            ⚠️ Submitting this request will initiate the permanent anonymization of your profile, addresses, garment passports, and communication records once pending orders are completed.
+            <Icon icon={TriangleAlert} /> Submitting this request will initiate the permanent anonymization of your profile, addresses, garment passports, and communication records once pending orders are completed.
           </div>
           <p style={{ color: 'var(--color-gray-500)', fontSize: 'var(--text-xs)', margin: 0 }}>
             Our compliance officer logs all requests to an immutable audit trail.
@@ -508,7 +509,7 @@ export default function ProfilePage() {
             {/* Saved Addresses Card */}
             <Card variant="bordered" padding="lg" className={styles.card}>
               <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>📍 Saved Addresses ({addresses.length})</h2>
+                <h2 className={styles.cardTitle}><Icon icon={MapPin} /> Saved Addresses ({addresses.length})</h2>
                 <ButtonLink href={ROUTES.addresses} variant="outline" size="sm">
                   Manage Addresses →
                 </ButtonLink>
@@ -528,7 +529,7 @@ export default function ProfilePage() {
                       </p>
                       {defaultAddr.delivery_notes && (
                         <p className={styles.addressNotesPreview}>
-                          📝 {defaultAddr.delivery_notes}
+                          <Icon icon={StickyNote} /> {defaultAddr.delivery_notes}
                         </p>
                       )}
                     </div>
@@ -548,7 +549,7 @@ export default function ProfilePage() {
             {/* Eleven AI Garment Memory Card */}
             <Card variant="bordered" padding="lg" className={styles.card}>
               <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>🤖 Eleven&apos;s Memory</h2>
+                <h2 className={styles.cardTitle}><Icon icon={Bot} /> Eleven&apos;s Memory</h2>
                 <ButtonLink href={ROUTES.preferences} variant="outline" size="sm">
                   Edit Preferences →
                 </ButtonLink>
@@ -561,7 +562,7 @@ export default function ProfilePage() {
                   </div>
                   <div className={styles.prefPill}>
                     <strong>Finishing</strong>
-                    <span>{prefs?.fold_vs_hang === 'fold' ? '🧺 Neatly Folded' : '👔 On Hangers'}</span>
+                    <span>{prefs?.fold_vs_hang === 'fold' ? 'Neatly Folded' : 'On Hangers'}</span>
                   </div>
                   <div className={styles.prefPill}>
                     <strong>Detergent</strong>
@@ -578,7 +579,7 @@ export default function ProfilePage() {
             {/* Make It Right Guarantee Center Card */}
             <Card variant="bordered" padding="lg" className={styles.card}>
               <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>🛡️ Make It Right Protection</h2>
+                <h2 className={styles.cardTitle}><Icon icon={ShieldCheck} /> Make It Right Protection</h2>
               </div>
               <div className={styles.cardBody}>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)', lineHeight: 'var(--leading-relaxed)' }}>
@@ -595,7 +596,7 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-gold-text)', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>
-                    <span>✨</span>
+                    <Icon icon={Sparkles} />
                     <span>All orders in good standing</span>
                   </div>
                 )}

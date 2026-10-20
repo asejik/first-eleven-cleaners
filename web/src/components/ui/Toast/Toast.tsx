@@ -2,13 +2,15 @@
 
 import { useEffect } from 'react';
 import { useUIStore, type Toast } from '@/stores/ui-store';
+import { CircleAlert, CircleCheck, CircleX, Info, X, type LucideIcon } from 'lucide-react';
+import { Icon } from '../Icon';
 import styles from './Toast.module.css';
 
-const TOAST_ICONS: Record<Toast['type'], string> = {
-  success: '✅',
-  error: '❌',
-  warning: '⚠️',
-  info: 'ℹ️',
+const TOAST_ICONS: Record<Toast['type'], LucideIcon> = {
+  success: CircleCheck,
+  error: CircleX,
+  warning: CircleAlert,
+  info: Info,
 };
 
 function ToastItem({ toast }: { toast: Toast }) {
@@ -24,7 +26,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   return (
     <div className={`${styles.toast} ${styles[toast.type]}`} role="alert">
-      <span className={styles.icon}>{TOAST_ICONS[toast.type]}</span>
+      <span className={styles.icon}><Icon icon={TOAST_ICONS[toast.type]} size={20} /></span>
       <div className={styles.content}>
         <p className={styles.title}>{toast.title}</p>
         {toast.message && <p className={styles.message}>{toast.message}</p>}
@@ -34,7 +36,7 @@ function ToastItem({ toast }: { toast: Toast }) {
         onClick={() => removeToast(toast.id)}
         aria-label="Dismiss notification"
       >
-        ×
+        <Icon icon={X} size={16} />
       </button>
       <div
         className={styles.progress}

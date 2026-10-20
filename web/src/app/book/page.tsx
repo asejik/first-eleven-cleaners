@@ -59,7 +59,7 @@ export default function BookingPage() {
             }}
           >
             <span>
-              👋 <strong>Already a customer?</strong> Sign in to prefill your information &amp; preferences.
+              <strong>Already a customer?</strong> Sign in to prefill your information &amp; preferences.
             </span>
             <Link
               href={`${ROUTES.login}?redirect=${encodeURIComponent(ROUTES.book)}`}

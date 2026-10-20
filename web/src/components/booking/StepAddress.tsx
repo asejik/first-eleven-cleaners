@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Card, Input, Button } from '@/components/ui';
+import { CircleCheck, MapPin, Map as MapIcon } from 'lucide-react';
+import { Card, Input, Button, Icon } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
 import { ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
 import { cityForZip } from '@/lib/city-pages';
@@ -263,7 +264,7 @@ export function StepAddress({
 
       {cleanedZip.length >= 5 && addressCoverage.checking && !detectedZone && !isWaitlist && (
         <div className={styles.zonePrompt} role="status">
-          <span style={{ fontSize: '20px' }}>📍</span>
+          <Icon icon={MapPin} size={20} />
           <div>Checking your address&hellip;</div>
         </div>
       )}
@@ -273,7 +274,7 @@ export function StepAddress({
         <div className={styles.zoneBanner} role="status">
           <div className={styles.zoneBannerHeader}>
             <div className={styles.zoneBannerTitle}>
-              <span>📍 {detectedZone.name}</span>
+              <span><Icon icon={MapPin} /> {detectedZone.name}</span>
             </div>
             <span className={styles.zoneBadgePill}>{detectedZone.badge}</span>
           </div>
@@ -305,7 +306,7 @@ export function StepAddress({
                   detectedZone.expressEligible ? styles.zoneSpecHighlight : styles.zoneSpecMuted
                 }`}
               >
-                {detectedZone.expressEligible ? '⚡ Mon–Thu' : 'Standard: 2 Business Days'}
+                {detectedZone.expressEligible ? 'Mon–Thu' : 'Standard: 2 Business Days'}
               </span>
             </div>
           </div>
@@ -355,7 +356,7 @@ export function StepAddress({
       {/* Beyond the last Extended Reach band, or outside North Texas: the waitlist */}
       {cleanedZip.length >= 5 && isWaitlist && (
         <div className={styles.zoneOutOfArea} role="status">
-          <span style={{ fontSize: '24px', lineHeight: 1 }}>📍</span>
+          <Icon icon={MapPin} size={24} />
           <div>
             <div className={styles.zoneOutOfAreaTitle}>{zone5NotStarted ? 'Extended Reach' : 'Not in your area yet'}</div>
             <div className={styles.zoneOutOfAreaText}>
@@ -365,7 +366,7 @@ export function StepAddress({
             </div>
             {waitlist.state === 'done' ? (
               <p className={styles.zoneOutOfAreaText} style={{ marginTop: 'var(--space-2)', fontWeight: 700 }}>
-                ✅ {waitlist.message}
+                <Icon icon={CircleCheck} /> {waitlist.message}
               </p>
             ) : (
               <div style={{ marginTop: 'var(--space-3)' }}>
@@ -396,7 +397,7 @@ export function StepAddress({
       {/* Neutral Prompt (Shown when ZIP is empty or incomplete) */}
       {cleanedZip.length < 5 && (
         <div className={styles.zonePrompt}>
-          <span style={{ fontSize: '20px' }}>📍</span>
+          <Icon icon={MapPin} size={20} />
           <div>
             {cleanedZip.length === 0
               ? 'Enter your 5-digit ZIP code above to verify area coverage, route schedule, and order minimum.'
@@ -406,7 +407,7 @@ export function StepAddress({
       )}
 
       <div className={styles.smartCoverageNotice}>
-        <span className={styles.noticeEmoji}>🗺️</span>
+        <span className={styles.noticeEmoji}><Icon icon={MapIcon} size={20} /></span>
         <div>
           <strong>Smart Coverage Promise:</strong> Door-to-door courier delivery is complimentary across the entire DFW Metroplex. Order minimums scale fairly by zone to power reliable plant routes. Beyond the Metroplex?{' '}
           <a href={`${ROUTES.serviceAreas}#extended-reach`}>See Extended Reach.</a>

@@ -3,7 +3,8 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader, ButtonLink } from '@/components/ui';
+import { Lock } from 'lucide-react';
+import { Loader, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import type { UserRole } from '@/types';
 
@@ -51,7 +52,7 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     return (
       <div className={styles.restrictedContainer}>
         <div className={styles.restrictedCard}>
-          <div className={styles.restrictedIcon}>🔒</div>
+          <div className={styles.restrictedIcon}><Icon icon={Lock} size={48} strokeWidth={1.5} /></div>
           <h2 className={styles.restrictedTitle}>Access Restricted</h2>
           <p className={styles.restrictedDescription}>
             Your account role (<strong className={styles.roleHighlight}>{userRole.toUpperCase()}</strong>) does not have permission to view this operational area.

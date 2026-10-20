@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useOrderDetail, isNotFoundError } from '@/hooks/useOrders';
-import { Button, Card, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
+import { Camera, CircleCheck, Search, ShieldCheck, Timer, TriangleAlert } from 'lucide-react';
+import { Button, Card, Badge, Loader, Modal, ButtonLink, Icon } from '@/components/ui';
 import { ORDER_STATUSES, ROUTES, SUPPORT_PHONE } from '@/lib/constants';
 import { photoLabel } from '@/lib/match-ready';
 import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
@@ -116,7 +117,7 @@ export default function PublicTrackingPage() {
                       role="img"
                       aria-label={order.status === 'delivered' ? 'Order delivered' : isDelayed ? 'Delivery delayed' : 'Delivery schedule'}
                     >
-                      {order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}
+                      <Icon icon={order.status === 'delivered' ? CircleCheck : isDelayed ? TriangleAlert : Timer} />
                     </span>
                     <div>
                       <strong>
@@ -180,14 +181,14 @@ export default function PublicTrackingPage() {
             {/* The 11-point Match-Ready Check, passed (client 2026-10-14) */}
             {order.match_ready?.passed && (
               <p className={styles.matchReadyBadge} role="status">
-                🛡️ Passed our 11-point Match-Ready Check
+                <Icon icon={ShieldCheck} /> Passed our 11-point Match-Ready Check
               </p>
             )}
 
             {/* Garment Passport Photos (Intake Inspection & Delivery Proof) */}
             {order.photos && order.photos.length > 0 && (
               <div className={styles.photosSection}>
-                <h3 className={styles.photosHeading}>📸 Garment Passport & Photo Proof</h3>
+                <h3 className={styles.photosHeading}><Icon icon={Camera} /> Garment Passport & Photo Proof</h3>
                 <p className={styles.photosSub}>
                   &ldquo;You see what we see.&rdquo; High-resolution timestamped inspection & delivery drop photos. Click any photo to expand full view.
                 </p>
@@ -206,7 +207,7 @@ export default function PublicTrackingPage() {
                         }
                         title="Click to view full uncropped photo"
                       >
-                        <span className={styles.expandBadge}>🔍 Click to Expand</span>
+                        <span className={styles.expandBadge}><Icon icon={Search} /> Click to Expand</span>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={photo.photo_url}
@@ -234,7 +235,7 @@ export default function PublicTrackingPage() {
             {/* Quick Actions */}
             <div className={styles.actionsBox}>
               <ButtonLink href={ROUTES.claim(orderId)} variant="outline" fullWidth>
-                🛡️ Have an issue? Make It Right Claim
+                <Icon icon={ShieldCheck} /> Have an issue? Make It Right Claim
               </ButtonLink>
               <ButtonLink href={ROUTES.home} variant="ghost" fullWidth>
                 First Eleven Cleaners Home
@@ -264,7 +265,7 @@ export default function PublicTrackingPage() {
         <Modal
           isOpen={Boolean(zoomPhoto)}
           onClose={() => setZoomPhoto(null)}
-          title={`📸 ${zoomPhoto?.title || 'Photo Inspection'}`}
+          title={`${zoomPhoto?.title || 'Photo Inspection'}`}
           size="lg"
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>

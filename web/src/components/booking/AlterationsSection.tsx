@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Scissors } from 'lucide-react';
+import { Icon } from '@/components/ui';
 import { DRY_CLEAN_PRICES, catalogItems, catalogPriceLabel, catalogLineTotal } from '@/lib/constants';
 import {
   INSTRUCTION_LABELS,
@@ -58,7 +60,7 @@ export function AlterationsSection({ lines, onAdd, onUpdate, onRemove }: Alterat
   return (
     <div>
       <div className={styles.sectionHeader} style={{ marginTop: 'var(--space-6)' }}>
-        <h2><span aria-hidden="true">🧵</span> Alterations</h2>
+        <h2><Icon icon={Scissors} /> Alterations</h2>
         <span className={styles.subtext}>3–5 business days · not with Express</span>
       </div>
       <p className={styles.estimatorHint}>

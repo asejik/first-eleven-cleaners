@@ -117,7 +117,8 @@
 }
 
 .indIcon {
-  font-size: var(--text-3xl);
+  color: var(--color-gold-text);
+  line-height: 0;
   display: inline-block;
   margin-bottom: var(--space-3);
 }
@@ -272,7 +273,8 @@
 }
 
 .certIcon {
-  font-size: 1.4rem;
+  color: var(--color-gold, #C9A14A);
+  line-height: 0;
 }
 
 .certTag {
@@ -321,7 +323,8 @@
 }
 
 .procurementPillIcon {
-  font-size: 1.25rem;
+  color: var(--color-gold, #C9A14A);
+  line-height: 0;
   flex-shrink: 0;
 }
 
@@ -427,7 +430,8 @@
 }
 
 .successIcon {
-  font-size: var(--text-4xl);
+  color: var(--color-green, #16a34a);
+  line-height: 0;
   display: inline-block;
   margin-bottom: var(--space-3);
 }
@@ -479,12 +483,13 @@
 }
 
 .outcomeIcon {
-  font-size: 28px;
+  color: var(--color-gold-text);
+  line-height: 0;
   display: block;
   margin-bottom: var(--space-3);
 }
 
-.outcomeCard h4 {
+.outcomeCard h3 {
   font-size: var(--text-lg);
   font-weight: var(--font-bold);
   color: var(--color-navy);

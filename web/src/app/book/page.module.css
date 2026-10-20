@@ -133,6 +133,13 @@
   line-height: var(--leading-normal);
 }
 
+/* The "See Extended Reach" link: same dark green, underlined, so it reads on the tint (WCAG AA) */
+.smartCoverageNotice a {
+  color: inherit;
+  font-weight: var(--font-semibold);
+  text-decoration: underline;
+}
+
 .noticeEmoji {
   font-size: var(--text-xl);
 }

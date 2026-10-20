@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, Badge, ButtonLink } from '@/components/ui';
+import { Award, CircleCheck, ClipboardCheck, Repeat, Scale, Search, Smartphone, Sparkles, Truck } from 'lucide-react';
+import { Card, Badge, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import { formatLongDate, dispatchThresholdMessage } from '@/lib/coverage';
 import { CADENCE_LABEL, ROUTINE_PATH } from '@/lib/routine';
@@ -21,12 +22,12 @@ interface StepConfirmationProps {
 }
 
 const STAGES = [
-  { label: 'Booked', icon: '📋', active: true },
-  { label: 'Picked Up', icon: '🚐', active: false },
-  { label: 'Weighed & Photo', icon: '⚖️', active: false },
-  { label: 'In Cleaning', icon: '✨', active: false },
-  { label: 'Out for Delivery', icon: '🚚', active: false },
-  { label: 'Delivered', icon: '✅', active: false },
+  { label: 'Booked', icon: ClipboardCheck, active: true },
+  { label: 'Picked Up', icon: Truck, active: false },
+  { label: 'Weighed & Photo', icon: Scale, active: false },
+  { label: 'In Cleaning', icon: Sparkles, active: false },
+  { label: 'Out for Delivery', icon: Truck, active: false },
+  { label: 'Delivered', icon: CircleCheck, active: false },
 ];
 
 export function StepConfirmation({
@@ -58,19 +59,19 @@ export function StepConfirmation({
         </p>
         {confirmedOrder.routeThreshold && (
           <p className={styles.confSubtitle}>
-            🚐 {dispatchThresholdMessage(confirmedOrder.routeThreshold.booked, confirmedOrder.routeThreshold.threshold)} We&apos;ll message you the moment your route is confirmed.
+            <Icon icon={Truck} /> {dispatchThresholdMessage(confirmedOrder.routeThreshold.booked, confirmedOrder.routeThreshold.threshold)} We&apos;ll message you the moment your route is confirmed.
           </p>
         )}
         {confirmedOrder.routine && (
           <p className={styles.confSubtitle}>
-            🔄 You&apos;re in the {CADENCE_LABEL[confirmedOrder.routine.cadence]} Routine. Next pickup:{' '}
+            <Icon icon={Repeat} /> You&apos;re in the {CADENCE_LABEL[confirmedOrder.routine.cadence]} Routine. Next pickup:{' '}
             <strong>{formatLongDate(confirmedOrder.routine.next_pickup_date)}</strong>. Skip, pause or change it anytime from{' '}
             <a href={ROUTINE_PATH}>your Routine page</a>. To sign in, use your email or (once verified) a text code. No password needed.
           </p>
         )}
         {confirmedOrder.routine?.founder && (
           <p className={styles.confSubtitle}>
-            🏅 You&apos;re <strong>Founding Member #{confirmedOrder.routine.founder.number}</strong> in {confirmedOrder.routine.founder.territory}: your plan rate is locked for life, and a numbered bag is coming with your first pickup.
+            <Icon icon={Award} /> You&apos;re <strong>Founding Member #{confirmedOrder.routine.founder.number}</strong> in {confirmedOrder.routine.founder.territory}: your plan rate is locked for life, and a numbered bag is coming with your first pickup.
           </p>
         )}
       </div>
@@ -84,20 +85,20 @@ export function StepConfirmation({
               key={stg.label}
               className={`${styles.stageStep} ${stg.active ? styles.stageActive : ''}`}
             >
-              <div className={styles.stageDot}>{stg.icon}</div>
+              <div className={styles.stageDot}><Icon icon={stg.icon} size={18} /></div>
               <span className={styles.stageName}>{stg.label}</span>
             </div>
           ))}
         </div>
         <p className={styles.trackerNote}>
-          📱 We will send text and email updates with photo receipts at each milestone.
+          <Icon icon={Smartphone} /> We will send text and email updates with photo receipts at each milestone.
         </p>
       </div>
 
       <div className={styles.confActions} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         {/* Direct Public Tracking Link (No login required) */}
         <ButtonLink href={ROUTES.track(confirmedOrder.id)} variant="primary" size="lg" fullWidth>
-          Track Order Live 🔍
+          Track Order Live <Icon icon={Search} />
         </ButtonLink>
 
         {user ? (

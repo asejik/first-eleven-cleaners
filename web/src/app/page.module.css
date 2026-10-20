@@ -58,18 +58,8 @@
   text-align: center;
   position: relative;
   z-index: 1;
-  animation: fade-in 0.6s ease;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  /* No fade-in: phones count the headline as shown only once it is visible, so a fade made the
+     page look slower (Lighthouse 2026-10-20) */
 }
 
 .heroBadge {
@@ -206,7 +196,8 @@
 }
 
 .stepIcon {
-  font-size: var(--text-4xl);
+  color: var(--color-gold-text);
+  line-height: 0;
   margin-bottom: var(--space-3);
 }
 
@@ -261,7 +252,8 @@
 }
 
 .serviceIcon {
-  font-size: var(--text-3xl);
+  color: var(--color-gold-text);
+  line-height: 0;
 }
 
 .serviceCard h3 {

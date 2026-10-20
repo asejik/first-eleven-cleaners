@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card } from '@/components/ui';
+import { Gift } from 'lucide-react';
+import { Button, Card, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 
 /**
@@ -41,7 +42,7 @@ export function ReferralCard({ className }: { className?: string }) {
   return (
     <Card variant="bordered" padding="lg" className={className}>
       <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)', color: 'var(--color-navy)', margin: '0 0 var(--space-2)' }}>
-        🎁 Give ${data.amount}, Get ${data.amount}
+        <Icon icon={Gift} /> Give ${data.amount}, Get ${data.amount}
       </h2>
       <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', margin: '0 0 var(--space-3)' }}>
         Friends get ${data.amount} off their first order with your code. You get ${data.amount} of credit when their order is delivered.

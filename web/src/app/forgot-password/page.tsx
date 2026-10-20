@@ -4,7 +4,8 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input, Card, ButtonLink } from '@/components/ui';
+import { MailCheck } from 'lucide-react';
+import { Button, Input, Card, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -51,7 +52,7 @@ export default function ForgotPasswordPage() {
 
         {submitted ? (
           <div className={styles.successState}>
-            <div className={styles.successIcon}>✉️</div>
+            <div className={styles.successIcon}><Icon icon={MailCheck} size={48} strokeWidth={1.5} /></div>
             <h3>Check Your Email</h3>
             <p>
               We&apos;ve sent password reset instructions to <strong>{email}</strong> if an account exists with that address.

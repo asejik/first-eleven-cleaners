@@ -180,6 +180,13 @@
   margin-bottom: var(--space-4);
 }
 
+/* Links in a sentence: dark gold and underlined, readable on white (WCAG AA) */
+.regionDesc a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .cityList {
   display: flex;
   flex-wrap: wrap;
@@ -224,7 +231,8 @@
 }
 
 .calloutIcon {
-  font-size: 40px;
+  color: #92400e;
+  line-height: 0;
   flex-shrink: 0;
 }
 
@@ -273,7 +281,8 @@
 }
 
 .stdIcon {
-  font-size: 32px;
+  color: var(--color-gold-text);
+  line-height: 0;
   display: block;
   margin-bottom: var(--space-3);
 }

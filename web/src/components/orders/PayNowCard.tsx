@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Card } from '@/components/ui';
+import { CircleCheck } from 'lucide-react';
+import { Button, Card, Icon } from '@/components/ui';
 import { SUPPORT_PHONE } from '@/lib/constants';
 
 /**
@@ -98,7 +99,7 @@ export function PayNowCard({
   if (paid) {
     return (
       <Card variant="bordered" padding="lg" style={{ marginBottom: 'var(--space-6)' }}>
-        <strong>{isHold ? "✅ Card updated. You're all set for your pickup." : '✅ Payment received. Thank you!'}</strong>
+        <strong><Icon icon={CircleCheck} /> {isHold ? "Card updated. You're all set for your pickup." : 'Payment received. Thank you!'}</strong>
         <p style={{ margin: 'var(--space-2) 0 0' }}>
           {isHold ? 'Nothing is charged until your order is weighed and itemized.' : 'Your order will be delivered on schedule.'}
         </p>

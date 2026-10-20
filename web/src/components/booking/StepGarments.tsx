@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Card, Badge, Button } from '@/components/ui';
+import { BedDouble, Lightbulb, Shirt, Sparkles, WashingMachine } from 'lucide-react';
+import { Card, Badge, Button, Icon } from '@/components/ui';
 import {
   DRY_CLEAN_PRICES,
   WASH_FOLD_MINIMUM_LBS,
@@ -107,7 +108,7 @@ export function StepGarments({
           onClick={() => setServiceType('mixed')}
           aria-pressed={serviceType === 'mixed'}
         >
-          <span aria-hidden="true">🧺 + 👔</span> Both (Wash &amp; Fold + Dry Cleaning)
+          <Icon icon={WashingMachine} /> <Icon icon={Shirt} /> Both (Wash &amp; Fold + Dry Cleaning)
         </button>
         <button
           type="button"
@@ -115,7 +116,7 @@ export function StepGarments({
           onClick={() => setServiceType('wash_fold')}
           aria-pressed={serviceType === 'wash_fold'}
         >
-          <span aria-hidden="true">🧺</span> Wash &amp; Fold Only
+          <Icon icon={WashingMachine} /> Wash &amp; Fold Only
         </button>
         <button
           type="button"
@@ -123,7 +124,7 @@ export function StepGarments({
           onClick={() => setServiceType('dry_clean')}
           aria-pressed={serviceType === 'dry_clean'}
         >
-          <span aria-hidden="true">👔</span> Dry Cleaning Only
+          <Icon icon={Shirt} /> Dry Cleaning Only
         </button>
       </div>
 
@@ -131,7 +132,7 @@ export function StepGarments({
       {serviceType !== 'dry_clean' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h2><span aria-hidden="true">🧺</span> Wash & Fold (Everyday Laundry)</h2>
+            <h2><Icon icon={WashingMachine} /> Wash & Fold (Everyday Laundry)</h2>
             <Badge variant="success">$3.00 / lb</Badge>
           </div>
           <div className={styles.weightSelector}>
@@ -150,7 +151,7 @@ export function StepGarments({
               <span className={styles.weightBadge}>{washFoldWeight} lbs</span>
             </div>
             <p className={styles.estimatorHint}>
-              💡 Tip: A typical laundry basket is about 15-20 lbs. Exact weight is verified at intake.
+              <Icon icon={Lightbulb} /> Tip: A typical laundry basket is about 15-20 lbs. Exact weight is verified at intake.
             </p>
           </div>
           {washFoldWeight < WASH_FOLD_MINIMUM_LBS && (
@@ -163,7 +164,7 @@ export function StepGarments({
           <div style={{ background: 'var(--color-cream)', padding: '16px', borderRadius: 'var(--radius-xl)', border: '1px solid rgba(201, 161, 74, 0.3)', marginTop: 'var(--space-4)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-navy)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                ✨ Match-Ready Add-On Recommendation
+                <Icon icon={Sparkles} /> Match-Ready Add-On Recommendation
               </strong>
               <Badge variant="success">Zero Extra Delivery Fee</Badge>
             </div>
@@ -202,13 +203,13 @@ export function StepGarments({
       {serviceType !== 'wash_fold' && (
         <div className={styles.serviceSection}>
           <div className={styles.sectionHeader}>
-            <h2><span aria-hidden="true">👔</span> Professional Dry Cleaning Items</h2>
+            <h2><Icon icon={Shirt} /> Professional Dry Cleaning Items</h2>
             <span className={styles.subtext}>Select item quantities</span>
           </div>
           <p className="sr-only" role="status" aria-live="polite">{qtyAnnouncement}</p>
           {renderGrid('dry_clean')}
           <div className={styles.sectionHeader} style={{ marginTop: 'var(--space-6)' }}>
-            <h2><span aria-hidden="true">🛏️</span> Household Items</h2>
+            <h2><Icon icon={BedDouble} /> Household Items</h2>
             <span className={styles.subtext}>Comforters, linens &amp; drapes</span>
           </div>
           {renderGrid('household')}

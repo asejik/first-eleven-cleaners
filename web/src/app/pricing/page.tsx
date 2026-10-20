@@ -22,7 +22,8 @@ import {
   catalogSubtotal,
   type CatalogCategory,
 } from '@/lib/constants';
-import { Card, ButtonLink } from '@/components/ui';
+import { BedDouble, CalendarDays, Info, Lock, MapPin, Map as MapIcon, Repeat, Scissors, ShieldCheck, Shirt, TriangleAlert, Truck, WashingMachine, Zap } from 'lucide-react';
+import { Card, ButtonLink, Icon } from '@/components/ui';
 import { RoutineSection } from '@/components/marketing/RoutineSection';
 import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
@@ -139,7 +140,7 @@ export default function PricingPage() {
             <Card variant="bordered" padding="lg" className={styles.priceCard}>
               <div className={styles.cardHeader}>
                 <div>
-                  <span className={styles.cardIcon}>🧺</span>
+                  <span className={styles.cardIcon}><Icon icon={WashingMachine} size={28} strokeWidth={1.5} /></span>
                   <h2 className={styles.cardTitle}>Wash & Fold (Everyday Laundry)</h2>
                 </div>
                 <div className={styles.priceTag}>
@@ -153,7 +154,7 @@ export default function PricingPage() {
               </p>
 
               <div className={styles.minimumNotice}>
-                <span className={styles.noticeIcon}>ℹ️</span>
+                <span className={styles.noticeIcon}><Icon icon={Info} /></span>
                 <div>
                   <strong>{WASH_FOLD_MINIMUM_LBS}-Pound Published Minimum:</strong> ${WASH_FOLD_MINIMUM_PRICE.toFixed(2)} order floor.
                   Orders under {WASH_FOLD_MINIMUM_LBS} lbs are billed at the ${WASH_FOLD_MINIMUM_PRICE.toFixed(0)} minimum floor.
@@ -162,7 +163,7 @@ export default function PricingPage() {
 
               {/* Routine member pricing (client 2026-10-08) */}
               <div id="member-prices" className={styles.minimumNotice} style={{ scrollMarginTop: '96px' }}>
-                <span className={styles.noticeIcon}>🔄</span>
+                <span className={styles.noticeIcon}><Icon icon={Repeat} /></span>
                 <div>
                   <strong>Routine members:</strong> ${memberWashFoldRate('weekly').toFixed(2)}/lb Weekly, ${memberWashFoldRate('biweekly').toFixed(2)}/lb Bi-Weekly.
                   Weekly saves {ROUTINE_PLAN_DISCOUNT_PERCENT.weekly}% and Bi-Weekly {ROUTINE_PLAN_DISCOUNT_PERCENT.biweekly}% on everything except alterations and fees.
@@ -181,7 +182,7 @@ export default function PricingPage() {
             <Card variant="bordered" padding="lg" className={styles.priceCard}>
               <div className={styles.cardHeader}>
                 <div>
-                  <span className={styles.cardIcon}>👔</span>
+                  <span className={styles.cardIcon}><Icon icon={Shirt} size={28} strokeWidth={1.5} /></span>
                   <h2 className={styles.cardTitle}>Professional Dry Cleaning</h2>
                 </div>
                 <span className={styles.perItemBadge}>Published Rate Card</span>
@@ -198,7 +199,7 @@ export default function PricingPage() {
             <Card variant="bordered" padding="lg" className={styles.priceCard}>
               <div className={styles.cardHeader}>
                 <div>
-                  <span className={styles.cardIcon}>🛏️</span>
+                  <span className={styles.cardIcon}><Icon icon={BedDouble} size={28} strokeWidth={1.5} /></span>
                   <h2 className={styles.cardTitle}>Household Items</h2>
                 </div>
                 <span className={styles.perItemBadge}>Published Rate Card</span>
@@ -215,7 +216,7 @@ export default function PricingPage() {
             <Card variant="bordered" padding="lg" className={styles.priceCard}>
               <div className={styles.cardHeader}>
                 <div>
-                  <span className={styles.cardIcon}>🧵</span>
+                  <span className={styles.cardIcon}><Icon icon={Scissors} size={28} strokeWidth={1.5} /></span>
                   <h2 className={styles.cardTitle}>Alterations</h2>
                 </div>
                 <span className={styles.perItemBadge}>3–5 Business Days</span>
@@ -235,7 +236,7 @@ export default function PricingPage() {
             <Card variant="surface" padding="lg" className={styles.expressCard}>
               <div className={styles.cardHeader}>
                 <div>
-                  <span className={styles.cardIcon}>⚡</span>
+                  <span className={styles.cardIcon}><Icon icon={Zap} size={28} strokeWidth={1.5} /></span>
                   <h2 className={styles.cardTitle}>24-Hour Express — Match-Ready Tomorrow</h2>
                 </div>
                 <span className={styles.statusBadge}>{coverage.expressEnabled ? 'Capacity Governed' : EXPRESS_COMING_SOON_BADGE}</span>
@@ -255,13 +256,13 @@ export default function PricingPage() {
                 </div>
                 <ul className={styles.expressSpecList}>
                   <li>
-                    <span>📅</span>
+                    <Icon icon={CalendarDays} size={18} />
                     <div>
                       <strong>Monday–Thursday pickups</strong> · Limited daily slots · Excludes specialty garments and household items.
                     </div>
                   </li>
                   <li>
-                    <span>🛡️</span>
+                    <Icon icon={ShieldCheck} size={18} />
                     <div>
                       <strong>On-Time Guarantee</strong> · Miss the 10:00 AM delivery window and the Express fee refunds automatically.
                     </div>
@@ -276,7 +277,7 @@ export default function PricingPage() {
             <Card variant="bordered" padding="lg" className={styles.priceCard}>
               <div className={styles.cardHeader}>
                 <div>
-                  <span className={styles.cardIcon}>🚐</span>
+                  <span className={styles.cardIcon}><Icon icon={Truck} size={28} strokeWidth={1.5} /></span>
                   <h2 className={styles.cardTitle}>Failed Pickup or Delivery — ${FAILED_PICKUP_FEE.toFixed(0)}</h2>
                 </div>
                 <span className={styles.perItemBadge}>Policy Clarity</span>
@@ -301,12 +302,12 @@ export default function PricingPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
                   <span>Repeat unnotified failed attempt:</span>
-                  <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                  <strong style={{ color: '#B91C1C' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
                 </div>
                 {/* Late cancel (client 2026-10-08): the same fee, one rule */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
                   <span>Cancels or reschedules under {LATE_CANCEL_CUTOFF_HOURS} hours before the window:</span>
-                  <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                  <strong style={{ color: '#B91C1C' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
                   <span>Zone 5 (Extended Reach):</span>
@@ -331,7 +332,7 @@ export default function PricingPage() {
                 <div className={styles.zoneCalcBox}>
                   <div className={styles.calcRowHeader}>
                     <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold', color: 'var(--color-navy)' }}>
-                      🗺️ Check Area Minimum:
+                      <Icon icon={MapIcon} /> Check Area Minimum:
                     </span>
                     <div className={styles.zoneZipInputRow}>
                       <span style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>ZIP:</span>
@@ -349,7 +350,7 @@ export default function PricingPage() {
                   {calcZone ? (
                     <div className={styles.zoneInfoCard}>
                       <div className={styles.zoneNameBadge}>
-                        <span>📍 {calcZone.name}</span>
+                        <span><Icon icon={MapPin} /> {calcZone.name}</span>
                         <span style={{ color: 'var(--color-green-dark)' }}>${calcZone.minimumOrder.toFixed(0)} min</span>
                       </div>
                       <div className={styles.zoneSpecsSummary}>
@@ -363,7 +364,7 @@ export default function PricingPage() {
                   ) : calcWaitlist ? (
                     <div className={styles.zoneInfoCard} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)' }}>
                       <div className={styles.zoneNameBadge} style={{ color: '#dc2626' }}>
-                        <span>📍 Not in your area yet</span>
+                        <span><Icon icon={MapPin} /> Not in your area yet</span>
                       </div>
                       <div className={styles.zoneSpecsSummary} style={{ color: 'var(--color-text-secondary)' }}>
                         This ZIP is beyond our routes for now. Enter your address on the booking page to join the waitlist.
@@ -372,7 +373,7 @@ export default function PricingPage() {
                   ) : (
                     <div className={styles.zoneInfoCard} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)' }}>
                       <div className={styles.zoneNameBadge} style={{ color: '#dc2626' }}>
-                        <span>📍 Outside Service Area</span>
+                        <span><Icon icon={MapPin} /> Outside Service Area</span>
                       </div>
                       <div className={styles.zoneSpecsSummary} style={{ color: 'var(--color-text-secondary)' }}>
                         We currently operate throughout the DFW Metroplex &amp; North Texas (ZIPs 750–754, 760–762).
@@ -382,7 +383,7 @@ export default function PricingPage() {
 
                   {subtotal > 0 && calcZone && zoneGap > 0 && (
                     <div className={styles.zoneGapAlert}>
-                      ⚠️ Current subtotal is ${zoneGap.toFixed(2)} below your area&apos;s ${calcZone.minimumOrder.toFixed(0)} minimum.{reach ? ' The Extended Reach delivery fee is on top of the minimum.' : ' Delivery is always free once minimum is met.'}
+                      <Icon icon={TriangleAlert} /> Current subtotal is ${zoneGap.toFixed(2)} below your area&apos;s ${calcZone.minimumOrder.toFixed(0)} minimum.{reach ? ' The Extended Reach delivery fee is on top of the minimum.' : ' Delivery is always free once minimum is met.'}
                     </div>
                   )}
                 </div>
@@ -461,7 +462,7 @@ export default function PricingPage() {
                       style={!calcZone?.expressEligible ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                       title={!calcZone?.expressEligible ? (coverage.expressEnabled ? `24-Hour Express unavailable in ${calcZone?.name || 'this area'}` : EXPRESS_COMING_SOON) : undefined}
                     >
-                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%)' : coverage.expressEnabled ? '(Not in Zone)' : `(${EXPRESS_COMING_SOON_BADGE})`}
+                      <Icon icon={Zap} /> 24-Hr Express {calcZone?.expressEligible ? '(+50%)' : coverage.expressEnabled ? '(Not in Zone)' : `(${EXPRESS_COMING_SOON_BADGE})`}
                     </button>
                   </div>
                 </div>
@@ -537,7 +538,7 @@ export default function PricingPage() {
                   Schedule Pickup with this Order
                 </ButtonLink>
                 <p className={styles.promiseCallout}>
-                  🔒 {PRICING_PAYMENT_PROMISE}
+                  <Icon icon={Lock} /> {PRICING_PAYMENT_PROMISE}
                 </p>
               </div>
             </Card>

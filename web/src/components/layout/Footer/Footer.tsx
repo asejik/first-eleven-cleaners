@@ -4,6 +4,8 @@ import { ROUTES, APP_NAME, SUPPORT_PHONE, SUPPORT_EMAIL } from '@/lib/constants'
 import { LEGAL_NAME } from '@/lib/legal';
 import { GOOGLE_REVIEW_URL } from '@/lib/google-reviews';
 import { SUPPORT_EMAIL_HREF, SUPPORT_PHONE_HREF } from '@/lib/contact';
+import { MapPin } from 'lucide-react';
+import { Icon } from '@/components/ui';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -29,7 +31,7 @@ export function Footer() {
             <p className={styles.tagline}>
               Every Garment Makes the Lineup.
             </p>
-            <p className={styles.location}>📍 Dallas-Fort Worth Metroplex</p>
+            <p className={styles.location}><Icon icon={MapPin} /> Dallas-Fort Worth Metroplex</p>
           </div>
 
           {/* Services */}

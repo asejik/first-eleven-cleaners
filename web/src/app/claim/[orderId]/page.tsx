@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims, useSubmitClaim } from '@/hooks/useClaims';
-import { Button, Card, Badge, Loader, ButtonLink } from '@/components/ui';
+import { Camera, MessageSquare, Receipt, ShieldCheck } from 'lucide-react';
+import { Button, Card, Badge, Loader, ButtonLink, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import styles from './page.module.css';
@@ -85,7 +86,7 @@ export default function ClaimPage() {
           {/* Success Banner after new submission */}
           {submittedClaim && (
             <div className={styles.successState}>
-              <span className={styles.successEmoji}>🛡️</span>
+              <span className={styles.successEmoji}><Icon icon={ShieldCheck} size={48} strokeWidth={1.5} /></span>
               <h2 className={styles.successTitle}>Claim #{submittedClaim.claim_id.slice(0, 8)} Logged</h2>
               <p className={styles.successText}>{submittedClaim.message}</p>
               <div className={styles.orderContextBox}>
@@ -103,7 +104,7 @@ export default function ClaimPage() {
           {existingClaims.length > 0 && (
             <div className={styles.existingClaimsSection}>
               <h3 className={styles.existingClaimsTitle}>
-                🛡️ Make It Right History ({existingClaims.length})
+                <Icon icon={ShieldCheck} /> Make It Right History ({existingClaims.length})
               </h3>
               {existingClaims.map((claim) => (
                 <div key={claim.id} className={styles.claimCard}>
@@ -145,13 +146,13 @@ export default function ClaimPage() {
                     {claim.resolution_notes ? (
                       <div className={styles.adminResolutionBox}>
                         <div className={styles.adminResolutionHeader}>
-                          <span>💬</span>
+                          <Icon icon={MessageSquare} />
                           <span>First Eleven Executive Resolution Response</span>
                         </div>
                         <p className={styles.adminResolutionText}>{claim.resolution_notes}</p>
                         {claim.refund_amount && claim.refund_amount > 0 ? (
                           <span className={styles.refundBadge}>
-                            💰 Refund Issued: ${claim.refund_amount.toFixed(2)}
+                            <Icon icon={Receipt} /> Refund Issued: ${claim.refund_amount.toFixed(2)}
                           </span>
                         ) : null}
                       </div>
@@ -225,7 +226,7 @@ export default function ClaimPage() {
 
               {/* Garment Passport Context Notice */}
               <div className={styles.passportNotice}>
-                <span>📸</span>
+                <Icon icon={Camera} />
                 <p>
                   Our intake photos and calibrated weight records for Order #{orderData?.order?.order_number || orderId} are automatically attached to this claim for instant inspection.
                 </p>

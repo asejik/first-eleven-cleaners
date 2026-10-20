@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { useOrderDetail, useCancelOrder, isNotFoundError } from '@/hooks/useOrders';
 import { useOrderClaims } from '@/hooks/useClaims';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Card, Badge, Loader, Modal, ButtonLink } from '@/components/ui';
+import { Ban, CircleCheck, ClipboardList, Lightbulb, MessageSquare, Receipt, ShieldCheck, Timer, TriangleAlert } from 'lucide-react';
+import { Button, Card, Badge, Loader, Modal, ButtonLink, Icon } from '@/components/ui';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { GarmentPassportTimeline } from '@/components/orders/GarmentPassportTimeline';
 import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE, EXTENDED_REACH_LABEL } from '@/lib/constants';
@@ -111,11 +112,11 @@ export default function OrderDetailPage() {
                 onClick={() => setIsCancelModalOpen(true)}
                 style={{ borderColor: 'var(--color-error)', color: 'var(--color-error)' }}
               >
-                🚫 Cancel Pickup
+                <Icon icon={Ban} /> Cancel Pickup
               </Button>
             )}
             <ButtonLink href={ROUTES.claim(order.id)} variant="outline" size="sm">
-              🛡️ Make It Right Claim
+              <Icon icon={ShieldCheck} /> Make It Right Claim
             </ButtonLink>
           </div>
         </div>
@@ -132,10 +133,10 @@ export default function OrderDetailPage() {
               <span className={styles.orderIdLabel}>Order #{order.order_number || order.id.slice(0, 8)}</span>
               <h1 className={styles.orderTitle}>
                 {order.order_type === 'wash_fold'
-                  ? '🧺 Wash & Fold'
+                  ? 'Wash & Fold'
                   : order.order_type === 'dry_clean'
-                  ? '👔 Dry Cleaning'
-                  : '🧺 Wash & Fold + 👔 Dry Cleaning'}
+                  ? 'Dry Cleaning'
+                  : 'Wash & Fold + Dry Cleaning'}
               </h1>
             </div>
             <Badge
@@ -177,7 +178,7 @@ export default function OrderDetailPage() {
                   role="img"
                   aria-label={order.status === 'delivered' ? 'Order delivered' : isDelayed ? 'Delivery delayed' : 'Delivery schedule'}
                 >
-                  {order.status === 'delivered' ? '✅' : isDelayed ? '⚠️' : '⏱️'}
+                  <Icon icon={order.status === 'delivered' ? CircleCheck : isDelayed ? TriangleAlert : Timer} />
                 </span>
                 <div>
                   <strong>
@@ -250,7 +251,7 @@ export default function OrderDetailPage() {
           <Card variant="bordered" padding="lg" className={styles.claimBannerCard}>
             <div className={styles.claimBannerHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <span style={{ fontSize: 'var(--text-xl)' }}>🛡️</span>
+                <Icon icon={ShieldCheck} size={24} />
                 <span className={styles.claimBannerTitle}>
                   Make It Right Claim Logged ({orderClaims[0].issue_type.replace('_', ' ').toUpperCase()})
                 </span>
@@ -283,12 +284,12 @@ export default function OrderDetailPage() {
               {orderClaims[0].resolution_notes ? (
                 <div className={styles.adminResolutionReply}>
                   <p className={styles.adminReplyTitle}>
-                    💬 First Eleven Executive Resolution Response:
+                    <Icon icon={MessageSquare} /> First Eleven Executive Resolution Response:
                   </p>
                   <p className={styles.adminReplyText}>{orderClaims[0].resolution_notes}</p>
                   {orderClaims[0].refund_amount && orderClaims[0].refund_amount > 0 ? (
                     <span className={styles.claimRefundPill}>
-                      💰 Refund Issued: ${orderClaims[0].refund_amount.toFixed(2)}
+                      <Icon icon={Receipt} /> Refund Issued: ${orderClaims[0].refund_amount.toFixed(2)}
                     </span>
                   ) : null}
                 </div>
@@ -305,7 +306,7 @@ export default function OrderDetailPage() {
         <div className={styles.detailsGrid}>
           {/* Itemized Receipt */}
           <Card variant="bordered" padding="md" className={styles.detailCard}>
-            <h3 className={styles.cardHeaderSmall}>🧾 Itemized Garment Receipt</h3>
+            <h3 className={styles.cardHeaderSmall}><Icon icon={Receipt} /> Itemized Garment Receipt</h3>
             <div className={styles.itemsList}>
               {order.items?.map((item) => (
                 <div key={item.id} className={styles.itemRow}>
@@ -351,14 +352,14 @@ export default function OrderDetailPage() {
 
             <div className={styles.receiptActions}>
               <ButtonLink href={ROUTES.claim(order.id)} variant="outline" size="sm" fullWidth className={styles.claimLink}>
-                🛡️ Make It Right Claim
+                <Icon icon={ShieldCheck} /> Make It Right Claim
               </ButtonLink>
             </div>
           </Card>
 
           {/* Activity Events Timeline */}
           <Card variant="bordered" padding="md" className={styles.detailCard}>
-            <h3 className={styles.cardHeaderSmall}>📋 Status Event Timeline</h3>
+            <h3 className={styles.cardHeaderSmall}><Icon icon={ClipboardList} /> Status Event Timeline</h3>
             <div className={styles.timelineList}>
               {order.events?.map((ev) => (
                 <div key={ev.id} className={styles.timelineItem}>
@@ -402,7 +403,7 @@ export default function OrderDetailPage() {
           ) : (
           <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-gray-200)' }}>
             <p style={{ color: 'var(--color-navy)', fontSize: 'var(--text-xs)', margin: 0, fontWeight: 'bold' }}>
-              💡 Zero Risk Checkout Promise:
+              <Icon icon={Lightbulb} /> Zero Risk Checkout Promise:
             </p>
             <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--text-xs)', margin: '4px 0 0' }}>
               Because your payment card is only charged after digital intake &amp; scale weighing at our plant, zero fees have been charged to your card.
