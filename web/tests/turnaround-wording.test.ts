@@ -23,8 +23,6 @@ const COMMENT = /^\s*(\/\/|\*)/;
 describe('The turnaround promise is 2 business days', () => {
   it('no customer-facing page, message or prompt promises 48 hours', () => {
     const offenders = files(SRC)
-      // constants.ts is off limits without approval; its STANDARD_BADGE isn't shown anywhere
-      .filter((f) => !f.endsWith('constants.ts'))
       .flatMap((f) =>
         readFileSync(f, 'utf8')
           .split('\n')
@@ -40,5 +38,12 @@ describe('The turnaround promise is 2 business days', () => {
     expect(terms).toContain('Standard orders are delivered 2 business days after pickup under our Match-Ready Guarantee.');
     expect(terms).toContain('a Thursday pickup is delivered Monday');
     expect(terms).not.toContain('excluding Sundays');
+  });
+});
+
+describe('Zone badge', () => {
+  it('zones without Express show the 2-business-day standard', async () => {
+    const { STANDARD_BADGE } = await import('@/lib/constants');
+    expect(STANDARD_BADGE).toBe('⏱ Standard 2 Business Days (Express Unavailable)');
   });
 });
