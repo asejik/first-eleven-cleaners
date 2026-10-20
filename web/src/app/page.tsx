@@ -13,6 +13,8 @@ import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPri
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui';
 import { RoutineSection } from '@/components/marketing/RoutineSection';
+import { GoogleReviewsSection } from '@/components/marketing/GoogleReviewsSection';
+import { getGoogleReviews } from '@/lib/google-reviews';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
 
@@ -28,7 +30,7 @@ export const metadata = pageMetadata({
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const { expressEnabled, zonesList } = await getCoverage();
+  const [{ expressEnabled, zonesList }, reviews] = await Promise.all([getCoverage(), getGoogleReviews()]);
   const minimumFrom = lowestMinimum(zonesList);
   return (
     <div className={styles.page}>
@@ -190,6 +192,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* === Google reviews (client review 2026-10-20, #14) === */}
+      <GoogleReviewsSection summary={reviews} />
 
       {/* === CTA Section === */}
       <section className={styles.ctaSection}>
