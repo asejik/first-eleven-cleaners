@@ -13,7 +13,7 @@ import styles from './page.module.css';
 export function TextSignInCard() {
   const addToast = useUIStore((s) => s.addToast);
   const queryClient = useQueryClient();
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['phone-verification'],
     queryFn: async (): Promise<{ phone: string | null; verified: boolean }> => {
       const res = await fetch('/api/auth/phone-verification');
@@ -67,7 +67,14 @@ export function TextSignInCard() {
         {data?.verified && <Badge variant="success">On</Badge>}
       </div>
       <div className={styles.cardBody} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {!data ? (
+        {isError ? (
+          <>
+            <p>We couldn&apos;t load your text sign-in status.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
+          </>
+        ) : !data ? (
           <p>Loading…</p>
         ) : data.verified ? (
           <p>Your phone {data.phone} is verified. Sign in anytime with a texted code, no password needed.</p>

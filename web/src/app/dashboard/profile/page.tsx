@@ -502,7 +502,8 @@ export default function ProfilePage() {
             />
 
             {/* Text-code sign-in (client 2026-10-08) */}
-            <TextSignInCard />
+            {/* Text sign-in is for customers; staff keep passwords (client 2026-10-08) */}
+            {user?.role === 'customer' && <TextSignInCard />}
 
             {/* Saved Addresses Card */}
             <Card variant="bordered" padding="lg" className={styles.card}>
