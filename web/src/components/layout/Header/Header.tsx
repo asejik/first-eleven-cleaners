@@ -109,9 +109,12 @@ export function Header() {
                   ⚖️ {user?.full_name || 'Intake Specialist'}
                 </Badge>
               ) : role === 'admin' ? (
-                <Badge variant="delivered" size="md">
-                  ⚡ {user?.full_name || 'Plant Director'}
-                </Badge>
+                // The name links to Profile, where it can be changed (client review 2026-10-20)
+                <Link href={ROUTES.profile} title="Edit your name and contact details" style={{ textDecoration: 'none' }}>
+                  <Badge variant="delivered" size="md">
+                    ⚡ {user?.full_name || 'Plant Director'}
+                  </Badge>
+                </Link>
               ) : (
                 <>
                   <ButtonLink href={ROUTES.profile} variant="ghostLight" size="sm">
@@ -168,6 +171,12 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+
+          {isAuth && role === 'admin' && (
+            <Link href={ROUTES.profile} className={styles.mobileNavLink} onClick={() => setIsMobileOpen(false)}>
+              👤 My Profile
+            </Link>
+          )}
 
           {isAuth && role === 'customer' && (
             <>
