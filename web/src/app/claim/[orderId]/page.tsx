@@ -73,7 +73,7 @@ export default function ClaimPage() {
         <Card variant="bordered" padding="lg" className={styles.card}>
           <div className={styles.header}>
             <div className={styles.badgeRow}>
-              <Badge variant="warning">Chewy-Standard Care</Badge>
+              <Badge variant="warning">Concierge-Standard Care</Badge>
               <Badge variant="info">Refund-First Policy</Badge>
             </div>
             <h1 className={styles.title}>Make It Right Guarantee</h1>
