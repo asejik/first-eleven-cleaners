@@ -3,12 +3,18 @@ import {
   APP_TAGLINE,
   ORDER_TWO_DISCOUNT,
   ORDER_TWO_WINDOW_DAYS,
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE,
 } from '@/lib/constants';
+import { SUPPORT_EMAIL_HREF, SUPPORT_PHONE_HREF } from '@/lib/contact';
 import { getCoverage } from '@/lib/coverage-settings';
 import { FIFA_STATEMENT } from '@/lib/legal';
 import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui';
+import { RoutineSection } from '@/components/marketing/RoutineSection';
+import { GoogleReviewsSection } from '@/components/marketing/GoogleReviewsSection';
+import { getGoogleReviews } from '@/lib/google-reviews';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
 
@@ -24,7 +30,7 @@ export const metadata = pageMetadata({
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const { expressEnabled, zonesList } = await getCoverage();
+  const [{ expressEnabled, zonesList }, reviews] = await Promise.all([getCoverage(), getGoogleReviews()]);
   const minimumFrom = lowestMinimum(zonesList);
   return (
     <div className={styles.page}>
@@ -159,6 +165,9 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* === First Eleven Routine (client review 2026-10-20, #12) === */}
+      <RoutineSection id="routine" />
+
       {/* === Trust / FIFA Heritage === */}
       <section className={styles.section}>
         <div className={styles.container}>
@@ -184,6 +193,9 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* === Google reviews (client review 2026-10-20, #14) === */}
+      <GoogleReviewsSection summary={reviews} />
+
       {/* === CTA Section === */}
       <section className={styles.ctaSection}>
         <div className={styles.container}>
@@ -200,6 +212,11 @@ export default async function HomePage() {
           </div>
           <p className={styles.ctaPromo}>
             Your second pickup within {ORDER_TWO_WINDOW_DAYS} days is ${ORDER_TWO_DISCOUNT} off, automatically.
+          </p>
+          {/* Support contact (client review 2026-10-20, #14) */}
+          <p className={styles.ctaContact}>
+            Questions? Call <a href={SUPPORT_PHONE_HREF}>{SUPPORT_PHONE}</a> or email{' '}
+            <a href={SUPPORT_EMAIL_HREF}>{SUPPORT_EMAIL}</a>.
           </p>
         </div>
       </section>

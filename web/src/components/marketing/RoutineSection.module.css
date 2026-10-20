@@ -1,0 +1,119 @@
+/* First Eleven Routine: navy band so it stands apart from the cream and white sections */
+.section {
+  background: linear-gradient(160deg, var(--color-navy) 0%, var(--color-navy-dark) 100%);
+  padding: var(--space-16) var(--space-4);
+  scroll-margin-top: 80px;
+}
+
+.container {
+  max-width: var(--container-xl);
+  margin: 0 auto;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-black);
+  color: var(--color-white);
+  margin-bottom: var(--space-3);
+}
+
+.accent {
+  color: var(--color-gold);
+}
+
+.subtitle {
+  max-width: 640px;
+  margin: 0 auto var(--space-10);
+  font-size: var(--text-lg);
+  color: var(--color-gray-200);
+  line-height: var(--leading-relaxed);
+}
+
+.grid {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.item {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(201, 161, 74, 0.35);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+
+.icon {
+  color: var(--color-gold);
+  margin-bottom: var(--space-3);
+}
+
+.itemTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+  margin-bottom: var(--space-2);
+}
+
+.itemText {
+  font-size: var(--text-sm);
+  color: var(--color-gray-200);
+  line-height: var(--leading-relaxed);
+}
+
+.actions {
+  margin-top: var(--space-10);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+}
+
+.link {
+  color: var(--color-gold);
+  font-weight: var(--font-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.link:hover {
+  color: var(--color-white);
+}
+
+@media (max-width: 639px) {
+  .title {
+    font-size: var(--text-2xl);
+  }
+}

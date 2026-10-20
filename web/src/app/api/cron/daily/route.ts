@@ -5,6 +5,7 @@ import { placeScheduledHolds, markExpiredHolds, runPaymentNeededLadder, runQuote
 import { rollExtendedReachRuns } from '@/lib/extended-reach';
 import { createRoutinePickups } from '@/lib/routine-pickups';
 import { sendOrderTwoNudges } from '@/lib/order-two-nudge';
+import { sendReviewRequests } from '@/lib/review-request';
 import { getCoverage } from '@/lib/coverage-settings';
 import { apiError } from '@/lib/api-errors';
 import { reportError } from '@/lib/error-reporting';
@@ -14,7 +15,8 @@ import { reportError } from '@/lib/error-reporting';
  * check (/api/cron/route-check, client 2026-10-08) didn't decide (first, so no hold is placed
  * for a pickup that moved), Routine pickups made 2 days ahead with a "skip this one?" text, card holds 2 days before pickup (Zone 5: once its run is confirmed), expired holds, the Payment
  * Needed reminder ladder, the quote ladder (reminder, staff call, returned unaltered), and the
- * Day 6 "order two" nudge (client 2026-10-14). Vercel Cron calls it at 14:00 UTC (9 AM Dallas
+ * Day 6 "order two" nudge (client 2026-10-14), and the Google review request the morning after
+ * a delivery (client review 2026-10-20). Vercel Cron calls it at 14:00 UTC (9 AM Dallas
  * in summer, 8 AM in winter; vercel.json) with "Authorization: Bearer <CRON_SECRET>".
  * Fails closed: without CRON_SECRET set, nobody can run it.
  */
@@ -48,7 +50,12 @@ export async function GET(request: Request) {
       reportError('api/cron/daily', err, { details: 'Day 6 order-two nudges not sent' });
       return { sent: 0, failed: true };
     });
-    return NextResponse.json({ ok: true, routes, routine, holds, expiredHolds, ladder, quotes, orderTwo });
+    // The Google review request, the morning after a delivery (client review 2026-10-20, #14)
+    const reviews = await sendReviewRequests(supabase, now).catch((err) => {
+      reportError('api/cron/daily', err, { details: 'Google review requests not sent' });
+      return { sent: 0, failed: true };
+    });
+    return NextResponse.json({ ok: true, routes, routine, holds, expiredHolds, ladder, quotes, orderTwo, reviews });
   } catch (err: unknown) {
     return apiError('api/cron/daily', err, 500);
   }

@@ -12,6 +12,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
 import { ROUTINE_PATH } from '@/lib/routine';
 import { ReferralCard } from '@/components/dashboard/ReferralCard';
+import { RoutineCard } from '@/components/dashboard/RoutineCard';
 import styles from './page.module.css';
 
 export default function DashboardPage() {
@@ -112,6 +113,9 @@ export default function DashboardPage() {
               </ButtonLink>
             </div>
           </div>
+
+          {/* First Eleven Routine (client review 2026-10-20, #12) */}
+          <RoutineCard className={styles.referralCard} />
 
           {/* Give $15, Get $15 (client 2026-10-10) */}
           <ReferralCard className={styles.referralCard} />

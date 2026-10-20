@@ -1,6 +1,6 @@
 import { addDaysToDate, dayOfWeek, texasDate } from '@/lib/texas-time';
 import type { Coverage } from '@/lib/coverage';
-import { FAILED_PICKUP_FEE, LATE_CANCEL_CUTOFF_HOURS, type ZoneConfig } from '@/lib/constants';
+import { FAILED_PICKUP_FEE, LATE_CANCEL_CUTOFF_HOURS, ROUTES, ROUTINE_PLAN_DISCOUNT_PERCENT, type ZoneConfig } from '@/lib/constants';
 import { isZoneRouteDay } from '@/lib/coverage';
 
 /**
@@ -56,6 +56,44 @@ export function allowedRoutineDays(zone: ZoneConfig, coverage: Coverage): string
 
 export function windowText(window: string): string {
   return window === 'evening' ? '5:00 to 8:00 PM' : '7:30 to 10:00 AM';
+}
+
+/** Booking with Weekly already picked (the Routine sections' button); the customer can still change it */
+export const ROUTINE_SIGNUP_PATH = `${ROUTES.book}?plan=weekly`;
+
+/** The plan in a booking link (?plan=weekly or biweekly), or null */
+export function planFromQuery(value: string | null | undefined): RoutineCadence | null {
+  return value === 'weekly' || value === 'biweekly' ? value : null;
+}
+
+/**
+ * What the Routine sections on the homepage, pricing page and dashboard say (client review
+ * 2026-10-20, #12: weekly/biweekly pickups, your window, skip, manage your schedule). Only what
+ * the membership does today (decideRoutineChange, the daily job's reminder text).
+ */
+export function routineHighlights(): { key: 'schedule' | 'pricing' | 'skip' | 'control'; title: string; text: string }[] {
+  return [
+    {
+      key: 'schedule',
+      title: 'Weekly or every other week',
+      text: `Choose your pickup day and window: mornings ${windowText('morning')} or evenings ${windowText('evening')}. We come on schedule, with no booking each time.`,
+    },
+    {
+      key: 'pricing',
+      title: 'Member pricing',
+      text: `Weekly saves ${ROUTINE_PLAN_DISCOUNT_PERCENT.weekly}% and Bi-Weekly ${ROUTINE_PLAN_DISCOUNT_PERCENT.biweekly}% on every order, except alterations and fees.`,
+    },
+    {
+      key: 'skip',
+      title: 'Skip when you need to',
+      text: 'Two days before each pickup we send you a reminder. Skip that pickup with one tap, by replying SKIP to the text, or from your dashboard.',
+    },
+    {
+      key: 'control',
+      title: 'Your schedule, your call',
+      text: `Change your day, window or plan, pause for up to ${ROUTINE_MAX_PAUSE_WEEKS} weeks, or cancel anytime with no fee.`,
+    },
+  ];
 }
 
 /** The auto-renewal agreement shown at checkout, as the client approved it (2026-10-10). */

@@ -23,6 +23,7 @@ import {
   type CatalogCategory,
 } from '@/lib/constants';
 import { Card, ButtonLink } from '@/components/ui';
+import { RoutineSection } from '@/components/marketing/RoutineSection';
 import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 import { useCoverage, useAddressCoverage } from '@/hooks/useCoverage';
@@ -160,7 +161,7 @@ export default function PricingPage() {
               </div>
 
               {/* Routine member pricing (client 2026-10-08) */}
-              <div className={styles.minimumNotice}>
+              <div id="member-prices" className={styles.minimumNotice} style={{ scrollMarginTop: '96px' }}>
                 <span className={styles.noticeIcon}>🔄</span>
                 <div>
                   <strong>Routine members:</strong> ${memberWashFoldRate('weekly').toFixed(2)}/lb Weekly, ${memberWashFoldRate('biweekly').toFixed(2)}/lb Bi-Weekly.
@@ -543,6 +544,9 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* First Eleven Routine (client review 2026-10-20, #12); member prices are on the Wash & Fold card */}
+      <RoutineSection id="routine" showPricingLink={false} />
     </div>
   );
 }

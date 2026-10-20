@@ -4,7 +4,9 @@ import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { ROUTES } from '@/lib/constants';
+import { Mail, Phone } from 'lucide-react';
+import { ROUTES, SUPPORT_EMAIL, SUPPORT_PHONE } from '@/lib/constants';
+import { SUPPORT_EMAIL_HREF, SUPPORT_PHONE_HREF } from '@/lib/contact';
 import { Button, Badge, ButtonLink } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import type { UserRole } from '@/types';
@@ -66,6 +68,8 @@ export function Header() {
   }
 
   const firstName = user?.full_name?.split(' ')[0] || 'My Account';
+  // Staff screens keep their own header; customers and visitors see how to reach us
+  const showContact = !isAuth || role === 'customer';
 
   return (
     <header className={styles.header}>
@@ -98,6 +102,13 @@ export function Header() {
 
         {/* Desktop Actions */}
         <div className={styles.desktopActions}>
+          {/* Support phone for customers and visitors (client review 2026-10-20, #14) */}
+          {showContact && (
+            <a href={SUPPORT_PHONE_HREF} className={styles.phoneLink} aria-label={`Call us at ${SUPPORT_PHONE}`}>
+              <Phone size={15} strokeWidth={2} aria-hidden="true" />
+              <span className={styles.phoneNumber}>{SUPPORT_PHONE}</span>
+            </a>
+          )}
           {isAuth ? (
             <div className={styles.userActions}>
               {role === 'driver' ? (
@@ -142,6 +153,13 @@ export function Header() {
             </>
           )}
         </div>
+
+        {/* Call button beside the menu on phones and tablets */}
+        {showContact && (
+          <a href={SUPPORT_PHONE_HREF} className={styles.mobileCall} aria-label={`Call us at ${SUPPORT_PHONE}`}>
+            <Phone size={20} strokeWidth={2} aria-hidden="true" />
+          </a>
+        )}
 
         {/* Mobile Menu Button */}
         <button
@@ -202,6 +220,17 @@ export function Header() {
                 ⚙️ Eleven&apos;s Memory Preferences
               </Link>
             </>
+          )}
+
+          {showContact && (
+            <div className={styles.mobileContact}>
+              <a href={SUPPORT_PHONE_HREF} className={styles.mobileNavLink}>
+                <Phone size={18} strokeWidth={2} aria-hidden="true" /> Call {SUPPORT_PHONE}
+              </a>
+              <a href={SUPPORT_EMAIL_HREF} className={styles.mobileNavLink}>
+                <Mail size={18} strokeWidth={2} aria-hidden="true" /> {SUPPORT_EMAIL}
+              </a>
+            </div>
           )}
 
           <div className={styles.mobileActions}>

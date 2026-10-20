@@ -608,6 +608,33 @@
   background-color: var(--color-cream);
 }
 
+/* Saved addresses on the Address step (client review 2026-10-20, #13) */
+.savedAddresses {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.savedAddressesLegend {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-navy);
+  margin-bottom: var(--space-2);
+}
+
+.savedAddressList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-2);
+}
+
+.savedAddressText {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
 .tierTitle {
   font-size: var(--text-xs);
   font-weight: var(--font-bold);

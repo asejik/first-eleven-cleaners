@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Card, Input, Button } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
-import { resolveZoneByZip, ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
+import { ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
+import { cityForZip } from '@/lib/city-pages';
 import { formatLongDate, type ExtendedReachQuote } from '@/lib/coverage';
 import type { AddressCoverage } from '@/hooks/useCoverage';
+import { isSameAddress, savedAddressText, splitAddressLabel } from '@/lib/saved-addresses';
+import type { Address } from '@/types';
 import styles from '@/app/book/page.module.css';
 
 interface StepAddressProps {
@@ -27,6 +30,9 @@ interface StepAddressProps {
   setZip: (val: string) => void;
   deliveryNotes: string;
   setDeliveryNotes: (val: string) => void;
+  /** A signed-in customer's saved addresses; picking one (or null for a new one) fills the fields */
+  savedAddresses?: Address[];
+  onUseSavedAddress: (address: Address | null) => void;
   detectedZone: ZoneConfig | null;
   /** Where the address is served: ZIP lists, or driving distance (client 2026-10-07, 8A) */
   addressCoverage: AddressCoverage;
@@ -61,6 +67,8 @@ export function StepAddress({
   setZip,
   deliveryNotes,
   setDeliveryNotes,
+  savedAddresses = [],
+  onUseSavedAddress,
   detectedZone,
   addressCoverage,
   extendedReach,
@@ -72,14 +80,10 @@ export function StepAddress({
 }: StepAddressProps) {
   const handleZipChange = (val: string) => {
     setZip(val);
-    // A likely city for the ZIP; the zone itself comes from addressCoverage
-    const resolved = resolveZoneByZip(val);
-    if (resolved && (!city || city === 'Dallas')) {
-      if (resolved.id === 'zone_3') setCity('Fort Worth');
-      else if (resolved.id === 'zone_2') setCity('Plano');
-      else if (resolved.id === 'zone_4') setCity('Denton');
-      else if (resolved.id === 'zone_1') setCity('Dallas');
-    }
+    // The city when the ZIP has only one (it used to guess by zone: an Arlington ZIP filled in
+    // Fort Worth); the zone itself comes from addressCoverage
+    const guess = cityForZip(val.trim());
+    if (guess && (!city || city === 'Dallas')) setCity(guess);
   };
 
   const cleanedZip = (zip || '').trim().replace(/[^\d]/g, '');
@@ -174,6 +178,37 @@ export function StepAddress({
             idPrefix="booking_step1"
           />
         </div>
+        {/* Saved addresses (client review 2026-10-20, #13): one tap fills the fields below */}
+        {savedAddresses.length > 0 && (
+          <fieldset className={styles.savedAddresses}>
+            <legend className={styles.savedAddressesLegend}>Your saved addresses</legend>
+            <div className={styles.savedAddressList}>
+              {savedAddresses.map((a) => {
+                const selected = isSameAddress(a, { street, zip });
+                const { label } = splitAddressLabel(a.delivery_notes);
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className={`${styles.tierCard} ${selected ? styles.selectedTier : ''}`}
+                    aria-pressed={selected}
+                    onClick={() => onUseSavedAddress(a)}
+                  >
+                    <span className={styles.tierTitle}>
+                      {label || (a.is_default ? 'Default' : 'Saved')}
+                      {label && a.is_default ? ' (default)' : ''}
+                    </span>
+                    <span className={styles.savedAddressText}>{savedAddressText(a)}</span>
+                  </button>
+                );
+              })}
+              <button type="button" className={styles.tierCard} onClick={() => onUseSavedAddress(null)}>
+                <span className={styles.tierTitle}>A different address</span>
+                <span className={styles.savedAddressText}>Clears the fields below</span>
+              </button>
+            </div>
+          </fieldset>
+        )}
         <Input
           id="booking-street"
           label="Street Address"

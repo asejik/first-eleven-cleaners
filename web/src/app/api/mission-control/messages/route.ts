@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyApiAuth } from '@/lib/supabase/auth-helpers';
-import { checkMessageText, textFor, testedMessage, ORDER_TWO_DEFAULTS, ORDER_TWO_KEYS, TESTED_MESSAGES, type TestedMessageKey } from '@/lib/message-tests';
+import { checkMessageText, textFor, testedMessage, OWN_TEXT_DEFAULTS, OWN_TEXT_KEYS, TESTED_MESSAGES, type TestedMessageKey } from '@/lib/message-tests';
 import { getMessageTests, messageTestStats, saveMessageTests } from '@/lib/message-tests-store';
 import { getZone5Messages } from '@/lib/zone5-message-settings';
 import type { Zone5MessageKey } from '@/lib/zone5-messages';
@@ -67,8 +67,8 @@ export async function POST(request: Request) {
     if (body.action === 'restart') {
       tests[key] = { ...before, countFrom: new Date().toISOString() };
     } else {
-      const isOrderTwo = (ORDER_TWO_KEYS as readonly string[]).includes(key);
-      const a = isOrderTwo ? body.a?.trim() || ORDER_TWO_DEFAULTS[key as keyof typeof ORDER_TWO_DEFAULTS] : undefined;
+      const isOwnText = (OWN_TEXT_KEYS as readonly string[]).includes(key);
+      const a = isOwnText ? body.a?.trim() || OWN_TEXT_DEFAULTS[key as keyof typeof OWN_TEXT_DEFAULTS] : undefined;
       if (a !== undefined) {
         const problem = checkMessageText(key, a);
         if (problem) return NextResponse.json({ error: `Version A: ${problem}` }, { status: 400 });
@@ -79,9 +79,9 @@ export async function POST(request: Request) {
         if (problem) return NextResponse.json({ error: `Version B: ${problem}` }, { status: 400 });
       }
       // A changed text starts a fresh count, so the numbers always describe the current versions
-      const changed = (isOrderTwo && a !== (before.a ?? ORDER_TWO_DEFAULTS[key as keyof typeof ORDER_TWO_DEFAULTS])) || b !== before.b || body.bOn !== before.bOn;
+      const changed = (isOwnText && a !== (before.a ?? OWN_TEXT_DEFAULTS[key as keyof typeof OWN_TEXT_DEFAULTS])) || b !== before.b || body.bOn !== before.bOn;
       tests[key] = {
-        ...(isOrderTwo ? { a } : {}),
+        ...(isOwnText ? { a } : {}),
         b,
         bOn: body.bOn && b.length > 0,
         countFrom: changed ? new Date().toISOString() : before.countFrom,

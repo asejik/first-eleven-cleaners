@@ -5,7 +5,8 @@ import { ZONE5_MESSAGE_DEFAULTS, ZONE5_MESSAGE_INFO, ZONE5_PLACEHOLDERS, unknown
 /**
  * A/B message tests (client 2026-10-14): "I need to be able to run two versions of any message
  * (A/B) and see sends, taps, and bookings for each." The messages that drive order two first:
- * the Day 6 nudge, the delivered text's "Book next week's pickup?" line, and the six Zone 5
+ * the Day 6 nudge, the delivered text's "Book next week's pickup?" line, the Google review
+ * request (client review 2026-10-20), and the six Zone 5
  * texts (their version A is edited in the Zone 5 panel, as before). Each customer gets the same
  * version of a message every time (A or B, 50/50); with B off, everyone gets A. A booking counts
  * for a version when that customer books within 7 days of it. Client-safe; the database side is
@@ -14,8 +15,10 @@ import { ZONE5_MESSAGE_DEFAULTS, ZONE5_MESSAGE_INFO, ZONE5_PLACEHOLDERS, unknown
 export const BOOKED_WITHIN_DAYS = 7;
 
 export const ORDER_TWO_KEYS = ['order_two_nudge', 'delivered_rebook'] as const;
-export type OrderTwoMessageKey = (typeof ORDER_TWO_KEYS)[number];
-export type TestedMessageKey = OrderTwoMessageKey | Zone5MessageKey;
+/** Messages whose version A is edited on this tab (Zone 5's are edited in their own panel) */
+export const OWN_TEXT_KEYS = [...ORDER_TWO_KEYS, 'review_request'] as const;
+export type OwnTextMessageKey = (typeof OWN_TEXT_KEYS)[number];
+export type TestedMessageKey = OwnTextMessageKey | Zone5MessageKey;
 
 export interface TestedMessageInfo {
   key: TestedMessageKey;
@@ -29,14 +32,18 @@ export interface TestedMessageInfo {
   zone5?: boolean;
 }
 
-export const ORDER_TWO_DEFAULTS: Record<OrderTwoMessageKey, string> = {
+export const OWN_TEXT_DEFAULTS: Record<OwnTextMessageKey, string> = {
   order_two_nudge: `Eleven at First Eleven Cleaners: Hi [First name], ready for round two? Your next pickup is one tap away, and it's $${ORDER_TWO_DISCOUNT} off: [link]. Reply STOP to opt out.`,
   delivered_rebook: "Book next week's pickup? [link]",
+  // Client review 2026-10-20 (#14): asked of every customer, whatever they told us (no review gating)
+  review_request:
+    'First Eleven Cleaners: Hi [First name], thank you for trusting us with your garments. How did we do? A short Google review helps other DFW customers find us: [link]. Reply STOP to opt out.',
 };
 
 export const TESTED_MESSAGES: readonly TestedMessageInfo[] = [
   { key: 'order_two_nudge', label: 'Day 6 nudge', when: '6 days after a first delivery, with no second order (once).', placeholders: ['First name', 'link'], required: 'link' },
   { key: 'delivered_rebook', label: 'Delivered: book next week', when: 'The end of the delivered text, for one-time customers.', placeholders: ['link'], required: 'link' },
+  { key: 'review_request', label: 'Google review request', when: 'The day after a delivery, once per customer.', placeholders: ['First name', 'link'], required: 'link' },
   ...(Object.keys(ZONE5_MESSAGE_DEFAULTS) as Zone5MessageKey[]).map((key) => ({
     key,
     label: `Zone 5: ${ZONE5_MESSAGE_INFO[key].label}`,
@@ -74,7 +81,7 @@ export function variantFor(recipient: string, key: string, test: MessageTest | u
 /** The text for a version: B's, the saved A, or the default (Zone 5 A comes from its own panel). */
 export function textFor(key: TestedMessageKey, variant: 'A' | 'B', test: MessageTest | undefined, zone5A?: string): string {
   if (variant === 'B' && test?.b.trim()) return test.b;
-  if ((ORDER_TWO_KEYS as readonly string[]).includes(key)) return test?.a?.trim() || ORDER_TWO_DEFAULTS[key as OrderTwoMessageKey];
+  if ((OWN_TEXT_KEYS as readonly string[]).includes(key)) return test?.a?.trim() || OWN_TEXT_DEFAULTS[key as OwnTextMessageKey];
   return zone5A ?? ZONE5_MESSAGE_DEFAULTS[key as Zone5MessageKey];
 }
 

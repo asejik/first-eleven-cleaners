@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Address } from '@/types';
 
-export function useCustomerAddresses() {
+export function useCustomerAddresses({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<{ addresses: Address[] }>({
     queryKey: ['addresses'],
     queryFn: async () => {
@@ -12,6 +12,7 @@ export function useCustomerAddresses() {
       return res.json();
     },
     staleTime: 30 * 1000,
+    enabled,
   });
 }
 

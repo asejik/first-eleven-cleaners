@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ZONE_CONFIG } from '@/lib/constants';
 import { resolveCoverage } from '@/lib/coverage';
-import { CITY_PAGES, cityDescription, cityTurnaround, placesText } from '@/lib/city-pages';
+import { CITY_PAGES, cityDescription, cityForZip, cityTurnaround, placesText } from '@/lib/city-pages';
 
 // ---------------------------------------------------------------------------
 // Client 2026-10-20 (#7): service area pages, in this order: North Dallas (Addison, Farmers
@@ -83,6 +83,19 @@ describe('City pages', () => {
     expect(cityTurnaround(ZONE_CONFIG.zone_4.routeDays)).toBe(
       'your order is cleaned in 2 business days and comes back on the next Tuesday or Friday route',
     );
+  });
+
+  it("booking's city guess: the ZIP's city when it has only one, never a zone's", () => {
+    expect(cityForZip('75023')).toBe('Plano');
+    expect(cityForZip('76063')).toBe('Mansfield');
+    expect(cityForZip('76107')).toBe('Fort Worth');
+    expect(cityForZip('76010')).toBeNull(); // Arlington & Grand Prairie (was "Fort Worth")
+    expect(cityForZip('75201')).toBeNull(); // Uptown, Zone 2 (was "Plano")
+    expect(cityForZip('75001')).toBeNull(); // Addison, North Dallas page
+    expect(cityForZip('99999')).toBeNull();
+    const step = read('src/components/booking/StepAddress.tsx');
+    expect(step).toContain('cityForZip(val.trim())');
+    expect(step).not.toContain("setCity('Fort Worth')");
   });
 
   it('places read as a sentence', () => {

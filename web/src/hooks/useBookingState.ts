@@ -28,6 +28,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
 import { earliestPickupDate, isExpressPickupDay, latestPickupDate, FOUNDER_HEAD_START_DAYS } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
+import { planFromQuery } from '@/lib/routine';
+import { bookingAddressFields, defaultAddress } from '@/lib/saved-addresses';
+import { useCustomerAddresses } from '@/hooks/useAddresses';
+import type { Address } from '@/types';
 import { holdAmountFor, shouldPlaceHoldNow } from '@/lib/payment-hold';
 import {
   newAlterationDraft,
@@ -130,6 +134,26 @@ export function useBookingState() {
     if (!phone) setPhone(user.phone || '');
     if (user.sms_consent) setSmsConsent(true);
     if (user.sms_promotions_consent) setSmsPromotionsConsent(true);
+  }
+
+  // Saved addresses (client review 2026-10-20, #13): a signed-in customer's default address is
+  // filled in when the address is still empty (a restored draft wins), and any saved one can be
+  // picked on the Address step
+  const isCustomer = Boolean(user && (!user.role || user.role === 'customer'));
+  const { data: addressData } = useCustomerAddresses({ enabled: isCustomer });
+  const savedAddresses = isCustomer ? addressData?.addresses ?? [] : [];
+  const applySavedAddress = (a: Address | null) => {
+    const f = a ? bookingAddressFields(a) : { street: '', unit: '', city: 'Dallas', zip: '', deliveryNotes: '' };
+    setStreet(f.street);
+    setUnit(f.unit);
+    setCity(f.city);
+    setZip(f.zip);
+    setDeliveryNotes(f.deliveryNotes);
+  };
+  const [addressPrefilledFor, setAddressPrefilledFor] = useState<string | null>(null);
+  if (user && savedAddresses.length > 0 && addressPrefilledFor !== user.id) {
+    setAddressPrefilledFor(user.id);
+    if (!street.trim() && !zip.trim()) applySavedAddress(defaultAddress(savedAddresses));
   }
 
   // Step 2: Services
@@ -259,6 +283,10 @@ export function useBookingState() {
       } catch {
         // ignore storage errors
       }
+      // "Start Your Routine" (/book?plan=weekly, client review 2026-10-20 #12) picks the plan;
+      // the customer still sees the choice and the agreement on the Schedule step
+      const plan = planFromQuery(new URLSearchParams(window.location.search).get('plan'));
+      if (plan) setFrequency(plan);
     }, 0);
     return () => clearTimeout(timer);
   }, [user]);
@@ -578,6 +606,8 @@ export function useBookingState() {
     setZip,
     deliveryNotes,
     setDeliveryNotes,
+    savedAddresses,
+    applySavedAddress,
     detectedZone,
     coverage,
     addressCoverage,

@@ -220,6 +220,6 @@ describe('Mission Control > Message Tests', () => {
     const list = await (await messagesGET(new Request('http://localhost/api/mission-control/messages'))).json();
     const nudge = list.messages.find((m: { key: string }) => m.key === 'order_two_nudge');
     expect(nudge).toMatchObject({ label: 'Day 6 nudge', b: B_NUDGE, bOn: true, a: expect.stringContaining('ready for round two') });
-    expect(list.messages.map((m: { key: string }) => m.key)).toEqual(['order_two_nudge', 'delivered_rebook', 'onTheList', 'routeConfirmed', 'routeNotReached', 'waitlistJoined', 'thresholdReached', 'zone5Open']);
+    expect(list.messages.map((m: { key: string }) => m.key)).toEqual(['order_two_nudge', 'delivered_rebook', 'review_request', 'onTheList', 'routeConfirmed', 'routeNotReached', 'waitlistJoined', 'thresholdReached', 'zone5Open']);
   });
 });
