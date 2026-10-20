@@ -132,7 +132,7 @@ export function zoneRulesLine(): string {
 
 export function expressLine(coverage: Coverage = DEFAULT_COVERAGE): string {
   if (!coverage.expressEnabled) {
-    return `24-Hour Express is coming soon (+${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal, Monday-Thursday morning pickups, Zones 1 and 2). It can't be booked yet; every order gets our 48-hour turnaround.`;
+    return `24-Hour Express is coming soon (+${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal, Monday-Thursday morning pickups, Zones 1 and 2). It can't be booked yet; every order gets our standard 2-business-day turnaround.`;
   }
   return `24-Hour Express: +${pct(EXPRESS_SURCHARGE_PERCENT)} of the order subtotal (the zone order minimum still applies), Monday-Thursday morning pickups in Zones 1 and 2.`;
 }

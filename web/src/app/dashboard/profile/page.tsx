@@ -482,7 +482,7 @@ export default function ProfilePage() {
                 <p className={styles.userEmail}>{user?.email}</p>
                 <div className={styles.userBadges}>
                   <Badge variant="success">Active Member</Badge>
-                  <Badge variant="info">48-Hr Guaranteed</Badge>
+                  <Badge variant="info">2-Business-Day Guarantee</Badge>
                 </div>
               </div>
             </div>

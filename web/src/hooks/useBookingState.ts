@@ -542,7 +542,7 @@ export function useBookingState() {
       addToast({
         type: 'success',
         title: 'Booking Confirmed!',
-        message: 'Order created with 48-hour Match-Ready guarantee.',
+        message: 'Order created with our Match-Ready Guarantee.',
       });
     } catch (err: unknown) {
       addToast({

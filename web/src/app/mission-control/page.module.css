@@ -143,9 +143,12 @@
 }
 
 /* --- Kanban Board --- */
+/* The seven columns share the page width, so the board fits a 1280px laptop and shrinks with
+   browser zoom; below that it scrolls sideways (client review 2026-10-20: "cut-off on the right
+   side, zoom doesn't work"). */
 .kanbanBoard {
   display: grid;
-  grid-template-columns: repeat(6, minmax(220px, 1fr)) minmax(270px, 310px);
+  grid-template-columns: repeat(6, minmax(160px, 1fr)) minmax(200px, 1.25fr);
   gap: var(--space-3);
   overflow-x: auto;
   padding-bottom: var(--space-4);
@@ -155,21 +158,12 @@
 
 .kanbanBoardCollapsed {
   display: grid;
-  grid-template-columns: repeat(6, minmax(240px, 1fr)) 56px;
+  grid-template-columns: repeat(6, minmax(160px, 1fr)) 56px;
   gap: var(--space-3);
   overflow-x: auto;
   padding-bottom: var(--space-4);
   min-height: 480px;
   align-items: start;
-}
-
-@media (max-width: 1400px) {
-  .kanbanBoard {
-    grid-template-columns: repeat(6, 230px) 290px;
-  }
-  .kanbanBoardCollapsed {
-    grid-template-columns: repeat(6, 250px) 56px;
-  }
 }
 
 .kanbanCol {

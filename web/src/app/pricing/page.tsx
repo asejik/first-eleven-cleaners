@@ -352,7 +352,7 @@ export default function PricingPage() {
                         <span style={{ color: 'var(--color-green-dark)' }}>${calcZone.minimumOrder.toFixed(0)} min</span>
                       </div>
                       <div className={styles.zoneSpecsSummary}>
-                        {calcZone.routeScheduleLabel} · {calcZone.expressEligible ? calcZone.expressLabel : 'Standard 48-Hr Only'}
+                        {calcZone.routeScheduleLabel} · {calcZone.expressEligible ? calcZone.expressLabel : 'Standard Only (2 Business Days)'}
                       </div>
                     </div>
                   ) : calcCoverage.checking ? (
@@ -446,7 +446,7 @@ export default function PricingPage() {
                       className={`${styles.expressOptionBtn} ${selectedExpress === 'standard' ? styles.activeOption : ''}`}
                       onClick={() => setSelectedExpress('standard')}
                     >
-                      48-Hr Standard (Included)
+                      Standard, 2 Business Days (Included)
                     </button>
                     <button
                       type="button"

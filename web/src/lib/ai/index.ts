@@ -149,7 +149,7 @@ export class SimulatedAIEngineProvider implements IAIEngineProvider {
         }
 
         return {
-          content: `Your active order **#${orderNum}** is currently: **${stageLabel}**.\n\nTarget delivery is on schedule for **${recentOrder.delivery_date} (${recentOrder.delivery_window || 'evening'})** under our 48-Hour Match-Ready Guarantee.`,
+          content: `Your active order **#${orderNum}** is currently: **${stageLabel}**.\n\nTarget delivery is on schedule for **${recentOrder.delivery_date} (${recentOrder.delivery_window || 'evening'})** under our Match-Ready Guarantee.`,
           intent: 'check_status',
           detectedLanguage: 'en',
           action: {

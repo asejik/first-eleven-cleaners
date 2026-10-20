@@ -143,7 +143,7 @@ function bookingRefusal(
     case 'window_full':
       return { status: 400, error: `The ${schedule.pickup_window} pickup window for ${schedule.pickup_date} has reached full capacity. Please select another window or date.` };
     case 'express_full':
-      return { status: 400, error: `24-Hour Express capacity for ${schedule.pickup_date} has reached its daily limit of ${EXPRESS_DAILY_SLOT_CAP} orders. Please select 48-Hour Standard pickup.` };
+      return { status: 400, error: `24-Hour Express capacity for ${schedule.pickup_date} has reached its daily limit of ${EXPRESS_DAILY_SLOT_CAP} orders. Please select Standard pickup.` };
     case 'promo_used':
       return { status: 400, error: `${promoUsedMessage(promoCode ?? '')} Please remove it and try again.` };
     case 'promo_exhausted':
@@ -309,7 +309,7 @@ export async function POST(request: Request) {
     const isExpress = validated.schedule.express_tier === 'express_24hr';
     if (isExpress && hasAlterations) {
       return NextResponse.json(
-        { error: "24-Hour Express and alterations can't share an order. Book the alterations as a separate order, or choose 48-Hour Standard." },
+        { error: "24-Hour Express and alterations can't share an order. Book the alterations as a separate order, or choose Standard." },
         { status: 400 }
       );
     }
@@ -317,7 +317,7 @@ export async function POST(request: Request) {
       if (!zone.expressEligible) {
         return NextResponse.json(
           {
-            error: `24-Hour Express is not available in ${zone.name}. Please select 48-Hour Standard pickup.`,
+            error: `24-Hour Express is not available in ${zone.name}. Please select Standard pickup.`,
             zone,
           },
           { status: 400 }
@@ -328,7 +328,7 @@ export async function POST(request: Request) {
       if (excludedItem) {
         return NextResponse.json(
           {
-            error: `24-Hour Express is not available for orders containing specialty items (${excludedItem.garment_type}). Please select 48-Hour Standard pickup.`,
+            error: `24-Hour Express is not available for orders containing specialty items (${excludedItem.garment_type}). Please select Standard pickup.`,
           },
           { status: 400 }
         );

@@ -101,7 +101,7 @@ export default function TermsOfServicePage() {
               <li className={styles.listItem}><strong>Customer cancels or reschedules under 2 hours before the window:</strong> $15.00 fee, charged to the card on file (Zone 5 Extended Reach pickups: the Extended Reach fee instead). The first one is waived as a courtesy; Routine members have one waived each calendar month instead. You are shown the fee and asked to confirm before it is charged.</li>
             </ul>
             <p className={styles.paragraph}>
-              Delivery times represent estimates backed by our 48-Hour Match-Ready Guarantee, excluding Sundays when our main plant is closed.
+              Standard orders are delivered 2 business days after pickup under our Match-Ready Guarantee. Our plant runs Monday to Friday, so a Thursday pickup is delivered Monday and Friday and Saturday pickups are delivered Tuesday; Zones 3 and 4 are delivered on the next route day after that, Zone 5 on the next Extended Reach run, and orders with alterations take longer. Your delivery date is shown when you book. We do not pick up or deliver on Sundays.
             </p>
           </section>
 

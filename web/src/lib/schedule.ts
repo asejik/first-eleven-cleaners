@@ -125,7 +125,7 @@ export function validateSchedule(
 
   if (tier === 'express_24hr') {
     if (!isExpressPickupDay(pickupDate)) {
-      return { ok: false, error: '24-Hour Express pickups run Monday through Thursday. Please choose one of those days or 48-Hour Standard.' };
+      return { ok: false, error: '24-Hour Express pickups run Monday through Thursday. Please choose one of those days or Standard.' };
     }
     if (pickupWindow !== 'morning') {
       return { ok: false, error: '24-Hour Express is a morning pickup. Please choose the morning window.' };

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       <div style="background-color: #f8fafc; border-left: 4px solid #C9A14A; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
         <h4 style="margin: 0 0 6px; color: #0B1F3A; font-size: 14px;">🌟 Match-Ready Service Features:</h4>
         <ul style="margin: 0; padding-left: 18px; color: #475569; font-size: 13px; line-height: 1.6;">
-          <li>48-Hour Standard Turnaround across DFW</li>
+          <li>2-Business-Day Standard Turnaround across DFW</li>
           <li>Digital Photo Intake Passports before charging</li>
           <li>AI Concierge (Eleven) 24/7 Wardrobe Memory</li>
           <li>Corporate Enterprise Net Terms & Itemized Statements</li>

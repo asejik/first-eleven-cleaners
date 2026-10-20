@@ -12,7 +12,6 @@ import {
   TX_SALES_TAX_RATE,
   FAILED_PICKUP_FEE,
   PICKUP_WINDOWS,
-  PROCESSING_HOURS,
   EXTENDED_REACH_LABEL,
   extendedReachTurnaroundLine,
   SUPPORT_PHONE,
@@ -93,7 +92,7 @@ export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
     `- Laundry and dry cleaning programs for businesses. Request a rate card: ${SITE_URL}/commercial`,
     '',
     '## Service Area',
-    `Standard turnaround: ${PROCESSING_HOURS} hours, counted on plant days (the plant runs Monday to Friday): Thursday pickups are delivered Monday, Friday and Saturday pickups Tuesday. Pickup windows: ${windows}. Details: ${SITE_URL}/service-areas`,
+    `Standard turnaround: 2 business days (the plant runs Monday to Friday): Thursday pickups are delivered Monday, Friday and Saturday pickups Tuesday. Pickup windows: ${windows}. Details: ${SITE_URL}/service-areas`,
     '',
     ...zones.map(
       (z) =>

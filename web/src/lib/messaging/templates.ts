@@ -65,7 +65,7 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
   const orderNum = data.orderNumber || data.orderId.slice(0, 8);
   const pDate = data.pickupDate || 'Scheduled date';
   const pWindow = data.pickupWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : 'Evening (5:00–8:00 PM)';
-  const dDate = data.deliveryDate || 'Within 48 hours';
+  const dDate = data.deliveryDate || 'Within 2 business days';
   const dWindow = data.deliveryWindow === 'morning' ? 'Morning (7:30–10:00 AM)' : 'Evening (5:00–8:00 PM)';
 
   switch (data.stage) {
@@ -117,7 +117,7 @@ export function formatStageMessage(data: MessagePayload): FormattedMessage {
       return {
         stage: 'in_cleaning',
         title: '✨ In Cleaning Process',
-        smsBody: `✨ First Eleven: Order #${orderNum} is now undergoing professional eco-friendly cleaning and hand-pressing. 48-Hour match-ready delivery on schedule for ${dDate} (${dWindow}). Track: ${data.trackingUrl}`,
+        smsBody: `✨ First Eleven: Order #${orderNum} is now undergoing professional eco-friendly cleaning and hand-pressing. Match-ready delivery on schedule for ${dDate} (${dWindow}). Track: ${data.trackingUrl}`,
         whatsappBody: `✨ *CLEANING IN PROGRESS*\n\nYour garments for Order *#${orderNum}* are now in our master plant undergoing eco-friendly cleaning, fiber conditioning, and hand pressing.\n\n🚚 *Target Delivery:* ${dDate} (${dWindow})\n📲 *Track:* ${data.trackingUrl}`,
         mediaUrl: data.photoUrl,
       };

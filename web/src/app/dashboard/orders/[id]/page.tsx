@@ -181,8 +181,8 @@ export default function OrderDetailPage() {
                     {order.status === 'delivered'
                       ? 'Delivered'
                       : isDelayed
-                      ? '48-Hour Guarantee: Plant Rescheduling In Progress'
-                      : '48-Hour Match-Ready Guarantee'}
+                      ? 'Match-Ready Guarantee: Plant Rescheduling In Progress'
+                      : 'Match-Ready Guarantee: 2 Business Days'}
                   </strong>
                   <p>
                     {order.status === 'delivered'

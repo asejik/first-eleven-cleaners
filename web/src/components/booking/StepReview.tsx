@@ -205,7 +205,7 @@ export function StepReview({
             <span style={{ fontWeight: 'var(--font-semibold)', color: isExpress24 ? 'var(--color-gold-dark)' : 'var(--color-navy)' }}>
               {isExpress24
                 ? '⚡ 24-Hour Express (Match-Ready Tomorrow)'
-                : '48-Hour Match-Ready (Included)'}
+                : 'Standard, 2 Business Days (Included)'}
             </span>
           </div>
           {expressSurcharge > 0 && (

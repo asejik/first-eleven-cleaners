@@ -214,7 +214,7 @@ export async function POST(req: Request) {
     // HELP / INFO
     if (/^(HELP|INFO)$/i.test(upperMsg)) {
       return createTwimlResponse(
-        'First Eleven Cleaners: For support, call or text (682) 200-0039 or email concierge@firstelevencleaners.com. 48-hr turnaround & free Metroplex delivery. Reply STOP to cancel. Msg & data rates may apply.'
+        'First Eleven Cleaners: For support, call or text (682) 200-0039 or email concierge@firstelevencleaners.com. 2-business-day turnaround & free Metroplex delivery. Reply STOP to cancel. Msg & data rates may apply.'
       );
     }
 

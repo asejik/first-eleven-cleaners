@@ -15,7 +15,7 @@ export const metadata = pageMetadata({
   path: '/',
   title: 'First Eleven Cleaners | DFW Dry Cleaning & Laundry Pickup',
   description:
-    'Premium dry cleaning and wash & fold with free pickup and delivery across Dallas-Fort Worth. 48-hour Match-Ready turnaround. Book online in minutes.',
+    'Premium dry cleaning and wash & fold with free pickup and delivery across Dallas-Fort Worth. 2-business-day Match-Ready turnaround. Book online in minutes.',
   imageAlt: 'First Eleven Cleaners - Every Garment Makes the Lineup',
 });
 
@@ -48,7 +48,7 @@ export default async function HomePage() {
           <p className={styles.heroSubtitle}>{APP_TAGLINE}</p>
           <p className={styles.heroDescription}>
             Premium dry cleaning and laundry pickup & delivery across the
-            Dallas-Fort Worth Metroplex. Transparent pricing. 48-hour turnaround.
+            Dallas-Fort Worth Metroplex. Transparent pricing. 2-business-day turnaround.
             Every step tracked.
           </p>
           <div className={styles.heroActions}>
@@ -99,7 +99,7 @@ export default async function HomePage() {
               <div className={styles.stepIcon}>🚚</div>
               <h3 className={styles.stepTitle}>Delivered to Your Door</h3>
               <p className={styles.stepDescription}>
-                Clean, folded, pressed & game-ready within 48 hours. Delivered
+                Clean, folded, pressed & game-ready in 2 business days. Delivered
                 with photo confirmation. Track every step in real-time.
               </p>
             </div>
