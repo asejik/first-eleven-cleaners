@@ -107,32 +107,32 @@ export default function CommercialPage() {
           <div className={styles.outcomesGrid}>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={Truck} size={28} strokeWidth={1.5} /></span>
-              <h4>Dedicated Route Schedules</h4>
+              <h3>Dedicated Route Schedules</h3>
               <p>Reliable recurring pickup and delivery windows tuned to your business shift changes and peak hours.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={FileText} size={28} strokeWidth={1.5} /></span>
-              <h4>Itemized Billing</h4>
+              <h3>Itemized Billing</h3>
               <p>Every order itemized, with billing terms agreed in your service agreement.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={Tag} size={28} strokeWidth={1.5} /></span>
-              <h4>Photo-Documented Intake &amp; Tracking</h4>
+              <h3>Photo-Documented Intake &amp; Tracking</h3>
               <p>Intake photos, condition notes, and live order tracking from pickup to delivery.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}>⏱️</span>
-              <h4>Turnaround Agreed in Writing</h4>
+              <h3>Turnaround Agreed in Writing</h3>
               <p>Your turnaround time is set out in your service agreement, so everyone works to the same commitment.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={Handshake} size={28} strokeWidth={1.5} /></span>
-              <h4>Dedicated Commercial Support</h4>
+              <h3>Dedicated Commercial Support</h3>
               <p>A direct contact for your account by phone and email.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={TrendingDown} size={28} strokeWidth={1.5} /></span>
-              <h4>Volume Rate Cards</h4>
+              <h3>Volume Rate Cards</h3>
               <p>Rates quoted for your volume, agreed before your first pickup.</p>
             </div>
           </div>

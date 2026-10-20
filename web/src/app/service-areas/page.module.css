@@ -180,6 +180,13 @@
   margin-bottom: var(--space-4);
 }
 
+/* Links in a sentence: dark gold and underlined, readable on white (WCAG AA) */
+.regionDesc a {
+  color: var(--color-gold-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .cityList {
   display: flex;
   flex-wrap: wrap;

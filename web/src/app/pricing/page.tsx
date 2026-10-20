@@ -302,12 +302,12 @@ export default function PricingPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
                   <span>Repeat unnotified failed attempt:</span>
-                  <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                  <strong style={{ color: '#B91C1C' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
                 </div>
                 {/* Late cancel (client 2026-10-08): the same fee, one rule */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)' }}>
                   <span>Cancels or reschedules under {LATE_CANCEL_CUTOFF_HOURS} hours before the window:</span>
-                  <strong style={{ color: 'var(--color-error)' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
+                  <strong style={{ color: '#B91C1C' }}>${FAILED_PICKUP_FEE.toFixed(2)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-cream)', borderRadius: 'var(--radius-md)' }}>
                   <span>Zone 5 (Extended Reach):</span>

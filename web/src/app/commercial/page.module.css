@@ -489,7 +489,7 @@
   margin-bottom: var(--space-3);
 }
 
-.outcomeCard h4 {
+.outcomeCard h3 {
   font-size: var(--text-lg);
   font-weight: var(--font-bold);
   color: var(--color-navy);
