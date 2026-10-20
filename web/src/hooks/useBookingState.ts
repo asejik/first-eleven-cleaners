@@ -28,6 +28,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAvailableSlots, useValidatePromoCode, useSubmitBooking } from '@/hooks/useBooking';
 import { earliestPickupDate, isExpressPickupDay, latestPickupDate, FOUNDER_HEAD_START_DAYS } from '@/lib/schedule';
 import { promoFinancialInputs, type AppliedPromo } from '@/lib/promo';
+import { planFromQuery } from '@/lib/routine';
 import { holdAmountFor, shouldPlaceHoldNow } from '@/lib/payment-hold';
 import {
   newAlterationDraft,
@@ -259,6 +260,10 @@ export function useBookingState() {
       } catch {
         // ignore storage errors
       }
+      // "Start Your Routine" (/book?plan=weekly, client review 2026-10-20 #12) picks the plan;
+      // the customer still sees the choice and the agreement on the Schedule step
+      const plan = planFromQuery(new URLSearchParams(window.location.search).get('plan'));
+      if (plan) setFrequency(plan);
     }, 0);
     return () => clearTimeout(timer);
   }, [user]);

@@ -9,6 +9,7 @@ import { FIFA_STATEMENT } from '@/lib/legal';
 import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui';
+import { RoutineSection } from '@/components/marketing/RoutineSection';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
 
@@ -158,6 +159,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* === First Eleven Routine (client review 2026-10-20, #12) === */}
+      <RoutineSection id="routine" />
 
       {/* === Trust / FIFA Heritage === */}
       <section className={styles.section}>
