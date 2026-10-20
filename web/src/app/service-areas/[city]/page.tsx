@@ -6,7 +6,8 @@ import { ROUTES, EXPRESS_BADGE, PICKUP_WINDOWS, WASH_FOLD_PRICE_PER_LB } from '@
 import { resolveCoverage } from '@/lib/coverage';
 import { getCoverage } from '@/lib/coverage-settings';
 import { SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
-import { CITY_PAGES, cityDescription, cityPage, cityPagePath, placesText } from '@/lib/city-pages';
+import { CITY_PAGES, cityDescription, cityPage, cityPagePath, cityTurnaround, placesText, type CityPage as City } from '@/lib/city-pages';
+import type { Coverage } from '@/lib/coverage';
 import { ENV_FEE_LABEL, SALES_TAX_LABEL, EXPRESS_COMING_SOON_BADGE, shirtPricesLine } from '@/lib/published-prices';
 import styles from '../page.module.css';
 
@@ -18,13 +19,21 @@ export function generateStaticParams() {
   return CITY_PAGES.map((c) => ({ city: c.slug }));
 }
 
+/** The page's ZIPs still on a Metroplex zone list, each with its zone (tier-down minimums included) */
+function servedZips(city: City, coverage: Coverage) {
+  return city.zips
+    .map((zip) => ({ zip, result: resolveCoverage({ zip }, coverage) }))
+    .flatMap(({ zip, result }) => (result.status === 'served' && result.zone.id !== 'zone_5' ? [{ zip, zone: result.zone }] : []));
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ city: string }> }) {
   const city = cityPage((await params).city);
   if (!city) return {};
+  const served = servedZips(city, await getCoverage());
   return pageMetadata({
     path: cityPagePath(city.slug),
     title: city.title,
-    description: cityDescription(city),
+    description: cityDescription(city, served[0]?.zone.routeDays ?? []),
     imageAlt: `First Eleven Cleaners - pickup and delivery in ${city.name}`,
   });
 }
@@ -33,11 +42,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
   const city = cityPage((await params).city);
   if (!city) notFound();
 
-  const coverage = await getCoverage();
-  // Only ZIPs still on a Metroplex zone list; each with its own minimum (tier-downs included)
-  const served = city.zips
-    .map((zip) => ({ zip, result: resolveCoverage({ zip }, coverage) }))
-    .flatMap(({ zip, result }) => (result.status === 'served' && result.zone.id !== 'zone_5' ? [{ zip, zone: result.zone }] : []));
+  const served = servedZips(city, await getCoverage());
   if (served.length === 0) notFound();
 
   const minimums = served.map((s) => s.zone.minimumOrder);
@@ -45,6 +50,8 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
   const minimumLabel = minimums.every((m) => m === lowest) ? `$${lowest.toFixed(0)} order minimum` : `Order minimums from $${lowest.toFixed(0)}`;
   const zone = served[0].zone;
   const express = served.every((s) => s.zone.expressEligible);
+  const turnaround = cityTurnaround(zone.routeDays);
+  const saturday = zone.routeDays.includes('Saturday');
   const where = placesText(city.places);
   const others = CITY_PAGES.filter((c) => c.slug !== city.slug);
   const [morning, evening] = PICKUP_WINDOWS;
@@ -80,7 +87,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
           <h1 className={styles.pageTitle}>Dry Cleaning &amp; Laundry Pickup in {city.name}</h1>
           <p className={styles.pageSubtitle}>
             We pick up and deliver dry cleaning, laundered shirts and wash &amp; fold across {where}. Pickup and delivery
-            are free, and your order comes back 2 business days after pickup.
+            are free, and {turnaround}.
           </p>
           <div className={styles.heroActions}>
             <ButtonLink href={ROUTES.book} variant="primary" size="lg">
@@ -124,7 +131,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
               <p className={styles.regionDesc}>
                 Choose a {morning.label.toLowerCase()} ({morning.start} to {morning.end}) or {evening.label.toLowerCase()} (
                 {evening.start} to {evening.end}) window. Every garment is photographed and tracked by order number in your
-                Garment Passport, and your order is back 2 business days after pickup. {SATURDAY_PICKUP_NOTICE}
+                Garment Passport, and {turnaround}.{saturday && ` ${SATURDAY_PICKUP_NOTICE}`}
               </p>
             </Card>
 
