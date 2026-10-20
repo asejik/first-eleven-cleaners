@@ -49,7 +49,7 @@ describe('llms.txt matches the real catalog (P08 SEO-02)', () => {
   });
 
   it('discloses the fees charged at checkout', () => {
-    expect(text).toContain(`${(ENVIRONMENTAL_FEE_RATE * 100).toFixed(0)}% environmental fee`);
+    expect(text).toContain(`${(ENVIRONMENTAL_FEE_RATE * 100).toFixed(0)}% Environmental Service Fee (a First Eleven charge, not a government tax)`);
     expect(text).toContain(`${(TX_SALES_TAX_RATE * 100).toFixed(2)}% Texas sales tax`);
     expect(text).toContain(`${money(FAILED_PICKUP_FEE)} failed pickup or delivery fee`);
     expect(text).toContain('no separate dollar minimum; the zone order minimum applies');

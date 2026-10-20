@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button, Card } from '@/components/ui';
 import { SUPPORT_PHONE, DRY_CLEAN_PRICES, EXTENDED_REACH_LABEL } from '@/lib/constants';
 import type { Order } from '@/types';
+import { ENV_FEE_LABEL, SALES_TAX_LABEL } from '@/lib/published-prices';
 
 /**
  * The two taps on the itemized ticket (client 2026-10-06, Part A): "Looks good" closes the
@@ -60,8 +61,8 @@ export function TicketFeedbackCard({ orderId, ticket }: { orderId: string; ticke
               ['Express surcharge', ticket.express_surcharge, '+'],
               ['Discount', ticket.discount_amount, '-'],
               [EXTENDED_REACH_LABEL, ticket.extended_reach_fee, '+'],
-              ['Environmental fee', ticket.environmental_fee, '+'],
-              ['Sales tax', ticket.sales_tax, '+'],
+              [ENV_FEE_LABEL, ticket.environmental_fee, '+'],
+              [SALES_TAX_LABEL, ticket.sales_tax, '+'],
             ]
               .filter(([, amount]) => Number(amount) > 0)
               .map(([label, amount, sign]) => (

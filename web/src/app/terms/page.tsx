@@ -74,7 +74,7 @@ export default function TermsOfServicePage() {
               All core prices are published transparently on our website prior to booking. Wash-and-fold is priced at $3.00/lb subject to a 15-lb minimum ($45.00). Order minimums start at $45 and depend on your service area; your minimum is shown when you enter your address, before you book. Dry cleaning is priced per garment according to our published item catalog.
             </p>
             <p className={styles.paragraph}>
-              <strong>Taxes &amp; Environmental Fees:</strong> All orders are subject to Texas state and local sales tax (currently 8.25%) and an Environmental Fee (3.0%) dedicated to closed-loop solvent recycling, water reclamation systems, and sustainable packaging. All taxes and surcharges are itemized transparently on booking review screens and final digital receipts.
+              <strong>Environmental Service Fee &amp; Sales Tax:</strong> Every order carries an Environmental Service Fee (3%), a First Eleven Cleaners charge (not a government tax) that supports solvent recycling, water reclamation, and sustainable packaging. Texas sales tax (currently 8.25%) is charged on the service price, including the Environmental Service Fee. Both are itemized on the booking review screen before you pay and on your final receipt.
             </p>
             <p className={styles.paragraph}>
               <strong>Invisible Checkout Protocol:</strong> When you book a pickup, your card on file is pre-authorized. We do not finalize or settle charges until your garments arrive at our central facility, are weighed on certified scales, itemized, and photographed into your Garment Passport.

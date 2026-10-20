@@ -26,7 +26,7 @@ import { Card, ButtonLink } from '@/components/ui';
 import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 import { useCoverage, useAddressCoverage } from '@/hooks/useCoverage';
-import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE } from '@/lib/published-prices';
+import { ENV_FEE_LABEL, EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, SALES_TAX_LABEL } from '@/lib/published-prices';
 import styles from './page.module.css';
 
 export default function PricingPage() {
@@ -517,11 +517,11 @@ export default function PricingPage() {
                   {financials.netSubtotal > 0 && (
                     <>
                       <div className={styles.breakdownRow}>
-                        <span>Environmental Fee (3%)</span>
+                        <span>{ENV_FEE_LABEL}</span>
                         <span>+${financials.environmentalFee.toFixed(2)}</span>
                       </div>
                       <div className={styles.breakdownRow}>
-                        <span>Texas Sales Tax (8.25%)</span>
+                        <span>{SALES_TAX_LABEL}</span>
                         <span>+${financials.salesTax.toFixed(2)}</span>
                       </div>
                     </>

@@ -94,7 +94,7 @@ export function lateCancelLine(): string {
 export function feesLine(lang: 'en' | 'es' = 'en'): string {
   return lang === 'es'
     ? `Se agregan un cargo ambiental de ${pct(ENVIRONMENTAL_FEE_RATE)} y el impuesto de Texas de ${pct(TX_SALES_TAX_RATE)}. Recogida y entrega gratis en todo el Metroplex (la Zona 5, Extended Reach, tiene un cargo de entrega).`
-    : `A ${pct(ENVIRONMENTAL_FEE_RATE)} environmental fee and ${pct(TX_SALES_TAX_RATE)} Texas sales tax are added at checkout. Pickup and delivery are free across the DFW Metroplex (Zones 1-4); Zone 5 Extended Reach has a delivery fee. ${lateCancelLine()}`;
+    : `A ${pct(ENVIRONMENTAL_FEE_RATE)} Environmental Service Fee (our own charge, not a government tax) and ${pct(TX_SALES_TAX_RATE)} Texas sales tax are added at checkout, itemized before you pay. Pickup and delivery are free across the DFW Metroplex (Zones 1-4); Zone 5 Extended Reach has a delivery fee. ${lateCancelLine()}`;
 }
 
 /**
