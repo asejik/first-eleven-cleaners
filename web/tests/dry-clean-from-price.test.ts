@@ -28,10 +28,11 @@ describe('Dry cleaning "from" price matches the price list (P08 SEO-13)', () => 
     expect(json).toContain(`"minPrice":"${dryCleanFromPrice().toFixed(2)}"`);
   });
 
-  it('the homepage and pricing description quote it', () => {
-    expect(readFileSync(join(APP, 'page.tsx'), 'utf8')).toContain(
-      `From ${from}/garment (shirts from $${DRY_CLEAN_PRICES.laundered_shirt.price.toFixed(2)})`,
-    );
-    expect(readFileSync(join(APP, 'pricing', 'layout.tsx'), 'utf8')).toContain(`dry cleaning from ${from}`);
+  // Client review 2026-10-20 (#3): the homepage and pricing description now quote shirt
+  // prices instead (tests/published-prices.test.ts), so no page says "from $5.99" against
+  // an $8.99 shirt.
+  it('the homepage and pricing description no longer quote it', () => {
+    expect(readFileSync(join(APP, 'page.tsx'), 'utf8')).not.toContain(`From ${from}/garment`);
+    expect(readFileSync(join(APP, 'pricing', 'layout.tsx'), 'utf8')).not.toContain(`dry cleaning from ${from}`);
   });
 });

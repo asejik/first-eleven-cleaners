@@ -5,6 +5,7 @@ import {
   ORDER_TWO_WINDOW_DAYS,
 } from '@/lib/constants';
 import { getCoverage } from '@/lib/coverage-settings';
+import { lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
@@ -21,7 +22,8 @@ export const metadata = pageMetadata({
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const { expressEnabled } = await getCoverage();
+  const { expressEnabled, zonesList } = await getCoverage();
+  const minimumFrom = lowestMinimum(zonesList);
   return (
     <div className={styles.page}>
       {/* === Promo Banner === */}
@@ -116,16 +118,16 @@ export default async function HomePage() {
                 Suits, dresses, formalwear, specialty fabrics, and stain
                 remediation at published per-garment rates.
               </p>
-              <span className={styles.servicePrice}>From $5.99/garment (shirts from $4.99)</span>
+              <span className={styles.servicePrice}>{shirtPricesLine()}</span>
             </div>
 
             <div className={styles.serviceCard}>
               <span className={styles.serviceIcon}>🧺</span>
               <h3>Wash &amp; Fold</h3>
               <p>
-                Everyday laundry, washed, dried, and neatly folded. $45 minimum order — includes up to 15 lbs ($3.00/lb).
+                Everyday laundry, washed, dried, and neatly folded. {washFoldLine(minimumFrom)} Your exact minimum shows once you enter your address.
               </p>
-              <span className={styles.servicePrice}>$3.00/lb ($45 min)</span>
+              <span className={styles.servicePrice}>From $3.00/lb</span>
             </div>
 
             <div className={styles.serviceCard}>

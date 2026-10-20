@@ -71,7 +71,7 @@ export default function TermsOfServicePage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>4. Pricing, Fees &amp; Invisible Checkout</h2>
             <p className={styles.paragraph}>
-              All core prices are published transparently on our website prior to booking. Wash-and-fold is priced at $3.00/lb subject to a 15-lb minimum floor ($45.00 minimum charge). Dry cleaning is priced per garment according to our published item catalog.
+              All core prices are published transparently on our website prior to booking. Wash-and-fold is priced at $3.00/lb subject to a 15-lb minimum ($45.00). Order minimums start at $45 and depend on your service area; your minimum is shown when you enter your address, before you book. Dry cleaning is priced per garment according to our published item catalog.
             </p>
             <p className={styles.paragraph}>
               <strong>Taxes &amp; Environmental Fees:</strong> All orders are subject to Texas state and local sales tax (currently 8.25%) and an Environmental Fee (3.0%) dedicated to closed-loop solvent recycling, water reclamation systems, and sustainable packaging. All taxes and surcharges are itemized transparently on booking review screens and final digital receipts.
