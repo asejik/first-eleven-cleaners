@@ -1,4 +1,11 @@
-import { DRY_CLEAN_PRICES, ENVIRONMENTAL_FEE_RATE, TX_SALES_TAX_RATE, WASH_FOLD_PRICE_PER_LB } from '@/lib/constants';
+import {
+  DRY_CLEAN_PRICES,
+  ENVIRONMENTAL_FEE_RATE,
+  FAILED_PICKUP_FEE,
+  LATE_CANCEL_CUTOFF_HOURS,
+  TX_SALES_TAX_RATE,
+  WASH_FOLD_PRICE_PER_LB,
+} from '@/lib/constants';
 
 /**
  * Prices quoted in marketing copy, read from the rate card so the homepage, pricing page,
@@ -42,3 +49,9 @@ export const ENV_FEE_LABEL = `Environmental Service Fee (${pct(ENVIRONMENTAL_FEE
 export const SALES_TAX_LABEL = `Texas Sales Tax (${pct(TX_SALES_TAX_RATE)})`;
 export const ENV_FEE_NOTE =
   'The Environmental Service Fee is a First Eleven Cleaners charge, not a government tax. It supports solvent recycling, water reclamation, and sustainable packaging.';
+
+/**
+ * The failed pickup policy in one sentence, shown at booking (client review 2026-10-20, #11):
+ * the same rules as the pricing page and Terms.
+ */
+export const FAILED_PICKUP_POLICY = `Failed pickup or delivery: $${FAILED_PICKUP_FEE.toFixed(0)}. Your first one is waived, rescheduling at least ${LATE_CANCEL_CUTOFF_HOURS} hours before your window is free, and there's no charge if we caused the miss.`;
