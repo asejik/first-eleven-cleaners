@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { ROUTES, APP_NAME, SUPPORT_PHONE, SUPPORT_EMAIL } from '@/lib/constants';
 import { LEGAL_NAME } from '@/lib/legal';
 import { GOOGLE_REVIEW_URL } from '@/lib/google-reviews';
+import { SUPPORT_EMAIL_HREF, SUPPORT_PHONE_HREF } from '@/lib/contact';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -58,7 +59,7 @@ export function Footer() {
             <h2 id="footer-support" className={styles.columnTitle}>Support</h2>
             <nav className={styles.columnLinks} aria-labelledby="footer-support">
               <a
-                href={`tel:+1${SUPPORT_PHONE.replace(/\D/g, '')}`}
+                href={SUPPORT_PHONE_HREF}
                 className={styles.contactLink}
                 style={{ color: 'var(--color-gold)', fontWeight: 600 }}
               >
@@ -79,7 +80,7 @@ export function Footer() {
                 <span>{SUPPORT_PHONE}</span>
               </a>
               <a
-                href={`mailto:${SUPPORT_EMAIL}`}
+                href={SUPPORT_EMAIL_HREF}
                 className={styles.contactLinkEmail}
               >
                 <svg

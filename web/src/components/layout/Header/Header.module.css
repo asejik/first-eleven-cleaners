@@ -130,6 +130,75 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* --- Support phone (client review 2026-10-20, #14) --- */
+.phoneLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  color: var(--color-gold);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+}
+
+.phoneLink:hover {
+  color: var(--color-white);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Between 1024 and 1279px the nav is tight: the icon alone, the number in its label */
+.phoneNumber {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .phoneNumber {
+    display: inline;
+  }
+}
+
+.mobileCall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  color: var(--color-gold);
+  border-radius: var(--radius-md);
+}
+
+.mobileCall:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 1024px) {
+  .mobileCall {
+    display: none;
+  }
+}
+
+.mobileContact {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobileContact .mobileNavLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gold);
+  font-size: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
 /* --- Mobile Menu Button --- */
 .mobileMenuBtn {
   display: flex;
