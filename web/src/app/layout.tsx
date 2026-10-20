@@ -7,6 +7,7 @@ import { CustomerOnly } from '@/components/layout/CustomerOnly';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { ToastContainer } from '@/components/ui/Toast';
 import { CookieConsent } from '@/components/ui/CookieConsent';
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 import { SITE_URL, buildSiteJsonLd } from '@/lib/seo';
 import '@/styles/globals.css';
@@ -135,6 +136,7 @@ export default function RootLayout({
             <CustomerOnly>
               <DynamicConcierge />
             </CustomerOnly>
+            <GoogleAnalytics />
             <CookieConsent />
             <ServiceWorkerRegister />
           </AuthProvider>

@@ -140,6 +140,7 @@ export default function PrivacyPolicyPage() {
               <li className={styles.listItem}>Secure hosting and database providers (Vercel, Supabase)</li>
               <li className={styles.listItem}>Text messaging (Twilio) and email (Resend)</li>
               <li className={styles.listItem}>Address distance and service-area lookup (Google Maps Platform)</li>
+              <li className={styles.listItem}>Website visit statistics, only if you choose Accept All Cookies (Google Analytics)</li>
               <li className={styles.listItem}>Security rate limiting, which processes IP addresses (Upstash)</li>
               <li className={styles.listItem}>AI infrastructure providers (Anthropic Claude API for Eleven)</li>
               <li className={styles.listItem}>Legal authorities when strictly required by enforceable subpoena or court order</li>
