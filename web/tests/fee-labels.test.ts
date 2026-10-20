@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { feeAndTaxOn } from '@/lib/constants';
 import { ENV_FEE_LABEL, ENV_FEE_NOTE, SALES_TAX_LABEL } from '@/lib/published-prices';
+import { feesLine } from '@/lib/ai/price-list';
 
 // ---------------------------------------------------------------------------
 // Client review 2026-10-20 (#6): "Itemize all charges before checkout. Confirm whether the 3%
@@ -38,5 +39,10 @@ describe('Environmental Service Fee and sales tax', () => {
     const terms = read('src/app/terms/page.tsx');
     expect(terms).toContain('a First Eleven Cleaners charge (not a government tax)');
     expect(terms).toContain('including the Environmental Service Fee');
+  });
+
+  it('the concierge says it in English and Spanish', () => {
+    expect(feesLine('en')).toContain('Environmental Service Fee (our own charge, not a government tax)');
+    expect(feesLine('es')).toContain('cargo de servicio ambiental de 3% (un cargo nuestro, no un impuesto del gobierno)');
   });
 });
