@@ -13,6 +13,7 @@ import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import { PayNowCard } from '@/components/orders/PayNowCard';
 import { TicketFeedbackCard } from '@/components/orders/TicketFeedbackCard';
 import { QuoteApprovalCard } from '@/components/orders/QuoteApprovalCard';
+import { GoogleReviewCard } from '@/components/orders/GoogleReviewCard';
 import styles from './page.module.css';
 
 export default function PublicTrackingPage() {
@@ -61,6 +62,8 @@ export default function PublicTrackingPage() {
         {order && ['weighed_itemized', 'in_cleaning', 'match_ready_check', 'out_for_delivery', 'delivered'].includes(order.status) && (
           <TicketFeedbackCard orderId={order.id} ticket={order.ticket} />
         )}
+
+        {order?.status === 'delivered' && <GoogleReviewCard />}
 
         {order ? (
           <Card variant="bordered" padding="lg" className={styles.trackingCard}>

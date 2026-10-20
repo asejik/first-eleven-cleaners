@@ -21,8 +21,13 @@ function getServerSnapshot(): string {
   return 'dismissed';
 }
 
+/** 'all', 'essential', 'unanswered', or 'dismissed' on the server */
+export function useCookieConsent(): string {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
 export function CookieConsent() {
-  const status = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const status = useCookieConsent();
 
   if (status !== 'unanswered') {
     return null;
