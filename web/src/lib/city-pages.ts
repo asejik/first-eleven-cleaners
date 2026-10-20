@@ -122,6 +122,12 @@ export const CITY_PAGES: CityPage[] = [
 ];
 
 export const cityPage = (slug: string) => CITY_PAGES.find((c) => c.slug === slug);
+
+/** The city for a ZIP when its page is one city ("Plano"), else null (booking's city guess) */
+export function cityForZip(zip: string): string | null {
+  const page = CITY_PAGES.find((c) => c.zips.includes(zip));
+  return page && !/[,&]/.test(page.name) ? page.name : null;
+}
 export const cityPagePath = (slug: string) => `/service-areas/${slug}`;
 
 /** "A, B and C" */

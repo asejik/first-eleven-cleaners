@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Card, Input, Button } from '@/components/ui';
 import { SmsConsentBlock } from '@/components/compliance';
-import { resolveZoneByZip, ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
+import { ROUTES, EXTENDED_REACH_LABEL, type ZoneConfig } from '@/lib/constants';
+import { cityForZip } from '@/lib/city-pages';
 import { formatLongDate, type ExtendedReachQuote } from '@/lib/coverage';
 import type { AddressCoverage } from '@/hooks/useCoverage';
 import { isSameAddress, savedAddressText, splitAddressLabel } from '@/lib/saved-addresses';
@@ -79,14 +80,10 @@ export function StepAddress({
 }: StepAddressProps) {
   const handleZipChange = (val: string) => {
     setZip(val);
-    // A likely city for the ZIP; the zone itself comes from addressCoverage
-    const resolved = resolveZoneByZip(val);
-    if (resolved && (!city || city === 'Dallas')) {
-      if (resolved.id === 'zone_3') setCity('Fort Worth');
-      else if (resolved.id === 'zone_2') setCity('Plano');
-      else if (resolved.id === 'zone_4') setCity('Denton');
-      else if (resolved.id === 'zone_1') setCity('Dallas');
-    }
+    // The city when the ZIP has only one (it used to guess by zone: an Arlington ZIP filled in
+    // Fort Worth); the zone itself comes from addressCoverage
+    const guess = cityForZip(val.trim());
+    if (guess && (!city || city === 'Dallas')) setCity(guess);
   };
 
   const cleanedZip = (zip || '').trim().replace(/[^\d]/g, '');
