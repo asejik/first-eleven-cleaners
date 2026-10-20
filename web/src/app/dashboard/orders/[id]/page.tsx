@@ -14,6 +14,7 @@ import { calculateOrderFinancials, ORDER_STATUSES, ROUTES, SUPPORT_PHONE, EXTEND
 import { PROGRESS_STAGES, progressIndex, formatDeliveryDate, isDeliveryLate, deliveredOnDate } from '@/lib/order-progress';
 import { CancelledOrderPanel } from '@/components/orders/CancelledOrderPanel';
 import { QuoteApprovalCard } from '@/components/orders/QuoteApprovalCard';
+import { GoogleReviewCard } from '@/components/orders/GoogleReviewCard';
 import styles from './page.module.css';
 
 export default function OrderDetailPage() {
@@ -121,6 +122,8 @@ export default function OrderDetailPage() {
 
         {/* Quotes waiting for the customer's OK (Parts B-D) */}
         <QuoteApprovalCard orderId={order.id} items={order.items || []} />
+
+        {order.status === 'delivered' && <GoogleReviewCard />}
 
         {/* Order Hero Card */}
         <Card variant="bordered" padding="lg" className={styles.headerCard}>

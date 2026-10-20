@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ROUTES, APP_NAME, SUPPORT_PHONE, SUPPORT_EMAIL } from '@/lib/constants';
 import { LEGAL_NAME } from '@/lib/legal';
+import { GOOGLE_REVIEW_URL } from '@/lib/google-reviews';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -100,6 +101,9 @@ export function Footer() {
               </a>
               <Link href={ROUTES.pricing}>100% Make It Right Guarantee</Link>
               <Link href={ROUTES.book}>Schedule Pickup</Link>
+              <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer">
+                Review Us on Google
+              </a>
             </nav>
           </div>
 
