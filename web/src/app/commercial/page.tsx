@@ -77,7 +77,7 @@ export default function CommercialPage() {
               <span className={styles.indIcon}>🏨</span>
               <h3>Boutique Hotels & Airbnbs</h3>
               <p>
-                Linen turnover, premium duvet pressing, express guest dry cleaning with door-to-door concierge delivery.
+                Linen turnover, premium duvet pressing, guest dry cleaning with door-to-door concierge delivery.
               </p>
             </Card>
 

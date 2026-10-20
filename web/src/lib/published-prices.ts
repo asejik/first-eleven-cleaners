@@ -23,3 +23,11 @@ export function lowestMinimum(zones: ReadonlyArray<{ minimumOrder: number }>): n
 export function washFoldLine(minimumFrom: number): string {
   return `Wash & Fold from ${money(WASH_FOLD_PRICE_PER_LB)}/lb. Minimum orders start at $${minimumFrom.toFixed(0)}, depending on service area.`;
 }
+
+/**
+ * Express status while Mission Control's switch is off (client 2026-10-07, 8E), worded the same
+ * on every page (client review 2026-10-20, #5).
+ */
+export const EXPRESS_COMING_SOON_BADGE = 'Coming Soon';
+export const EXPRESS_COMING_SOON =
+  '24-Hour Express is coming soon. It opens once our plant confirms next-day capacity; until then every order gets our standard turnaround.';

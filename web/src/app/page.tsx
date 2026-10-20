@@ -5,7 +5,7 @@ import {
   ORDER_TWO_WINDOW_DAYS,
 } from '@/lib/constants';
 import { getCoverage } from '@/lib/coverage-settings';
-import { lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
+import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
 import { pageMetadata } from '@/lib/seo';
@@ -146,9 +146,9 @@ export default async function HomePage() {
               <p>
                 {expressEnabled
                   ? 'Need it fast? 24-Hour Express turnaround, Monday to Thursday pickups, with a +50% surcharge. Picked up morning, delivered next morning.'
-                  : 'Available soon — plant capacity confirming. Built for mission-critical fast turnaround.'}
+                  : EXPRESS_COMING_SOON}
               </p>
-              <span className={styles.servicePrice}>{expressEnabled ? 'From +50%' : 'Available Soon'}</span>
+              <span className={styles.servicePrice}>{expressEnabled ? 'From +50%' : EXPRESS_COMING_SOON_BADGE}</span>
             </div>
           </div>
         </div>

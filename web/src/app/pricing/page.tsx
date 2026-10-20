@@ -26,6 +26,7 @@ import { Card, ButtonLink } from '@/components/ui';
 import { PRICING_PAYMENT_PROMISE } from '@/lib/payment-hold';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 import { useCoverage, useAddressCoverage } from '@/hooks/useCoverage';
+import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE } from '@/lib/published-prices';
 import styles from './page.module.css';
 
 export default function PricingPage() {
@@ -236,8 +237,13 @@ export default function PricingPage() {
                   <span className={styles.cardIcon}>⚡</span>
                   <h2 className={styles.cardTitle}>24-Hour Express — Match-Ready Tomorrow</h2>
                 </div>
-                <span className={styles.statusBadge}>Capacity Governed</span>
+                <span className={styles.statusBadge}>{coverage.expressEnabled ? 'Capacity Governed' : EXPRESS_COMING_SOON_BADGE}</span>
               </div>
+              {/* Same status as the homepage and booking: the details show once the switch is on (client review 2026-10-20, #5) */}
+              {!coverage.expressEnabled ? (
+                <p className={styles.expressPromise}>{EXPRESS_COMING_SOON}</p>
+              ) : (
+              <>
               <p className={styles.expressPromise}>
                 Picked up this morning, delivered tomorrow morning. Order by 9 PM tonight to make tomorrow&apos;s Express pickup.
               </p>
@@ -261,6 +267,8 @@ export default function PricingPage() {
                   </li>
                 </ul>
               </div>
+              </>
+              )}
             </Card>
 
             {/* Failed Pickup / Delivery Fee Card */}
@@ -450,9 +458,9 @@ export default function PricingPage() {
                       }}
                       disabled={!calcZone?.expressEligible}
                       style={!calcZone?.expressEligible ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                      title={!calcZone?.expressEligible ? `24-Hour Express unavailable in ${calcZone?.name || 'this area'}` : undefined}
+                      title={!calcZone?.expressEligible ? (coverage.expressEnabled ? `24-Hour Express unavailable in ${calcZone?.name || 'this area'}` : EXPRESS_COMING_SOON) : undefined}
                     >
-                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%)' : '(Not in Zone)'}
+                      ⚡ 24-Hr Express {calcZone?.expressEligible ? '(+50%)' : coverage.expressEnabled ? '(Not in Zone)' : `(${EXPRESS_COMING_SOON_BADGE})`}
                     </button>
                   </div>
                 </div>
