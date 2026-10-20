@@ -186,6 +186,14 @@
   gap: var(--space-2);
 }
 
+.cityGroup {
+  margin-bottom: var(--space-6);
+}
+
+.cityGroup .cityList {
+  margin-top: var(--space-3);
+}
+
 .cityTag {
   background-color: var(--color-cream);
   border: 1px solid var(--color-border);

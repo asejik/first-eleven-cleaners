@@ -1,7 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import { Card, ButtonLink } from '@/components/ui';
 import { ROUTES, EXPRESS_BADGE, EXTENDED_REACH_BAND_CITIES, extendedReachTurnaroundLine } from '@/lib/constants';
-import { extendedReachStartLine } from '@/lib/coverage';
+import { extendedReachStartLine, resolveCoverage } from '@/lib/coverage';
 import { getCoverage } from '@/lib/coverage-settings';
 import Link from 'next/link';
 import { CITY_PAGES, cityPagePath } from '@/lib/city-pages';
@@ -45,19 +45,31 @@ export default async function ServiceAreasPage() {
         </div>
       </section>
 
-      {/* City pages, Zone 1 first in the client's order (client 2026-10-20, #7) */}
+      {/* City pages by zone, Zone 1 first in the client's order (client 2026-10-20, #7) */}
       <section className={styles.section}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Find Your City</h2>
           </div>
-          <div className={styles.cityList}>
-            {CITY_PAGES.map((c) => (
-              <Link key={c.slug} href={cityPagePath(c.slug)} className={styles.cityTag}>
-                📍 {c.name}
-              </Link>
-            ))}
-          </div>
+          {coverage.zonesList.map((zone) => {
+            const pages = CITY_PAGES.filter((c) => {
+              const r = resolveCoverage({ zip: c.zips[0] }, coverage);
+              return r.status === 'served' && r.zone.id === zone.id;
+            });
+            if (pages.length === 0) return null;
+            return (
+              <div key={zone.id} className={styles.cityGroup}>
+                <h3 className={styles.regionTitle}>{zone.name}</h3>
+                <div className={styles.cityList}>
+                  {pages.map((c) => (
+                    <Link key={c.slug} href={cityPagePath(c.slug)} className={styles.cityTag}>
+                      📍 {c.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 

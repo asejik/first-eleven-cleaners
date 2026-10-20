@@ -6,7 +6,7 @@ import sitemap from '@/app/sitemap';
 // learn to ignore it. With no real per-page edit dates, it is left out.
 // ---------------------------------------------------------------------------
 describe('Sitemap (P08 SEO-09)', () => {
-  it('lists the 8 public pages and the 9 city pages without a made-up lastmod', () => {
+  it('lists the 8 public pages and the 20 city pages without a made-up lastmod', () => {
     const entries = sitemap();
     expect(entries.map((e) => new URL(e.url).pathname)).toEqual([
       '/',
@@ -24,6 +24,17 @@ describe('Sitemap (P08 SEO-09)', () => {
       '/service-areas/the-colony',
       '/service-areas/flower-mound',
       '/service-areas/coppell',
+      '/service-areas/uptown-downtown-dallas',
+      '/service-areas/east-dallas-bishop-arts',
+      '/service-areas/irving-las-colinas',
+      '/service-areas/allen-mckinney-prosper',
+      '/service-areas/grapevine-southlake-colleyville-euless',
+      '/service-areas/bedford-hurst-keller-westlake',
+      '/service-areas/arlington-grand-prairie',
+      '/service-areas/denton',
+      '/service-areas/rockwall-forney',
+      '/service-areas/fort-worth',
+      '/service-areas/mansfield',
       '/privacy',
       '/terms',
     ]);
