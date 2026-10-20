@@ -13,6 +13,8 @@ export interface ContactMessage {
   /** Email subject and heading */
   title: string;
   body: string;
+  /** The email's text when it differs from the text message's (e.g. no "Reply STOP") */
+  emailBody?: string;
 }
 
 export type ContactResult = { channel: 'sms' | 'email' | 'none'; ok: boolean; error?: string };
@@ -55,13 +57,13 @@ export async function sendSms(to: string, body: string): Promise<ContactResult> 
   }
 }
 
-export async function sendContactMessage({ phone, email, smsConsent, title, body }: ContactMessage): Promise<ContactResult> {
+export async function sendContactMessage({ phone, email, smsConsent, title, body, emailBody }: ContactMessage): Promise<ContactResult> {
   const to = toE164(phone || '');
   if (smsConsent && to && twilioConfig()) {
     const sms = await sendSms(to, body);
     if (sms.ok || !email) return sms;
   }
   if (!email) return { channel: 'none', ok: false, error: 'No way to reach them' };
-  const result = await sendEmail({ to: email, subject: `${title} | First Eleven Cleaners`, html: buildNoticeEmailHtml({ title, messageBody: body }) });
+  const result = await sendEmail({ to: email, subject: `${title} | First Eleven Cleaners`, html: buildNoticeEmailHtml({ title, messageBody: emailBody ?? body }) });
   return { channel: 'email', ok: result.success, error: result.error };
 }
