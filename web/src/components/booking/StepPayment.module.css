@@ -17,6 +17,12 @@
   margin-bottom: var(--space-6);
 }
 
+.merchantNote {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-2);
+}
+
 .seeItPayItCallout {
   display: flex;
   gap: var(--space-3);

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ROUTES, APP_NAME, SUPPORT_PHONE, SUPPORT_EMAIL } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -120,7 +121,7 @@ export function Footer() {
         <div className={styles.bottom}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <p className={styles.copyright}>
-              © {currentYear} {APP_NAME}. All rights reserved.
+              © {currentYear} {LEGAL_NAME}. All rights reserved.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
               <Link href={ROUTES.terms} style={{ color: 'var(--color-gray-400)', textDecoration: 'underline' }}>

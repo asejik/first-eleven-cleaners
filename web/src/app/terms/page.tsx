@@ -1,6 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
-import { ROUTES, APP_NAME } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 import styles from './page.module.css';
 
 export const metadata = pageMetadata({
@@ -19,7 +20,7 @@ export default function TermsOfServicePage() {
           <span className={styles.badge}>Legal &amp; Trust</span>
           <h1 className={styles.title}>Terms of Service</h1>
           <p className={styles.subtitle}>
-            Effective Date: September 2, 2026 • First Eleven Cleaners
+            Effective Date: September 2, 2026 • {LEGAL_NAME}
           </p>
         </div>
 
@@ -28,7 +29,7 @@ export default function TermsOfServicePage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>1. Acceptance of Terms</h2>
             <p className={styles.paragraph}>
-              By accessing our website, creating an account, or scheduling dry cleaning or laundry pickup through First Eleven Cleaners (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), you agree to be bound by these Terms of Service.
+              By accessing our website, creating an account, or scheduling dry cleaning or laundry pickup through {LEGAL_NAME} (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), you agree to be bound by these Terms of Service.
             </p>
             <p className={styles.paragraph}>
               If you do not agree to these Terms, please do not use our services.
@@ -215,7 +216,7 @@ export default function TermsOfServicePage() {
           <div className={styles.contactBox}>
             <h3 className={styles.contactTitle}>14. Contact Our Legal Department</h3>
             <p className={styles.contactText}>
-              <strong>{APP_NAME}</strong><br />
+              <strong>{LEGAL_NAME}</strong><br />
               Dallas-Fort Worth Metroplex, Texas<br />
               Direct Legal Inquiries: <a href="mailto:legal@firstelevencleaners.com" className={styles.contactLink}>legal@firstelevencleaners.com</a>
             </p>

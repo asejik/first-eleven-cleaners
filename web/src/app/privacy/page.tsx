@@ -1,6 +1,7 @@
 import { pageMetadata } from '@/lib/seo';
 import Link from 'next/link';
-import { ROUTES, APP_NAME } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 import styles from './page.module.css';
 
 export const metadata = pageMetadata({
@@ -19,7 +20,7 @@ export default function PrivacyPolicyPage() {
           <span className={styles.badge}>Legal &amp; Trust</span>
           <h1 className={styles.title}>Privacy Policy</h1>
           <p className={styles.subtitle}>
-            Effective Date: September 2, 2026 • First Eleven Cleaners
+            Effective Date: September 2, 2026 • {LEGAL_NAME}
           </p>
         </div>
 
@@ -28,7 +29,7 @@ export default function PrivacyPolicyPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>1. Introduction</h2>
             <p className={styles.paragraph}>
-              First Eleven Cleaners (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) respects your privacy and is committed to protecting your personal information.
+              {LEGAL_NAME} (&quot;First Eleven,&quot; &quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) respects your privacy and is committed to protecting your personal information.
             </p>
             <p className={styles.paragraph}>
               This Privacy Policy explains how we collect, use, disclose, store, and protect information when you use our website, mobile applications, booking platform, AI Concierge (&quot;Eleven&quot;), customer portal, SMS services, WhatsApp services, and laundry, dry-cleaning, pickup, and delivery services across the Dallas-Fort Worth Metroplex.
@@ -198,7 +199,7 @@ export default function PrivacyPolicyPage() {
           <div className={styles.contactBox}>
             <h3 className={styles.contactTitle}>11. Contact Our Privacy Office</h3>
             <p className={styles.contactText}>
-              <strong>{APP_NAME}</strong><br />
+              <strong>{LEGAL_NAME}</strong><br />
               Dallas-Fort Worth Metroplex, Texas<br />
               Direct Privacy Inquiries: <a href="mailto:privacy@firstelevencleaners.com" className={styles.contactLink}>privacy@firstelevencleaners.com</a>
             </p>

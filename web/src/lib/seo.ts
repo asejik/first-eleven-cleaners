@@ -6,6 +6,7 @@ import {
   SUPPORT_PHONE,
   WASH_FOLD_PRICE_PER_LB,
 } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 
 /**
  * Canonical public address of the site (P08 SEO-01).
@@ -98,6 +99,7 @@ export function buildSiteJsonLd() {
         '@type': 'DryCleaningOrLaundryService',
         '@id': `${SITE_URL}/#organization`,
         name: APP_NAME,
+        legalName: LEGAL_NAME,
         url: SITE_URL,
         logo: `${SITE_URL}/logo.png`,
         image: [`${SITE_URL}/og-image.jpg`, `${SITE_URL}/logo.png`],

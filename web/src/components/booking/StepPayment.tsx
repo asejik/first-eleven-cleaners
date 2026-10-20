@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Script from 'next/script';
 import { Card, Input, Button } from '@/components/ui';
 import { SUPPORT_PHONE } from '@/lib/constants';
+import { LEGAL_NAME } from '@/lib/legal';
 import styles from './StepPayment.module.css';
 import consentStyles from '@/components/compliance/SmsConsentBlock.module.css';
 import { PAYMENT_TERMS_TEXT, PAYMENT_TERMS_TEXT_SCHEDULED } from '@/lib/payment-hold';
@@ -332,6 +333,10 @@ export function StepPayment({
         />
         <span className={consentStyles.checkboxLabel}>{holdNow ? PAYMENT_TERMS_TEXT : PAYMENT_TERMS_TEXT_SCHEDULED}</span>
       </label>
+
+      <p className={styles.merchantNote}>
+        Charges appear from {LEGAL_NAME}. Card payments are processed securely by Square.
+      </p>
 
       <div className={styles.buttonSplit}>
         <Button variant="outline" onClick={onBack}>
