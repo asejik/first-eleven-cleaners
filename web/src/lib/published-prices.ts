@@ -16,9 +16,9 @@ const money = (n: number) => `$${n.toFixed(2)}`;
 export const DRY_CLEANED_SHIRT_PRICE = DRY_CLEAN_PRICES.shirt_blouse.price;
 export const LAUNDERED_SHIRT_PRICE = DRY_CLEAN_PRICES.laundered_shirt.price;
 
-/** "Dry-cleaned shirts $8.99 · Laundered shirts $4.99" */
+/** The homepage shows shirts only, in the client's words (client 2026-10-20): "Shirts laundered $4.99 / dry-cleaned $8.99" */
 export function shirtPricesLine(): string {
-  return `Dry-cleaned shirts ${money(DRY_CLEANED_SHIRT_PRICE)} · Laundered shirts ${money(LAUNDERED_SHIRT_PRICE)}`;
+  return `Shirts laundered ${money(LAUNDERED_SHIRT_PRICE)} / dry-cleaned ${money(DRY_CLEANED_SHIRT_PRICE)}`;
 }
 
 /** The lowest order minimum across the Metroplex zones (Zone 1 today). */
