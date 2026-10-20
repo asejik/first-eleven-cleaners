@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAppBaseUrl } from '@/lib/constants';
+import { CITY_PAGES, cityPagePath } from '@/lib/city-pages';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = getAppBaseUrl();
@@ -38,6 +39,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    ...CITY_PAGES.map((c) => ({
+      url: `${baseUrl}${cityPagePath(c.slug)}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
     {
       url: `${baseUrl}/privacy`,
       changeFrequency: 'yearly',

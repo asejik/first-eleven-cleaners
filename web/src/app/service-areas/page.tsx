@@ -3,6 +3,8 @@ import { Card, ButtonLink } from '@/components/ui';
 import { ROUTES, EXPRESS_BADGE, EXTENDED_REACH_BAND_CITIES, extendedReachTurnaroundLine } from '@/lib/constants';
 import { extendedReachStartLine } from '@/lib/coverage';
 import { getCoverage } from '@/lib/coverage-settings';
+import Link from 'next/link';
+import { CITY_PAGES, cityPagePath } from '@/lib/city-pages';
 import styles from './page.module.css';
 
 // Zone cards come from the live coverage settings (client 2026-10-07, 8F: no hardcoding);
@@ -39,6 +41,22 @@ export default async function ServiceAreasPage() {
             <ButtonLink href={ROUTES.pricing} variant="outlineLight" size="lg">
               View Published Pricing
             </ButtonLink>
+          </div>
+        </div>
+      </section>
+
+      {/* City pages, Zone 1 first in the client's order (client 2026-10-20, #7) */}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Find Your City</h2>
+          </div>
+          <div className={styles.cityList}>
+            {CITY_PAGES.map((c) => (
+              <Link key={c.slug} href={cityPagePath(c.slug)} className={styles.cityTag}>
+                📍 {c.name}
+              </Link>
+            ))}
           </div>
         </div>
       </section>
