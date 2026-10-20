@@ -147,7 +147,7 @@ export function StepSchedule({
               onToast({
                 type: 'warning',
                 title: 'Advance Schedule Rule',
-                message: `${expressTier === 'standard' ? '48-Hour Standard' : 'Express'} service requires advance booking. Earliest available pickup is ${formatDisplayDate(minVal)}.`,
+                message: `${expressTier === 'standard' ? 'Standard' : 'Express'} service requires advance booking. Earliest available pickup is ${formatDisplayDate(minVal)}.`,
               });
               return;
             }
@@ -220,7 +220,7 @@ export function StepSchedule({
               )}
             </div>
             <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'success'}>
-              {expressTier === 'express_24hr' ? '⚡ Match-Ready Tomorrow' : '🛡️ 48-Hr Match-Ready'}
+              {expressTier === 'express_24hr' ? '⚡ Match-Ready Tomorrow' : '🛡️ Match-Ready in 2 Business Days'}
             </Badge>
           </div>
         )}
@@ -339,7 +339,7 @@ export function StepSchedule({
             {detectedZone?.id === 'zone_5' ? (
               <><strong>⏱️ {extendedReach?.turnaround || 'Extended Reach: back on the next run.'}</strong> 24-Hour Express isn&apos;t offered beyond the Metroplex.</>
             ) : (
-              <><strong>⏱️ Standard 48-Hour Care.</strong> 24-Hour Express is coming soon. Every pickup receives our signature 48-hour match-ready turnaround.</>
+              <><strong>⏱️ Standard Care: 2 Business Days.</strong> 24-Hour Express is coming soon. Every pickup is match-ready 2 business days after pickup.</>
             )}
           </div>
         ) : !detectedZone?.expressEligible ? (
@@ -353,7 +353,7 @@ export function StepSchedule({
             fontSize: 'var(--text-xs)',
             color: '#334155',
           }}>
-            <strong>⏱️ Standard 48-Hour Care for {detectedZone?.name || 'Your Area'}:</strong> 24-Hour Express is not offered in this zone to protect route consistency and logistics. All pickups in your area receive our signature 48-hour match-ready turnaround.
+            <strong>⏱️ Standard Care for {detectedZone?.name || 'Your Area'}:</strong> 24-Hour Express is not offered in this zone to protect route consistency and logistics. Your order is delivered on your next route day once the plant has it ready; the date is shown below.
           </div>
         ) : pickupWindow === 'morning' && isExpressDay ? (
           <div className={styles.expressOptionBox}>
@@ -364,7 +364,7 @@ export function StepSchedule({
               <Badge variant={expressTier === 'express_24hr' ? 'gold' : 'info'}>
                 {expressTier === 'express_24hr'
                   ? '⚡ 24-Hour Express (+50%)'
-                  : 'Standard: 48 Hours (Included)'}
+                  : 'Standard: 2 Business Days (Included)'}
               </Badge>
             </div>
             <div className={styles.expressTierOptions}>
@@ -374,9 +374,9 @@ export function StepSchedule({
                 onClick={() => handleSelectTier('standard')}
                 aria-pressed={expressTier === 'standard'}
               >
-                <span className={styles.tierTitle}>48-Hr Standard</span>
+                <span className={styles.tierTitle}>Standard</span>
                 <span className={styles.tierBadge}>Included</span>
-                <span className={styles.tierDesc}>Match-ready in 48 hours</span>
+                <span className={styles.tierDesc}>Match-ready in 2 business days</span>
               </button>
               <button
                 type="button"
@@ -420,7 +420,7 @@ export function StepSchedule({
           </div>
         ) : (
           <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)' }}>
-            ℹ️ Standard 48-hour care applies. 24-Hour Express is offered on Monday to Thursday morning pickup windows.
+            ℹ️ Standard care (2 business days) applies. 24-Hour Express is offered on Monday to Thursday morning pickup windows.
           </div>
         )}
       </div>

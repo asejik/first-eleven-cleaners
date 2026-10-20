@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     template: '%s | First Eleven Cleaners',
   },
   description:
-    'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex. 48-hour Match-Ready guarantee.',
+    'Every Garment Makes the Lineup. Premium AI-augmented dry cleaning and laundry pickup & delivery across the Dallas-Fort Worth Metroplex. 2-business-day Match-Ready guarantee.',
   keywords: [
     'dry cleaning Dallas',
     'laundry delivery DFW',

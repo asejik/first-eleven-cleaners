@@ -329,7 +329,7 @@ export default function BillingPage() {
                   <div>
                     <span className={styles.receiptBrand}>First Eleven Cleaners</span>
                     <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>
-                      48-Hour Match-Ready Dry Cleaning &amp; Laundry
+                      Match-Ready Dry Cleaning &amp; Laundry
                     </p>
                   </div>
                   <div style={{ textAlign: 'right' }}>

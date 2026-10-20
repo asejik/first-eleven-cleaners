@@ -270,7 +270,7 @@ export function StepAddress({
                   detectedZone.expressEligible ? styles.zoneSpecHighlight : styles.zoneSpecMuted
                 }`}
               >
-                {detectedZone.expressEligible ? '⚡ Mon–Thu' : 'Standard 48-Hr'}
+                {detectedZone.expressEligible ? '⚡ Mon–Thu' : 'Standard: 2 Business Days'}
               </span>
             </div>
           </div>

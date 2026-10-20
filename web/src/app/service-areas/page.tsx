@@ -149,8 +149,8 @@ export default async function ServiceAreasPage() {
           <div className={styles.standardsGrid}>
             <div className={styles.standardBox}>
               <span className={styles.stdIcon}>⏱️</span>
-              <h4>48-Hour Turnaround</h4>
-              <p>Picked up today, returned clean, pressed, and game-ready within 48 hours.</p>
+              <h4>2-Business-Day Turnaround</h4>
+              <p>Returned clean, pressed, and game-ready 2 business days after pickup (Zones 3 and 4: on your next route day after that). Your delivery date is shown when you book.</p>
             </div>
             <div className={styles.standardBox}>
               <span className={styles.stdIcon}>🚐</span>

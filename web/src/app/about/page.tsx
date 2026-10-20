@@ -57,8 +57,8 @@ const PRINCIPLES = [
   },
   {
     icon: '⏱️',
-    title: 'The 48-Hour Match-Ready Standard',
-    body: 'Our operations run with precision timing. From the moment our courier secures your bag to return delivery at your door, every stage is timed and tracked to meet our guaranteed 48-hour turnaround.',
+    title: 'The 2-Business-Day Match-Ready Standard',
+    body: 'Our operations run with precision timing. From the moment our courier secures your bag to return delivery at your door, every stage is timed and tracked to meet our 2-business-day turnaround.',
   },
   {
     icon: '⚡',
@@ -275,8 +275,8 @@ export default function AboutPage() {
             </div>
             <div className={styles.dualColStats}>
               <div className={styles.statCard}>
-                <span className={styles.statNumber}>48h</span>
-                <span className={styles.statDesc}>Match-Ready Guarantee — pickup to delivery</span>
+                <span className={styles.statNumber}>2 days</span>
+                <span className={styles.statDesc}>Match-Ready Guarantee: 2 business days, pickup to delivery</span>
               </div>
               <div className={styles.statCard}>
                 <span className={styles.statNumber}>6</span>
@@ -304,7 +304,7 @@ export default function AboutPage() {
           </h2>
           <p className={styles.ctaSubtitle}>
             Premium pickup &amp; delivery dry cleaning across the Dallas-Fort Worth Metroplex.
-            48-hour turnaround. Every step tracked. Every price visible. No surprises — ever.
+            2-business-day turnaround. Every step tracked. Every price visible. No surprises — ever.
           </p>
           <div className={styles.ctaActions}>
             <ButtonLink href={ROUTES.book} variant="primary" size="lg">Schedule Your First Pickup</ButtonLink>

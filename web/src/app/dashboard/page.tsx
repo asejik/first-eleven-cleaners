@@ -295,7 +295,7 @@ export default function DashboardPage() {
                         )}
 
                         <div className={styles.deliveryEstimate}>
-                          ⏱️ <strong>Match-Ready Promise:</strong> Delivery on {order.delivery_date || 'Within 48 hours'}
+                          ⏱️ <strong>Match-Ready Promise:</strong> Delivery on {order.delivery_date || 'Within 2 business days'}
                         </div>
                       </div>
 
