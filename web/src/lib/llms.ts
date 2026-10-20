@@ -19,6 +19,7 @@ import {
   SUPPORT_EMAIL,
 } from '@/lib/constants';
 import { SITE_URL } from '@/lib/seo';
+import { FIFA_STATEMENT } from '@/lib/legal';
 import { ALTERATIONS_NOT_OFFERED } from '@/lib/alterations';
 import { routinePricingLine, lateCancelLine, referralLine, orderTwoLine } from '@/lib/ai/price-list';
 import { DEFAULT_COVERAGE, feeLabel, extendedReachStartLine, type Coverage } from '@/lib/coverage';
@@ -47,7 +48,7 @@ export function buildLlmsTxt(coverage: Coverage = DEFAULT_COVERAGE): string {
     '> Dry cleaning and wash & fold laundry with free pickup and delivery across the Dallas-Fort Worth Metroplex, Texas.',
     '',
     '## About',
-    `${APP_NAME} was born at the FIFA World Cup 2026 International Broadcast Centre (IBC) in Dallas, Texas, providing 12 weeks of high-pressure garment operations for 3,500 accredited international media professionals with a signed Vendor Performance Confirmation. ${APP_NAME} is a certified Minority Business Enterprise (MBE), Service-Disabled Veteran-Owned Small Business (SDVOSB), Texas Veteran-HUB, and Disadvantaged Business Enterprise (DBE).`,
+    `${APP_NAME} ${FIFA_STATEMENT.charAt(0).toLowerCase()}${FIFA_STATEMENT.slice(1)} ${APP_NAME} is a certified Minority Business Enterprise (MBE), Service-Disabled Veteran-Owned Small Business (SDVOSB), Texas Veteran-HUB, and Disadvantaged Business Enterprise (DBE).`,
     `${APP_NAME} is a pickup and delivery service with no storefront. Customers book online and a driver collects and returns their garments.`,
     '',
     '## Services and Prices',

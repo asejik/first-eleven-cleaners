@@ -1,5 +1,6 @@
 import { pageMetadata } from '@/lib/seo';
 import { ButtonLink } from '@/components/ui';
+import { FIFA_STATEMENT } from '@/lib/legal';
 import { ROUTES, ORDER_TWO_DISCOUNT, ORDER_TWO_WINDOW_DAYS } from '@/lib/constants';
 import styles from './page.module.css';
 
@@ -29,7 +30,7 @@ const TIMELINE = [
   {
     year: 'Summer 2026',
     title: 'The FIFA World Cup 2026 — Dallas IBC',
-    body: 'We were selected to operate the garment-care facility at the FIFA World Cup 2026™ International Broadcast Centre in Dallas. For twelve consecutive weeks, we served 3,500 accredited international media professionals — journalists, producers, and broadcast crews from around the globe — completing hundreds of transactions under live-event conditions, zero documented disputes, and a signed Vendor Performance Confirmation at close.',
+    body: `${FIFA_STATEMENT} The engagement closed with a signed Vendor Performance Confirmation.`,
   },
   {
     year: 'The Lessons',
@@ -47,7 +48,7 @@ const PRINCIPLES = [
   {
     icon: '📸',
     title: 'Documentation is Destiny',
-    body: 'Every garment is photographed at intake and return. We proved at the IBC that photographic evidence ends disputes in thirty seconds. That protocol is now your Garment Passport — a visual record of every item, every cleaning, every handoff.',
+    body: 'Every garment is photographed at intake and return. At the IBC we learned that a clear photo at intake answers questions quickly and fairly. That protocol is now your Garment Passport — a visual record of every item, every cleaning, every handoff.',
   },
   {
     icon: '💰',
@@ -94,8 +95,8 @@ export default function AboutPage() {
         </p>
         <p className={styles.heroBody}>
           We didn&apos;t start in a strip mall. We started at the center of the world&apos;s most-watched
-          sporting event, serving 3,500 international media professionals under live-event pressure —
-          and we brought every lesson home to Dallas.
+          sporting event, providing laundry and dry-cleaning services inside the International Broadcast
+          Centre in Dallas, and we brought every lesson home.
         </p>
         <div className={styles.heroActions}>
           <ButtonLink href={ROUTES.book} variant="primary" size="lg">Schedule a Pickup</ButtonLink>
@@ -107,23 +108,18 @@ export default function AboutPage() {
       <section className={styles.proofBar}>
         <div className={styles.proofBarInner}>
           <div className={styles.proofStat}>
-            <span className={styles.proofNumber}>3,500</span>
-            <span className={styles.proofLabel}>International Media Professionals Served</span>
+            <span className={styles.proofNumber}>FIFA World Cup 2026™</span>
+            <span className={styles.proofLabel}>International Broadcast Centre, Dallas</span>
           </div>
           <div className={styles.proofDivider} />
           <div className={styles.proofStat}>
-            <span className={styles.proofNumber}>12</span>
-            <span className={styles.proofLabel}>Consecutive Weeks of Operations</span>
+            <span className={styles.proofNumber}>12 Weeks</span>
+            <span className={styles.proofLabel}>Of On-Site Laundry &amp; Dry Cleaning</span>
           </div>
           <div className={styles.proofDivider} />
           <div className={styles.proofStat}>
-            <span className={styles.proofNumber}>Hundreds</span>
-            <span className={styles.proofLabel}>Orders Processed Under Live-Event Conditions</span>
-          </div>
-          <div className={styles.proofDivider} />
-          <div className={styles.proofStat}>
-            <span className={styles.proofNumber}>0</span>
-            <span className={styles.proofLabel}>Documented Disputes</span>
+            <span className={styles.proofNumber}>Signed</span>
+            <span className={styles.proofLabel}>Vendor Performance Confirmation</span>
           </div>
         </div>
       </section>
@@ -169,9 +165,8 @@ export default function AboutPage() {
                 Dr. Itiola brings a rare combination of academic rigor and operational discipline to the
                 garment-care industry. A Project Management Professional, LEED-Accredited sustainability
                 specialist, and service-disabled veteran of the U.S. Armed Forces, he designed and ran
-                the garment-care operation that served the FIFA World Cup International Broadcast Centre —
-                3,500 media professionals, twelve weeks, completed with a signed performance letter —
-                and rebuilt those systems from the ground up as the foundation of First Eleven Cleaners.
+                the garment-care operation that served the FIFA World Cup International Broadcast Centre over twelve
+                weeks, completed with a signed performance letter, and rebuilt those systems from the ground up as the foundation of First Eleven Cleaners.
               </p>
               <p className={styles.founderBio}>
                 His operating philosophy: <em>&ldquo;If it is not written, it does not exist.&rdquo;</em>{' '}
@@ -230,8 +225,7 @@ export default function AboutPage() {
           </div>
           <p className={styles.certNote}>
             Our SDVOSB and Veteran-HUB certifications make First Eleven eligible for VA Vets First priority
-            procurement and SDVOSB sole-source contracts — categories in which qualified garment-care vendors
-            are scarce across North Texas. We are proud to be one of the select few certified operators in this market that can attach a{' '}
+            procurement and SDVOSB sole-source contracts, and we can attach our{' '}
             <strong>FIFA World Cup Vendor Performance Letter</strong> to an institutional bid.
           </p>
         </div>

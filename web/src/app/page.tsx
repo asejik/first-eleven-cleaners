@@ -5,6 +5,7 @@ import {
   ORDER_TWO_WINDOW_DAYS,
 } from '@/lib/constants';
 import { getCoverage } from '@/lib/coverage-settings';
+import { FIFA_STATEMENT } from '@/lib/legal';
 import { EXPRESS_COMING_SOON, EXPRESS_COMING_SOON_BADGE, lowestMinimum, shirtPricesLine, washFoldLine } from '@/lib/published-prices';
 import { ButtonLink } from '@/components/ui';
 import styles from './page.module.css';
@@ -162,20 +163,14 @@ export default async function HomePage() {
               <h2 className={styles.sectionTitle}>
                 Trusted by International Media Crews
               </h2>
-              <p className={styles.trustText}>
-                We served 3,500 accredited international media professionals at
-                the FIFA World Cup 2026™ International Broadcast Centre in
-                Dallas. Twelve weeks of daily garment-care operations under
-                live-event pressure — completed with a signed Vendor Performance
-                Confirmation.
-              </p>
+              <p className={styles.trustText}>{FIFA_STATEMENT}</p>
               <p className={styles.trustText}>
                 That same standard of excellence is now available at your
                 doorstep. Every garment photographed. Every price published.
                 Every step tracked. No surprises — ever.
               </p>
               <div className={styles.trustBadges}>
-                <span className={styles.trustBadge}>✅ World Cup Proven</span>
+                <span className={styles.trustBadge}>✅ FIFA World Cup 2026 IBC</span>
                 <span className={styles.trustBadge}>📸 Photo-Documented Intake</span>
                 <span className={styles.trustBadge}>💰 Transparent Pricing</span>
                 <span className={styles.trustBadge}>📱 Real-Time Tracking</span>
