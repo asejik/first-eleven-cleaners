@@ -361,6 +361,24 @@
   gap: var(--space-4);
 }
 
+/* Spam trap: off-screen, never seen or tabbed to by people */
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.formError {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: #FEF0F0;
+  color: #B91C1C;
+  font-size: var(--text-sm);
+}
+
 .formRow {
   display: grid;
   grid-template-columns: 1fr;
