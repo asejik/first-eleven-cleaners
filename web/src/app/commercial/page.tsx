@@ -5,6 +5,8 @@ import { Award, BadgeCheck, Building2, Camera, CircleCheck, Dumbbell, Hotel, Med
 import { Button, Input, Card, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { COMMERCIAL_PROPOSAL_TIME, COMMERCIAL_REPLY, COMMERCIAL_TURNAROUND, COMMERCIAL_TURNAROUND_TITLE } from '@/lib/commercial/promises';
+import { INDUSTRIES, VOLUMES, type Industry, type Volume } from '@/lib/commercial/inquiry-options';
+import { SUPPORT_PHONE } from '@/lib/constants';
 import styles from './page.module.css';
 
 export default function CommercialPage() {
@@ -12,28 +14,52 @@ export default function CommercialPage() {
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [industry, setIndustry] = useState('salon_spa');
-  const [volumeEstimate, setVolumeEstimate] = useState('weekly_50_150');
+  const [industry, setIndustry] = useState<Industry>('salon_spa');
+  const [volumeEstimate, setVolumeEstimate] = useState<Volume>('weekly_50_150');
   const [notes, setNotes] = useState('');
+  const [website, setWebsite] = useState(''); // hidden from people: only bots fill it
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const addToast = useUIStore((s) => s.addToast);
 
+  // Emailed to the support inbox by /api/commercial/inquiry (client 2026-10-21)
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    // Simulate inquiry submission or record to Supabase
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsSubmitting(false);
-    setSubmitted(true);
-
-    addToast({
-      type: 'success',
-      title: 'Inquiry Received',
-      message: `${COMMERCIAL_REPLY} We send your proposal ${COMMERCIAL_PROPOSAL_TIME}.`,
-    });
+    setFormError('');
+    try {
+      const res = await fetch('/api/commercial/inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: businessName,
+          contact_name: contactName,
+          email,
+          phone,
+          industry,
+          volume: volumeEstimate,
+          notes,
+          website,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(data.error || `We couldn't send your inquiry just now. Please try again, or call us at ${SUPPORT_PHONE}.`);
+        return;
+      }
+      setSubmitted(true);
+      addToast({
+        type: 'success',
+        title: 'Inquiry Received',
+        message: `${COMMERCIAL_REPLY} We send your proposal ${COMMERCIAL_PROPOSAL_TIME}.`,
+      });
+    } catch {
+      setFormError(`We couldn't send your inquiry just now. Please check your connection and try again, or call us at ${SUPPORT_PHONE}.`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -263,16 +289,12 @@ export default function CommercialPage() {
                       <select
                         id="industrySelect"
                         value={industry}
-                        onChange={(e) => setIndustry(e.target.value)}
+                        onChange={(e) => setIndustry(e.target.value as Industry)}
                         className={styles.selectInput}
                       >
-                        <option value="salon_spa">Salon / Spa / Wellness</option>
-                        <option value="gym_fitness">Gym / Fitness Club</option>
-                        <option value="hotel_hospitality">Hotel / Airbnb Operator</option>
-                        <option value="corporate_office">Corporate / Executive Office</option>
-                        <option value="sports_events">Sports Team / Event Producer</option>
-                        <option value="government_institutional">Government / Institutional</option>
-                        <option value="other">Other Commercial Need</option>
+                        {Object.entries(INDUSTRIES).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -281,13 +303,12 @@ export default function CommercialPage() {
                       <select
                         id="volumeSelect"
                         value={volumeEstimate}
-                        onChange={(e) => setVolumeEstimate(e.target.value)}
+                        onChange={(e) => setVolumeEstimate(e.target.value as Volume)}
                         className={styles.selectInput}
                       >
-                        <option value="under_50">Under 50 lbs / week</option>
-                        <option value="weekly_50_150">50 - 150 lbs / week</option>
-                        <option value="weekly_150_500">150 - 500 lbs / week</option>
-                        <option value="weekly_500_plus">500+ lbs / week (High Volume)</option>
+                        {Object.entries(VOLUMES).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -303,6 +324,24 @@ export default function CommercialPage() {
                       className={styles.textarea}
                     />
                   </div>
+
+                  <div className={styles.honeypot} aria-hidden="true">
+                    <label htmlFor="websiteInput">Website</label>
+                    <input
+                      id="websiteInput"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </div>
+
+                  {formError && (
+                    <p className={styles.formError} role="alert">
+                      {formError}
+                    </p>
+                  )}
 
                   <Button type="submit" variant="primary" size="lg" fullWidth isLoading={isSubmitting}>
                     Submit Commercial Inquiry
