@@ -6,6 +6,13 @@
 export const GOOGLE_REVIEW_URL = 'https://g.page/r/CYtBj4hybBFbEBM/review';
 
 /**
+ * The Google Business Profile on Maps (client 2026-10-21), by its stable map ID: the link the
+ * client sent (maps.app.goo.gl/G16tTec9AVkS9AcG6) opens this listing. Named in the site's
+ * structured data (sameAs) so search engines tie the site to the listing.
+ */
+export const GOOGLE_BUSINESS_PROFILE_URL = 'https://maps.google.com/?cid=6562145371228684683';
+
+/**
  * Our own short link to the review page (/review): the review request message's tracked link
  * leads here, since tracked links only open our own pages, and it fits on cards and receipts.
  */

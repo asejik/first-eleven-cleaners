@@ -44,6 +44,10 @@ describe('Structured data states only confirmed facts (P08 SEO-03)', () => {
     expect(json).not.toContain('https://firstelevencleaners.com');
   });
 
+  it('links the Google Business Profile (sameAs), and no other profile', () => {
+    expect((business as unknown as { sameAs: string[] }).sameAs).toEqual(['https://maps.google.com/?cid=6562145371228684683']);
+  });
+
   it('the root layout renders the shared builder', () => {
     const layout = readFileSync(join(__dirname, '..', 'src', 'app', 'layout.tsx'), 'utf8');
     expect(layout).toContain('buildSiteJsonLd()');
