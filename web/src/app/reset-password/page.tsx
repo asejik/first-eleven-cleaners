@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/stores/ui-store';
-import { Button, Input, Card, ButtonLink } from '@/components/ui';
+import { Timer } from 'lucide-react';
+import { Button, Input, Card, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES } from '@/lib/constants';
 import { passwordProblem, PASSWORD_HINT } from '@/lib/auth-messages';
 import styles from '../forgot-password/page.module.css';
@@ -72,7 +73,7 @@ export default function ResetPasswordPage() {
 
         {!isLoading && !isAuthenticated ? (
           <div className={styles.successState}>
-            <div className={styles.successIcon}>⏱️</div>
+            <div className={styles.successIcon}><Icon icon={Timer} size={48} strokeWidth={1.5} /></div>
             <h3>Link Expired</h3>
             <p>This password reset link is no longer valid. Request a new one to continue.</p>
             <ButtonLink href="/forgot-password" variant="primary" fullWidth style={{ marginTop: 'var(--space-4)' }}>

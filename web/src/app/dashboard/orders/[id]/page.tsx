@@ -295,7 +295,7 @@ export default function OrderDetailPage() {
                 </div>
               ) : (
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-navy)', margin: 0 }}>
-                  ⏱️ Our plant director is reviewing the garment passport photos. An executive response will be posted here and sent via SMS within 2 business hours.
+                  <Icon icon={Timer} /> Our plant director is reviewing the garment passport photos. An executive response will be posted here and sent via SMS within 2 business hours.
                 </p>
               )}
             </div>

@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarDays, Repeat, ShieldCheck, Sunrise, Sunset, TriangleAlert, Truck, Zap } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Info, Repeat, ShieldCheck, Sunrise, Sunset, Timer, TriangleAlert, Truck, Zap } from 'lucide-react';
 import { Card, Input, Badge, Button, Icon } from '@/components/ui';
 import type { ZoneConfig } from '@/lib/constants';
 import { isExpressPickupDay, isSaturdayPickup, SATURDAY_PICKUP_NOTICE } from '@/lib/schedule';
@@ -338,9 +338,9 @@ export function StepSchedule({
             color: '#334155',
           }}>
             {detectedZone?.id === 'zone_5' ? (
-              <><strong>⏱️ {extendedReach?.turnaround || 'Extended Reach: back on the next run.'}</strong> 24-Hour Express isn&apos;t offered beyond the Metroplex.</>
+              <><strong><Icon icon={Timer} /> {extendedReach?.turnaround || 'Extended Reach: back on the next run.'}</strong> 24-Hour Express isn&apos;t offered beyond the Metroplex.</>
             ) : (
-              <><strong>⏱️ Standard Care: 2 Business Days.</strong> 24-Hour Express is coming soon. Every pickup is match-ready 2 business days after pickup.</>
+              <><strong><Icon icon={Timer} /> Standard Care: 2 Business Days.</strong> 24-Hour Express is coming soon. Every pickup is match-ready 2 business days after pickup.</>
             )}
           </div>
         ) : !detectedZone?.expressEligible ? (
@@ -354,7 +354,7 @@ export function StepSchedule({
             fontSize: 'var(--text-xs)',
             color: '#334155',
           }}>
-            <strong>⏱️ Standard Care for {detectedZone?.name || 'Your Area'}:</strong> 24-Hour Express is not offered in this zone to protect route consistency and logistics. Your order is delivered on your next route day once the plant has it ready; the date is shown below.
+            <strong><Icon icon={Timer} /> Standard Care for {detectedZone?.name || 'Your Area'}:</strong> 24-Hour Express is not offered in this zone to protect route consistency and logistics. Your order is delivered on your next route day once the plant has it ready; the date is shown below.
           </div>
         ) : pickupWindow === 'morning' && isExpressDay ? (
           <div className={styles.expressOptionBox}>
@@ -421,7 +421,7 @@ export function StepSchedule({
           </div>
         ) : (
           <div style={{ background: 'var(--color-cream)', padding: '12px 16px', borderRadius: 'var(--radius-lg)', marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-gray-600)' }}>
-            ℹ️ Standard care (2 business days) applies. 24-Hour Express is offered on Monday to Thursday morning pickup windows.
+            <Icon icon={Info} /> Standard care (2 business days) applies. 24-Hour Express is offered on Monday to Thursday morning pickup windows.
           </div>
         )}
       </div>
