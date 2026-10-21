@@ -17,7 +17,7 @@ describe('Only services we run today', () => {
     }
   });
 
-  it('Commercial turnaround is the one agreed in writing', () => {
-    expect(read('src/app/commercial/page.tsx')).toContain('Turnaround Agreed in Writing');
+  it('Commercial turnaround is the residential one (client 2026-10-21)', () => {
+    expect(read('src/app/commercial/page.tsx')).toContain('{COMMERCIAL_TURNAROUND_TITLE}');
   });
 });

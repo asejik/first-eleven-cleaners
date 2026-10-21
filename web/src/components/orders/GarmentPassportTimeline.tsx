@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, ClipboardList, Images, Repeat, Scale, Search, ShieldCheck, Sparkles } from 'lucide-react';
+import { Camera, ClipboardList, Hourglass, Images, Repeat, Scale, Search, ShieldCheck, Sparkles } from 'lucide-react';
 import { Badge, Modal, Button, Icon } from '@/components/ui';
 import type { Order, GarmentPhoto } from '@/types';
 import { photoLabel } from '@/lib/match-ready';
@@ -164,7 +164,7 @@ export function GarmentPassportTimeline({ order }: GarmentPassportTimelineProps)
                 />
               ) : (
                 <div style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', textAlign: 'center', padding: '20px' }}>
-                  <span>⏳ In Professional Process</span>
+                  <span><Icon icon={Hourglass} /> In Professional Process</span>
                   <p style={{ margin: '4px 0 0', fontSize: '10px' }}>Final return photo will be logged upon porch drop-off.</p>
                 </div>
               )}

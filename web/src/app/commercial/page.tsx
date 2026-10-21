@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Award, Building2, CircleCheck, Dumbbell, FileText, Handshake, Hotel, Medal, Scissors, Star, Tag, TrendingDown, Truck, Zap } from 'lucide-react';
+import { Award, BadgeCheck, Building2, Camera, CircleCheck, Dumbbell, Hotel, Medal, Scissors, ShieldCheck, Star, Timer, TrendingDown, Truck, Zap } from 'lucide-react';
 import { Button, Input, Card, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
+import { COMMERCIAL_PROPOSAL_TIME, COMMERCIAL_REPLY, COMMERCIAL_TURNAROUND, COMMERCIAL_TURNAROUND_TITLE } from '@/lib/commercial/promises';
 import styles from './page.module.css';
 
 export default function CommercialPage() {
@@ -31,7 +32,7 @@ export default function CommercialPage() {
     addToast({
       type: 'success',
       title: 'Inquiry Received',
-      message: 'A First Eleven account executive will contact you within 24 business hours.',
+      message: `${COMMERCIAL_REPLY} We send your proposal ${COMMERCIAL_PROPOSAL_TIME}.`,
     });
   };
 
@@ -43,8 +44,8 @@ export default function CommercialPage() {
           <span className={styles.badge}>B2B & Institutional Garment Programs</span>
           <h1 className={styles.heroTitle}>Commercial Laundry & Dry Cleaning for DFW Businesses</h1>
           <p className={styles.heroSubtitle}>
-            Agreed rate cards, recurring pickup schedules, photo-documented intake, and turnaround times
-            agreed in writing for Dallas-Fort Worth businesses.
+            Agreed rate cards and recurring pickup schedules for Dallas-Fort Worth businesses, with the
+            same {COMMERCIAL_TURNAROUND_TITLE.toLowerCase()}, Match-Ready Check and guarantee as every First Eleven order.
           </p>
         </div>
       </section>
@@ -86,7 +87,7 @@ export default function CommercialPage() {
               <span className={styles.indIcon}><Icon icon={Building2} size={32} strokeWidth={1.5} /></span>
               <h3>Corporate & Uniforms</h3>
               <p>
-                Team garment accounts with per-employee item tagging, executive dry cleaning, and consolidated invoicing.
+                Team garment accounts, executive dry cleaning, and consolidated invoicing.
               </p>
             </Card>
           </div>
@@ -100,40 +101,41 @@ export default function CommercialPage() {
             <span className={styles.badgeGold}>Business Accounts</span>
             <h2 className={styles.sectionHeading}>What Every Business Account Includes</h2>
             <p className={styles.sectionSubheading}>
-              Your schedule, rates, and turnaround are set out in writing before the first pickup.
+              Your schedule and rates are set out in writing before the first pickup. Everything else is
+              the promise every First Eleven customer gets.
             </p>
           </div>
 
           <div className={styles.outcomesGrid}>
             <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}><Icon icon={Timer} size={28} strokeWidth={1.5} /></span>
+              <h3>{COMMERCIAL_TURNAROUND_TITLE}</h3>
+              <p>Pickups Monday to Friday, back {COMMERCIAL_TURNAROUND} after pickup, the same as our residential service. We don&apos;t offer same-day service.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}><Icon icon={ShieldCheck} size={28} strokeWidth={1.5} /></span>
+              <h3>11-Point Match-Ready Check</h3>
+              <p>Every order passes our 11-point Match-Ready Check before it leaves the plant.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}><Icon icon={Camera} size={28} strokeWidth={1.5} /></span>
+              <h3>Garment Passport</h3>
+              <p>Every garment photographed and tracked by order number in the Garment Passport, from pickup to delivery.</p>
+            </div>
+            <div className={styles.outcomeCard}>
+              <span className={styles.outcomeIcon}><Icon icon={BadgeCheck} size={28} strokeWidth={1.5} /></span>
+              <h3>Make It Right Guarantee</h3>
+              <p>Not happy with the cleaning or pressing of a garment? Tell us within 7 days of delivery and we re-clean it free.</p>
+            </div>
+            <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={Truck} size={28} strokeWidth={1.5} /></span>
-              <h3>Dedicated Route Schedules</h3>
-              <p>Reliable recurring pickup and delivery windows tuned to your business shift changes and peak hours.</p>
-            </div>
-            <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}><Icon icon={FileText} size={28} strokeWidth={1.5} /></span>
-              <h3>Itemized Billing</h3>
-              <p>Every order itemized, with billing terms agreed in your service agreement.</p>
-            </div>
-            <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}><Icon icon={Tag} size={28} strokeWidth={1.5} /></span>
-              <h3>Photo-Documented Intake &amp; Tracking</h3>
-              <p>Intake photos, condition notes, and live order tracking from pickup to delivery.</p>
-            </div>
-            <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}>⏱️</span>
-              <h3>Turnaround Agreed in Writing</h3>
-              <p>Your turnaround time is set out in your service agreement, so everyone works to the same commitment.</p>
-            </div>
-            <div className={styles.outcomeCard}>
-              <span className={styles.outcomeIcon}><Icon icon={Handshake} size={28} strokeWidth={1.5} /></span>
-              <h3>Dedicated Commercial Support</h3>
-              <p>A direct contact for your account by phone and email.</p>
+              <h3>Dedicated Routes &amp; Support</h3>
+              <p>Recurring pickup windows set around your shift changes, and a direct contact for your account by phone and email.</p>
             </div>
             <div className={styles.outcomeCard}>
               <span className={styles.outcomeIcon}><Icon icon={TrendingDown} size={28} strokeWidth={1.5} /></span>
               <h3>Volume Rate Cards</h3>
-              <p>Rates quoted for your volume, agreed before your first pickup.</p>
+              <p>Rates quoted for your volume and agreed before your first pickup, with every order itemized.</p>
             </div>
           </div>
         </div>
@@ -205,7 +207,8 @@ export default function CommercialPage() {
             <Card variant="bordered" padding="lg" className={styles.inquiryCard}>
               <h2 className={styles.formTitle}>Request a Custom Commercial Rate Card</h2>
               <p className={styles.formSubtitle}>
-                Tell us about your organization and volume requirements. We deliver customized proposals within 24 hours.
+                Tell us about your organization and volume requirements. {COMMERCIAL_REPLY} Your custom proposal
+                follows {COMMERCIAL_PROPOSAL_TIME}.
               </p>
 
               {submitted ? (

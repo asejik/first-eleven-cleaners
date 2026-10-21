@@ -1,5 +1,5 @@
 import { pageMetadata } from '@/lib/seo';
-import { CalendarDays, Camera, MapPin, Map as MapIcon, ShieldCheck, Truck, Wallet } from 'lucide-react';
+import { CalendarDays, Camera, MapPin, Map as MapIcon, ShieldCheck, Timer, Truck, Wallet } from 'lucide-react';
 import { Card, ButtonLink, Icon } from '@/components/ui';
 import { ROUTES, EXPRESS_BADGE, EXTENDED_REACH_BAND_CITIES, extendedReachTurnaroundLine } from '@/lib/constants';
 import { extendedReachStartLine, resolveCoverage } from '@/lib/coverage';
@@ -107,7 +107,7 @@ export default async function ServiceAreasPage() {
                       zone.expressEligible ? styles.zonePillHighlight : styles.zonePillMuted
                     }`}
                   >
-                    {zone.expressEligible ? EXPRESS_BADGE : '⏱ Standard Turnaround'}
+                    {zone.expressEligible ? EXPRESS_BADGE : <><Icon icon={Timer} /> Standard Turnaround</>}
                   </span>
                 </div>
 
@@ -141,7 +141,7 @@ export default async function ServiceAreasPage() {
                   <Icon icon={CalendarDays} /> {extendedReachTurnaroundLine(reach)}
                 </span>
                 <span className={`${styles.zonePill} ${styles.zonePillMuted}`}>
-                  ⏱ No Express
+                  <Icon icon={Timer} /> No Express
                 </span>
               </div>
 
@@ -179,7 +179,7 @@ export default async function ServiceAreasPage() {
         <div className={styles.container}>
           <div className={styles.standardsGrid}>
             <div className={styles.standardBox}>
-              <span className={styles.stdIcon}>⏱️</span>
+              <span className={styles.stdIcon}><Icon icon={Timer} size={32} strokeWidth={1.5} /></span>
               <h4>2-Business-Day Turnaround</h4>
               <p>Returned clean, pressed, and game-ready 2 business days after pickup (Zones 3 and 4: on your next route day after that). Your delivery date is shown when you book.</p>
             </div>

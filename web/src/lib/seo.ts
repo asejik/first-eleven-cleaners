@@ -7,6 +7,7 @@ import {
   WASH_FOLD_PRICE_PER_LB,
 } from '@/lib/constants';
 import { LEGAL_NAME } from '@/lib/legal';
+import { GOOGLE_BUSINESS_PROFILE_URL } from '@/lib/google-reviews';
 
 /**
  * Canonical public address of the site (P08 SEO-01).
@@ -106,6 +107,7 @@ export function buildSiteJsonLd() {
         telephone: phoneForSchema(SUPPORT_PHONE),
         email: SUPPORT_EMAIL,
         priceRange: '$$',
+        sameAs: [GOOGLE_BUSINESS_PROFILE_URL],
         address: {
           '@type': 'PostalAddress',
           addressLocality: 'Dallas',

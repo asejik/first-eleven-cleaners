@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCustomerOrders } from '@/hooks/useOrders';
 import { useCustomerClaims } from '@/hooks/useClaims';
 import { Button, Card, Badge, Skeleton, RefreshButton, ButtonLink, Icon } from '@/components/ui';
-import { CircleCheck, CreditCard, MapPin, User as UserIcon, Plus, Repeat, RotateCw, Settings, ShieldCheck, Sparkles, TriangleAlert, Truck, WashingMachine, Zap } from 'lucide-react';
+import { CircleCheck, CreditCard, MapPin, User as UserIcon, Plus, Repeat, RotateCw, Settings, ShieldCheck, Sparkles, Timer, TriangleAlert, Truck, WashingMachine, Zap } from 'lucide-react';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ROUTES, ORDER_STATUSES } from '@/lib/constants';
 import { ROUTINE_PATH } from '@/lib/routine';
@@ -299,7 +299,7 @@ export default function DashboardPage() {
                         )}
 
                         <div className={styles.deliveryEstimate}>
-                          ⏱️ <strong>Match-Ready Promise:</strong> Delivery on {order.delivery_date || 'Within 2 business days'}
+                          <Icon icon={Timer} /> <strong>Match-Ready Promise:</strong> Delivery on {order.delivery_date || 'Within 2 business days'}
                         </div>
                       </div>
 

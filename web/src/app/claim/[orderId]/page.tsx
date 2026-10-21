@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useOrderDetail } from '@/hooks/useOrders';
 import { useOrderClaims, useSubmitClaim } from '@/hooks/useClaims';
-import { Camera, MessageSquare, Receipt, ShieldCheck } from 'lucide-react';
+import { Camera, MessageSquare, Receipt, ShieldCheck, Timer } from 'lucide-react';
 import { Button, Card, Badge, Loader, ButtonLink, Icon } from '@/components/ui';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
@@ -158,7 +158,7 @@ export default function ClaimPage() {
                       </div>
                     ) : (
                       <div className={styles.pendingResolutionBox}>
-                        ⏱️ <strong>In Executive Review:</strong> Our plant director is inspecting the garment intake photos and order records. Your resolution response and credit/re-clean confirmation will appear here shortly.
+                        <Icon icon={Timer} /> <strong>In Executive Review:</strong> Our plant director is inspecting the garment intake photos and order records. Your resolution response and credit/re-clean confirmation will appear here shortly.
                       </div>
                     )}
                   </div>

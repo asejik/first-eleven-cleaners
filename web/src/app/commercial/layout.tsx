@@ -4,7 +4,7 @@ export const metadata = pageMetadata({
   path: '/commercial',
   title: 'Commercial Laundry & Dry Cleaning',
   description:
-    'Dry cleaning and laundry programs for DFW hotels, salons, gyms and offices, with turnaround agreed in writing. Certified MBE, SDVOSB, Texas Veteran-HUB and DBE.',
+    'Dry cleaning and laundry programs for DFW hotels, salons, gyms and offices, back in 2 business days. Certified MBE, SDVOSB, Texas Veteran-HUB and DBE.',
   imageAlt: 'First Eleven Cleaners - Commercial B2B Laundry & Dry Cleaning Programs',
 });
 

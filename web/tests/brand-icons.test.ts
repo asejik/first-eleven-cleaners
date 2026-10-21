@@ -10,7 +10,8 @@ import { join, relative } from 'node:path';
 const SRC = join(__dirname, '..', 'src');
 const STAFF_ONLY = /^(app\/(mission-control|staff|driver|portal|admin)\/|components\/(mission-control|driver)\/)/;
 // Pictographs and symbols drawn as emoji; plain text marks (✓ → •) and flags are allowed
-const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}]/u;
+// (with the clock and hourglass block, ℹ, and the emoji presentation selector U+FE0F)
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{231A}-\u{23FF}\u{2139}\u{FE0F}]/u;
 const TEXT_MARKS = /[✓✔→•]/gu;
 
 const files = (dir: string): string[] =>
