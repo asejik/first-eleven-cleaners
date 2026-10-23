@@ -20,6 +20,9 @@ interface KanbanBoardProps {
   onViewArchive?: () => void;
 }
 
+/** "DRY CLEAN", "WASH & FOLD", "MIXED" for the card badge */
+const serviceLabel = (type: string) => (type === 'wash_fold' ? 'WASH & FOLD' : type.replace(/_/g, ' ').toUpperCase());
+
 function formatOrderDate(o: Order, stage: OrderStatusKey): { dateText: string; timeText?: string } {
   if (stage === 'delivered') {
     const deliveredEvent = o.events?.find((e) => e.status === 'delivered');
@@ -200,7 +203,7 @@ export function KanbanBoard({
                       <div key={o.id} className={styles.orderCard}>
                         <div className={styles.orderCardHead}>
                           <span className={styles.orderNum}>#{orderNum}</span>
-                          <Badge variant="cleaning">{o.order_type.toUpperCase()}</Badge>
+                          <Badge variant="cleaning" size="sm">{serviceLabel(o.order_type)}</Badge>
                         </div>
 
                         <h3 className={styles.orderCustomer}>{customerName}</h3>
@@ -226,7 +229,7 @@ export function KanbanBoard({
                         )}
 
                         {o.payment_status === 'failed' && (onRetryCharge || onMarkPaid) && (
-                          <div style={{ display: 'flex', gap: '6px', margin: '0 0 6px' }}>
+                          <div className={styles.cardActions}>
                             {onRetryCharge && (
                               <button
                                 type="button"
@@ -257,8 +260,9 @@ export function KanbanBoard({
                           className={styles.advanceBtn}
                           onClick={() => onAdvance(o.id, stage)}
                           disabled={isAdvancing}
+                          title="Advance to the next stage"
                         >
-                          Advance to Next Stage ➔
+                          Next Stage ➔
                         </button>
                       </div>
                     );
@@ -354,7 +358,7 @@ export function KanbanBoard({
                       <div key={o.id} className={`${styles.orderCard} ${styles.orderCardDelivered}`}>
                         <div className={styles.orderCardHead}>
                           <span className={styles.orderNum}>#{orderNum}</span>
-                          <Badge variant="delivered">{o.order_type.toUpperCase()}</Badge>
+                          <Badge variant="delivered" size="sm">{serviceLabel(o.order_type)}</Badge>
                         </div>
 
                         <h3 className={styles.orderCustomer}>{customerName}</h3>
