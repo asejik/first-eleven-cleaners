@@ -76,6 +76,11 @@ export default function PrivacyPolicyPage() {
             <p className={styles.paragraph}>
               We may automatically collect device details, browser types, IP addresses, general geolocation, usage analytics, cookies, and system log files.
             </p>
+            <p className={styles.paragraph}>
+              If you reach us from our van (its QR code, the link in our reply to a PICKUP text, or the web address on the van), we set our own cookie holding a random visitor number and
+              how you arrived, kept for 60 days, so we can count the bookings our van brings in. When you text PICKUP, we keep a scrambled form of your number, not the number itself, for
+              the same purpose. Neither is shared with anyone.
+            </p>
           </section>
 
           {/* Section 3: How We Use Information */}
