@@ -152,6 +152,6 @@ describe('Mission Control', () => {
   it('has the Growth tab with the order-two panel', () => {
     const page = readFileSync(join(__dirname, '..', 'src/app/mission-control/page.tsx'), 'utf8');
     expect(page).toContain("{ id: 'order_two', label: '📈 Growth' }");
-    expect(page).toContain("activeTab === 'order_two' && <OrderTwoPanel />");
+    expect(page).toMatch(/activeTab === 'order_two' && \([\s\S]*?<OrderTwoPanel \/>/);
   });
 });

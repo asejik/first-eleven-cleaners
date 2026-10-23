@@ -31,6 +31,7 @@ import { RepsPanel } from '@/components/mission-control/RepsPanel';
 import { RepPayoutsPanel } from '@/components/mission-control/RepPayoutsPanel';
 import { MessageTestsPanel } from '@/components/mission-control/MessageTestsPanel';
 import { OrderTwoPanel } from '@/components/mission-control/OrderTwoPanel';
+import { VanReportPanel } from '@/components/mission-control/VanReportPanel';
 import { TierDownPanel } from '@/components/mission-control/TierDownPanel';
 
 const STAGES: OrderStatusKey[] = [
@@ -505,8 +506,13 @@ To send it out anyway, type the reason for the override (it is logged):`);
               {/* A/B message tests (client 2026-10-14) */}
               {activeTab === 'messages' && <MessageTestsPanel />}
 
-              {/* The order-two rate (client 2026-10-14) */}
-              {activeTab === 'order_two' && <OrderTwoPanel />}
+              {/* The van wrap, VAN-01 (client 2026-10-23), then the order-two rate (client 2026-10-14) */}
+              {activeTab === 'order_two' && (
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  <VanReportPanel />
+                  <OrderTwoPanel />
+                </div>
+              )}
             </>
           )}
 

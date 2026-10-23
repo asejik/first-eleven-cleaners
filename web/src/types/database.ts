@@ -273,6 +273,9 @@ export type Database = {
           order_two_nudged_at: string | null;
           rep_code: string | null;
           rep_code_at: string | null;
+          marketing_source: string | null;
+          marketing_channel: string | null;
+          marketing_source_at: string | null;
         };
         Insert: {
           id?: string;
@@ -291,6 +294,9 @@ export type Database = {
           order_two_nudged_at?: string | null;
           rep_code?: string | null;
           rep_code_at?: string | null;
+          marketing_source?: string | null;
+          marketing_channel?: string | null;
+          marketing_source_at?: string | null;
         };
         Update: {
           id?: string;
@@ -309,6 +315,9 @@ export type Database = {
           order_two_nudged_at?: string | null;
           rep_code?: string | null;
           rep_code_at?: string | null;
+          marketing_source?: string | null;
+          marketing_channel?: string | null;
+          marketing_source_at?: string | null;
         };
         Relationships: [];
       };
@@ -1041,6 +1050,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      marketing_events: {
+        Row: {
+          id: string;
+          source: string;
+          channel: string;
+          event: string;
+          visitor_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          source: string;
+          channel: string;
+          event: string;
+          visitor_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          source?: string;
+          channel?: string;
+          event?: string;
+          visitor_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       message_sends: {
         Row: {
           id: string;
@@ -1301,6 +1337,8 @@ export type Database = {
           plant_ticket_number: string | null;
           order_two_discount: number;
           rep_code: string | null;
+          marketing_source: string | null;
+          marketing_channel: string | null;
         };
         Insert: {
           id?: string;
@@ -1364,6 +1402,8 @@ export type Database = {
           plant_ticket_number?: string | null;
           order_two_discount?: number;
           rep_code?: string | null;
+          marketing_source?: string | null;
+          marketing_channel?: string | null;
         };
         Update: {
           id?: string;
@@ -1427,6 +1467,8 @@ export type Database = {
           plant_ticket_number?: string | null;
           order_two_discount?: number;
           rep_code?: string | null;
+          marketing_source?: string | null;
+          marketing_channel?: string | null;
         };
         Relationships: [
           {

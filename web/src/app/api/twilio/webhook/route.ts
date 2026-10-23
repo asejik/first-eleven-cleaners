@@ -10,6 +10,7 @@ import { toE164 } from '@/lib/phone';
 import { reportError } from '@/lib/error-reporting';
 import { logMessages, recentMessages } from '@/lib/message-log';
 import { handleSkipReply, SKIP_NOTHING_REPLY } from '@/lib/zone5-skip';
+import { isPickupKeyword, phoneVisitorId, pickupReply, recordMarketingEvent } from '@/lib/marketing-source';
 
 // Helper to wrap message text in valid TwiML XML
 function createTwimlResponse(message: string): Response {
@@ -216,6 +217,33 @@ export async function POST(req: Request) {
       return createTwimlResponse(
         'First Eleven Cleaners: For support, call or text (682) 200-0039 or email concierge@firstelevencleaners.com. 2-business-day turnaround & free Metroplex delivery. Reply STOP to cancel. Msg & data rates may apply.'
       );
+    }
+
+    // PICKUP, from the van wrap (client 2026-10-23): the booking link at once, no staff needed.
+    // Recorded for the VAN-01 report by a hash of the number; a known customer's log gets both sides.
+    if (isPickupKeyword(trimmedBody)) {
+      const reply = pickupReply(getAppBaseUrl());
+      if (adminSupabase && senderE164) {
+        try {
+          await recordMarketingEvent(adminSupabase, { channel: 'text', event: 'text_in', visitorId: phoneVisitorId(senderE164) });
+          const { data: known } = await adminSupabase
+            .from('customers')
+            .select('id')
+            .eq('phone', senderE164)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (known) {
+            await logMessages(adminSupabase, [
+              { customerId: known.id, channel: 'sms', direction: 'inbound', body: trimmedBody, externalId: messageSid || null, from, to, createdAt: new Date().toISOString() },
+              { customerId: known.id, channel: 'sms', direction: 'outbound', body: reply, mode: 'pickup_reply', from: to, to: from, createdAt: new Date(Date.now() + 500).toISOString() },
+            ]);
+          }
+        } catch (pickupErr) {
+          reportError('twilio/pickup', pickupErr, { details: 'A PICKUP text was answered but not recorded' });
+        }
+      }
+      return createTwimlResponse(reply);
     }
 
     // SKIP: acts on what our last text to them was about (a Routine reminder, a Zone 5 run,

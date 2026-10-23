@@ -53,6 +53,7 @@ import { ensureAuthUser } from '@/lib/passwordless';
 import { claimFounding, founderStatus, planDiscountFor, FOUNDER_HEAD_START_DAYS } from '@/lib/founding';
 import { checkReferralForBooking, recordReferral, referrerForCode, REFERRAL_AMOUNT } from '@/lib/referrals';
 import { findActiveRep, stampRepCode } from '@/lib/reps';
+import { bookingAttribution, stampMarketingSource } from '@/lib/marketing-source';
 import { orderTwoDiscountFor } from '@/lib/order-two';
 import { recordBookingForMessages } from '@/lib/message-tests-store';
 
@@ -877,6 +878,15 @@ export async function POST(request: Request) {
               } catch (repErr) {
                 reportError('api/bookings', repErr, { details: `Order ${insertedOrder.id}: rep code not stamped` });
               }
+            }
+
+            // The van wrap, VAN-01 (client 2026-10-23): the van page's cookie, or a PICKUP text
+            // from this phone. On the order, and on the customer if it's their first order.
+            try {
+              const attribution = await bookingAttribution(supabase, { cookieHeader: request.headers.get('cookie'), phoneE164: validated.customer.phone });
+              if (attribution) await stampMarketingSource(supabase, { attribution, customerId, orderId: insertedOrder.id });
+            } catch (sourceErr) {
+              reportError('api/bookings', sourceErr, { details: `Order ${insertedOrder.id}: van source not stamped` });
             }
 
             // Joining the Routine (client 2026-10-08): this booking is the first pickup. The

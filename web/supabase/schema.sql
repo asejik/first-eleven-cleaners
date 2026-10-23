@@ -1232,6 +1232,30 @@ ALTER TABLE message_sends ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON message_sends FROM anon, authenticated;
 GRANT ALL ON message_sends TO service_role;
 
+-- The van wrap, VAN-01 (20261023_van_tracking): van page visits, "Schedule Your Pickup" taps
+-- and PICKUP texts (visitor_id: a cookie id, or a keyed hash of the phone for a text), and
+-- the source stamped on the order and on the customer's first order
+CREATE TABLE IF NOT EXISTS marketing_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source VARCHAR(20) NOT NULL,
+  channel VARCHAR(10) NOT NULL CHECK (channel IN ('qr', 'text', 'typed')),
+  event VARCHAR(20) NOT NULL CHECK (event IN ('visit', 'book_click', 'text_in')),
+  visitor_id VARCHAR(64) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_marketing_events_source ON marketing_events(source, created_at);
+CREATE INDEX IF NOT EXISTS idx_marketing_events_visitor ON marketing_events(visitor_id, event, created_at DESC);
+ALTER TABLE marketing_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON marketing_events FROM anon, authenticated;
+GRANT ALL ON marketing_events TO service_role;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS marketing_source VARCHAR(20);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS marketing_channel VARCHAR(10);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS marketing_source VARCHAR(20);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS marketing_channel VARCHAR(10);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS marketing_source_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_orders_marketing_source ON orders(marketing_source) WHERE marketing_source IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_customers_marketing_source ON customers(marketing_source) WHERE marketing_source IS NOT NULL;
+
 -- Zone 5 runs per band: dispatched (threshold met or "dispatch anyway") and announced
 CREATE TABLE IF NOT EXISTS route_cycles (
   run_date DATE NOT NULL,
